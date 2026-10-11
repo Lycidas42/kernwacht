@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12102c">
+<meta name="description" content="Idle Tower Defense im Neon-Look. Ohne Shop, ohne Werbung.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kernwacht">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+/* Grundgerüst für eigenständiges Hosting: Safe-Area wie im Artifact-Rahmen */
+*, *::before, *::after { box-sizing: border-box; }
+:root { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); height: 100%; }
+body { margin: 0; font-size: 14px; overscroll-behavior: none; }
+</style>
+<title>Kernwacht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Ein Bildschirm: großes Spielfeld oben (Kanone unten, Angriff von oben), kompakte Werkbank unten. Bewusst nur ein Neon-Theme. */
+:root {
+  --void: #12102c;
+  --sky-top: #1e1a4a;
+  --deck: #17143a;
+  --deck-2: #221e4f;
+  --line: #3a3474;
+  --ink: #eeebff;
+  --ink-dim: #a39ed0;
+  --core: #3ef0ff;
+  --hostile: #ff4f9a;
+  --energy: #ffc04d;
+  --crystal: #c3a6ff;
+  --heal: #5dffb0;
+  --range: #ffd166;
+  --font-ui: "Chakra Petch", "Rajdhani", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--void); color: var(--ink); font-family: var(--font-ui); overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--core); outline-offset: 2px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.e { color: var(--energy); }
+.k { color: var(--crystal); }
+.e::before, .k::before { content: ""; display: inline-block; width: .55em; height: .55em; margin-right: .3em; vertical-align: .05em; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.e::before { border-radius: 50%; }
+.k::before { transform: rotate(45deg); }
+
+#app { height: 100%; display: flex; flex-direction: column; }
+#stage { position: relative; flex: 1 1 64%; min-height: 0; touch-action: manipulation; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* HUD */
+#hud { position: absolute; left: 0; right: 0; top: 0; padding: 8px 16px 0; display: grid; gap: 5px; pointer-events: none; }
+.hudrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wave { font-weight: 700; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; }
+.wave b { color: var(--core); font-family: var(--font-num); }
+.spacer { flex: 1; }
+.pill { font-size: .78rem; padding: 2px 7px; border: 1px solid var(--line); background: color-mix(in srgb, var(--deck) 82%, transparent); border-radius: 3px; white-space: nowrap; }
+.pill span { color: var(--ink-dim); font-family: var(--font-ui); margin-right: 4px; }
+.pill.foe b { color: var(--hostile); font-weight: 600; }
+.pill.mine b { color: var(--core); font-weight: 600; }
+.bar { height: 6px; background: var(--deck-2); border-radius: 3px; overflow: hidden; position: relative; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px; }
+#hpbar i { background: linear-gradient(90deg, var(--heal), var(--core)); box-shadow: 0 0 8px var(--core); }
+#wavebar { height: 2px; }
+#wavebar i { background: var(--ink-dim); }
+.hpline { display: flex; justify-content: space-between; font-size: .7rem; color: var(--ink-dim); letter-spacing: .06em; text-transform: uppercase; }
+
+/* Steuerung im Feld */
+#ctrl { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 5px; }
+#ctrl button, #endBtn { min-width: 36px; height: 30px; padding: 0 7px; border: 1px solid var(--line); background: color-mix(in srgb, var(--deck) 88%, transparent); border-radius: 4px; font-family: var(--font-num); font-size: .76rem; color: var(--ink-dim); }
+#ctrl button[aria-pressed="true"] { color: var(--void); background: var(--core); border-color: var(--core); }
+#endBtn { position: absolute; left: 10px; bottom: 10px; font-family: var(--font-ui); letter-spacing: .05em; }
+#endBtn.armed { color: var(--hostile); border-color: var(--hostile); }
+
+/* Orbitalschlag */
+#strikeBtn { position: absolute; right: 12px; bottom: 50px; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; }
+#strikeBtn svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+#strikeBtn .lbl { position: relative; font-size: .58rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); line-height: 1.1; text-align: center; font-weight: 600; }
+#strikeBtn.ready .lbl { color: var(--hostile); }
+#strikeBtn.armed { animation: pulse .7s ease-in-out infinite alternate; }
+#strikeBtn.armed .lbl { color: var(--ink); }
+@keyframes pulse { to { filter: drop-shadow(0 0 10px var(--hostile)); } }
+#hint { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); font-size: .78rem; color: var(--ink); background: color-mix(in srgb, var(--deck) 90%, transparent); border: 1px solid var(--hostile); padding: 3px 10px; border-radius: 3px; white-space: nowrap; pointer-events: none; }
+
+/* Werkbank */
+#bench { flex: 1 1 36%; min-height: 0; display: flex; flex-direction: column; background: var(--deck); border-top: 1px solid var(--line); }
+#tabs { display: flex; padding: 0 12px 0 16px; gap: 2px; border-bottom: 1px solid var(--line); align-items: center; }
+#tabs [role=tab] { padding: 8px 8px 6px; font-weight: 600; font-size: .82rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-dim); border-bottom: 2px solid transparent; }
+#tabs [role=tab][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--core); }
+#energyTotal { font-size: .95rem; margin-right: 8px; }
+#autoAll { height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: .7rem; color: var(--ink-dim); }
+#autoAll[aria-pressed="true"] { color: var(--void); background: var(--heal); border-color: var(--heal); }
+#list { flex: 1; overflow-y: auto; padding: 4px 16px 12px; display: grid; gap: 2px; align-content: start; }
+.row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 5px 0 5px 9px; border-left: 2px solid var(--line); }
+.row.locked { opacity: .45; }
+.row .nm { font-weight: 600; font-size: .9rem; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.row .nm small { font-family: var(--font-num); color: var(--ink-dim); font-weight: 400; font-size: .7rem; }
+.row .val { font-family: var(--font-num); font-size: .74rem; color: var(--core); }
+.row .ds { font-size: .74rem; color: var(--ink-dim); display: none; }
+.auto { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: .62rem; color: var(--ink-dim); }
+.auto[aria-pressed="true"] { color: var(--heal); border-color: var(--heal); }
+.auto.off[aria-pressed="true"] { color: var(--ink-dim); border-style: dashed; }
+.buy { min-width: 80px; height: 32px; padding: 0 8px; border-radius: 4px; border: 1px solid var(--energy); color: var(--energy); font-family: var(--font-num); font-size: .8rem; text-align: right; }
+.buy:disabled { border-color: var(--line); color: var(--ink-dim); cursor: default; }
+.buy.ok { background: color-mix(in srgb, var(--energy) 14%, transparent); }
+.buy.k-btn { border-color: var(--crystal); color: var(--crystal); }
+.buy.k-btn.ok { background: color-mix(in srgb, var(--crystal) 16%, transparent); }
+.buy.max { border-color: var(--line); color: var(--heal); }
+
+/* Overlays */
+.ov { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 16px; background: color-mix(in srgb, var(--void) 78%, transparent); backdrop-filter: blur(3px); }
+.card { width: min(440px, 100%); max-height: 100%; overflow-y: auto; background: var(--deck); border: 1px solid var(--line); border-radius: 6px; padding: 22px 20px; display: grid; gap: 14px; }
+.card h1 { margin: 0; font-size: clamp(2.2rem, 9vw, 3rem); line-height: .95; letter-spacing: .04em; font-weight: 700; text-transform: uppercase; }
+.card h1 span { color: var(--core); text-shadow: 0 0 18px color-mix(in srgb, var(--core) 60%, transparent); }
+.card h2 { margin: 0; font-size: 1.35rem; letter-spacing: .05em; text-transform: uppercase; text-wrap: balance; }
+.card p { margin: 0; color: var(--ink-dim); line-height: 1.45; font-size: .9rem; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { border: 1px solid var(--line); border-radius: 4px; padding: 8px; min-width: 0; }
+.stat .l { font-size: .66rem; color: var(--ink-dim); text-transform: uppercase; letter-spacing: .08em; }
+.stat .v { font-family: var(--font-num); font-size: 1.05rem; margin-top: 2px; }
+.actions { display: grid; gap: 8px; }
+.cta { height: 48px; border-radius: 4px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; background: var(--core); color: var(--void); box-shadow: 0 0 20px color-mix(in srgb, var(--core) 40%, transparent); }
+.sec { height: 44px; border-radius: 4px; border: 1px solid var(--line); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.fair, .howto { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .8rem; color: var(--ink-dim); }
+.fair li::before { content: "+ "; color: var(--heal); font-family: var(--font-num); }
+.howto li b { color: var(--ink); font-weight: 600; }
+.note { font-size: .84rem; color: var(--heal); line-height: 1.4; }
+#labList { display: grid; gap: 4px; }
+#labList .row .ds { display: block; }
+.labhead { display: flex; justify-content: space-between; align-items: baseline; }
+.danger { color: var(--hostile); font-size: .8rem; text-decoration: underline; justify-self: start; }
+
+@media (min-height: 940px) { .row .ds { display: block; } }
+@media (min-width: 900px) {
+  #app { flex-direction: row; }
+  #stage { flex: 1 1 auto; }
+  #bench { flex: 0 0 380px; border-top: 0; border-left: 1px solid var(--line); }
+  .row .ds { display: block; }
+}
+@media (prefers-reduced-motion: reduce) { #strikeBtn.armed { animation: none; } }
+</style>
+</head>
+<body>
+
+
+<div id="app">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud">
+      <div class="hudrow">
+        <div class="wave">Welle <b id="waveNo">1</b></div>
+        <div class="spacer"></div>
+        <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>
+        <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
+        <div class="pill num k" id="runK">0</div>
+      </div>
+      <div class="bar" id="wavebar"><i></i></div>
+      <div class="hpline"><span>Kanone</span><span class="num" id="hpTxt">0 / 0</span></div>
+      <div class="bar" id="hpbar"><i></i></div>
+    </div>
+    <button id="endBtn">Beenden</button>
+    <button id="strikeBtn" aria-label="Orbitalschlag">
+      <svg viewBox="0 0 58 58"><circle cx="29" cy="29" r="26" fill="#17143a" stroke="#3a3474" stroke-width="3"/><circle id="strikeRing" cx="29" cy="29" r="26" fill="none" stroke="#ff4f9a" stroke-width="3" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="163.4"/></svg>
+      <span class="lbl" id="strikeLbl">Orbital<br>0 %</span>
+    </button>
+    <div id="hint" hidden>Tippe ins Feld, um den Schlag zu setzen</div>
+    <div id="ctrl">
+      <button id="pauseBtn" aria-label="Pause">II</button>
+      <button data-speed="1" aria-pressed="true">1×</button>
+      <button data-speed="2" aria-pressed="false">2×</button>
+      <button data-speed="4" aria-pressed="false">4×</button>
+    </div>
+  </div>
+  <div id="bench">
+    <div id="tabs" role="tablist">
+      <button role="tab" data-tab="atk" aria-selected="true">Angriff</button>
+      <button role="tab" data-tab="def" aria-selected="false">Abwehr</button>
+      <button role="tab" data-tab="eco" aria-selected="false">Ertrag</button>
+      <span class="spacer"></span>
+      <span id="energyTotal" class="num e">0</span>
+      <button id="autoAll" aria-pressed="true" title="Alle Auto-Käufe an- oder ausschalten">AUTO AN</button>
+    </div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<div class="ov" id="menu">
+  <div class="card">
+    <h1>Kern<span>wacht</span></h1>
+    <p>Deine Kanone hält, bis sie fällt. Jeder Fall bringt Kristalle, und im Labor wird die nächste Kanone stärker.</p>
+    <div class="stats">
+      <div class="stat"><div class="l">Bestwelle</div><div class="v num" id="mBest">0</div></div>
+      <div class="stat"><div class="l">Läufe</div><div class="v num" id="mRuns">0</div></div>
+      <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="mK">0</div></div>
+    </div>
+    <div class="note" id="offlineNote" hidden></div>
+    <div class="actions">
+      <button class="cta" id="startBtn">Lauf starten</button>
+      <button class="sec" id="labBtn">Labor</button>
+    </div>
+    <ul class="howto">
+      <li><b>Gegner antippen</b> markiert ihn als Ziel für 6 Sekunden.</li>
+      <li><b>Orbitalschlag</b> lädt sich durch Abschüsse auf. Antippen, dann ins Feld tippen.</li>
+    </ul>
+    <ul class="fair">
+      <li>Kein Shop, keine Werbung, keine Premiumwährung</li>
+      <li>Tempo 4× und Auto-Kauf sind von Anfang an frei</li>
+      <li>Das Labor sammelt offline weiter, bis zu 24 Stunden</li>
+    </ul>
+  </div>
+</div>
+
+<div class="ov" id="back" hidden>
+  <div class="card">
+    <h2>Willkommen zurück</h2>
+    <p id="backTxt">Dein Lauf war pausiert und geht genau dort weiter, wo du aufgehört hast.</p>
+    <div class="note" id="backK" hidden></div>
+    <div class="actions">
+      <button class="cta" id="resumeBtn">Weiterspielen</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="over" hidden>
+  <div class="card">
+    <h2 id="overTitle">Kanone gefallen</h2>
+    <div class="stats">
+      <div class="stat"><div class="l">Welle</div><div class="v num" id="oWave">0</div></div>
+      <div class="stat"><div class="l">Abschüsse</div><div class="v num" id="oKills">0</div></div>
+      <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="oK">0</div></div>
+    </div>
+    <div class="note" id="oBest" hidden>Neue Bestwelle.</div>
+    <div class="actions">
+      <button class="cta" id="labBtn2">Ins Labor</button>
+      <button class="sec" id="againBtn">Sofort neu starten</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="lab" hidden>
+  <div class="card">
+    <div class="labhead"><h2>Labor</h2><span class="num k" id="labK">0</span></div>
+    <p>Dauerhafte Verbesserungen für alle kommenden Läufe.</p>
+    <div id="labList"></div>
+    <div class="actions">
+      <button class="cta" id="labStart">Lauf starten</button>
+      <button class="sec" id="labClose">Zurück</button>
+    </div>
+    <button class="danger" id="resetBtn">Spielstand löschen</button>
+  </div>
+</div>
+
+<script src="core.js"></script>
+<script>
+(function () {
+  'use strict';
+  const C = window.Core;
+  const KEY = 'kernwacht.v1', RKEY = 'kernwacht.run.v2';
+  const $ = id => document.getElementById(id);
+
+  // ---------- Speichern ----------
+  function load(k) { try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
+  function put(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  let meta = load(KEY);
+  if (!meta || meta.v !== 1) meta = C.newMeta();
+  meta.auto = meta.auto || {};
+  if (meta.autoAll == null) meta.autoAll = true;
+  function save() {
+    meta.lastSeen = Date.now(); put(KEY, meta);
+    put(RKEY, run && !run.dead ? run.snapshot() : null);
+  }
+  window.__kwSave = save;
+
+  // ---------- Zahlen ----------
+  const SUF = ['', 'K', 'M', 'Mrd', 'Bio', 'Brd', 'Trd'];
+  function fmt(n) {
+    if (!isFinite(n)) return '∞';
+    if (n < 0) return '-' + fmt(-n);
+    if (n < 1000) return n < 10 && n % 1 ? n.toFixed(1).replace('.', ',') : String(Math.floor(n));
+    let i = 0; while (n >= 1000 && i < SUF.length - 1) { n /= 1000; i++; }
+    if (n >= 1000) return n.toExponential(2).replace('.', ',');
+    return (n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + ' ' + SUF[i];
+  }
+  const pct = x => Math.round(x * 100) + ' %';
+  const dec = (x, d) => x.toFixed(d).replace('.', ',');
+
+  // ---------- Zustand ----------
+  let run = null, speed = 1, paused = false, tab = 'atk', strikeArmed = false, shake = 0;
+  const fx = [], parts = [];
+  const ov = { menu: $('menu'), over: $('over'), lab: $('lab'), back: $('back') };
+  function show(name) {
+    for (const k in ov) ov[k].hidden = k !== name;
+    if (name === 'lab') renderLab();
+    if (name === 'menu') renderMenu();
+  }
+  function setPaused(p) { paused = p; $('pauseBtn').textContent = p ? '▶' : 'II'; }
+
+  function startRun() {
+    run = new C.Run(meta);
+    fx.length = 0; parts.length = 0; strikeArmed = false;
+    setPaused(false); show(null); buildList(); save();
+  }
+  function endRun(early) {
+    if (!run || run.finished) return;
+    run.finished = true;
+    const res = run.finish();
+    put(RKEY, null); save();
+    $('overTitle').textContent = early ? 'Lauf beendet' : 'Kanone gefallen';
+    $('oWave').textContent = res.wave; $('oKills').textContent = fmt(res.kills); $('oK').textContent = '+' + fmt(res.crystals);
+    $('oBest').hidden = !res.newBest;
+    setTimeout(() => show('over'), early ? 0 : 900);
+  }
+
+  // ---------- Offline / Rückkehr ----------
+  // Ein laufender Lauf pausiert, solange du weg bist. Das Labor sammelt währenddessen Kristalle.
+  function offlineCrystals() {
+    const now = Date.now(), away = Math.min(24 * 3600e3, now - (meta.lastSeen || now));
+    meta.lastSeen = now;
+    if (away < 60e3) return null;
+    const k = Math.floor(C.offlinePerHour(meta) * away / 3600e3);
+    meta.crystals += k;
+    const h = Math.floor(away / 3600e3), m = Math.floor(away / 60e3) % 60;
+    return { k, txt: (h ? h + ' h ' : '') + m + ' min' };
+  }
+  function welcomeBack(fromLoad) {
+    const o = offlineCrystals();
+    if (run && !run.dead) {
+      if (!o && !fromLoad) return;
+      setPaused(true);
+      $('backTxt').textContent = 'Dein Lauf in Welle ' + run.wave + ' war pausiert und geht genau dort weiter, wo du aufgehört hast.';
+      $('backK').hidden = !(o && o.k > 0);
+      if (o && o.k > 0) $('backK').textContent = `Das Labor hat in ${o.txt} ${fmt(o.k)} Kristalle gesammelt.`;
+      show('back'); save();
+    } else if (o && o.k > 0) {
+      $('offlineNote').textContent = `Während deiner Abwesenheit (${o.txt}) hat das Labor ${fmt(o.k)} Kristalle gesammelt.`;
+      $('offlineNote').hidden = false;
+      save(); if (!ov.menu.hidden) renderMenu();
+    }
+  }
+  $('resumeBtn').addEventListener('click', () => { show(null); setPaused(false); buildList(); });
+
+  // ---------- Upgrade-Liste ----------
+  const VAL = {
+    dmg: s => fmt(s.dmg), rate: s => dec(s.rate, 2) + '/s', range: s => Math.round(s.range),
+    crit: s => pct(s.crit), critx: s => dec(s.critx, 1) + '×', multi: s => (1 + s.multi) + ' Ziele',
+    mine: s => s.mineCd ? fmt(s.mineDmg) : '–', hp: s => fmt(s.maxHp), regen: s => fmt(s.regen) + '/s', armor: s => pct(s.armor),
+    knock: s => s.knock ? dec(s.knock, 1) : '–', shock: s => s.shockCd ? fmt(s.shockDmg) : '–',
+    blade: s => s.blades ? s.blades + '× ' + fmt(s.bladeDmg) : '–', loot: s => '×' + dec(s.loot, 2),
+    interest: s => pct(s.interest), crys: s => '×' + dec(s.crysMult, 2),
+  };
+  let rows = [];
+  function buildList() {
+    const list = $('list'); list.innerHTML = ''; rows = [];
+    for (const u of C.RUN_UPG.filter(u => u.tab === tab)) {
+      const el = document.createElement('div'); el.className = 'row';
+      el.innerHTML = `<div><div class="nm">${u.name}<small></small><span class="val"></span></div><div class="ds">${u.desc}</div></div>
+        <button class="auto" aria-pressed="false" aria-label="Auto-Kauf ${u.name}">AUTO</button>
+        <button class="buy num"></button>`;
+      const [autoB, buyB] = el.querySelectorAll('button');
+      autoB.addEventListener('click', () => { meta.auto[u.id] = !meta.auto[u.id]; save(); refresh(); });
+      buyB.addEventListener('click', () => { if (run && run.buy(u)) refresh(); });
+      list.appendChild(el);
+      rows.push({ u, el, lvl: el.querySelector('small'), val: el.querySelector('.val'), autoB, buyB });
+    }
+    refresh();
+  }
+  function refresh() {
+    const aa = $('autoAll');
+    aa.setAttribute('aria-pressed', meta.autoAll ? 'true' : 'false');
+    aa.textContent = meta.autoAll ? 'AUTO AN' : 'AUTO AUS';
+    if (!run) return;
+    $('energyTotal').textContent = fmt(run.energy);
+    for (const r of rows) {
+      const u = r.u, avail = run.available(u), mx = run.maxed(u);
+      r.el.classList.toggle('locked', !avail);
+      r.lvl.textContent = avail ? 'St. ' + run.L(u.id) : 'Labor';
+      r.val.textContent = avail ? VAL[u.id](run.s) : '';
+      r.autoB.setAttribute('aria-pressed', meta.auto[u.id] ? 'true' : 'false');
+      r.autoB.classList.toggle('off', !meta.autoAll);
+      r.autoB.disabled = !avail || mx;
+      if (!avail) { r.buyB.disabled = true; r.buyB.textContent = 'gesperrt'; r.buyB.className = 'buy num'; }
+      else if (mx) { r.buyB.disabled = true; r.buyB.textContent = 'MAX'; r.buyB.className = 'buy num max'; }
+      else { const c = run.cost(u), ok = run.energy >= c; r.buyB.disabled = !ok; r.buyB.className = 'buy num e' + (ok ? ' ok' : ''); r.buyB.textContent = fmt(c); }
+    }
+  }
+  $('autoAll').addEventListener('click', () => { meta.autoAll = !meta.autoAll; save(); refresh(); });
+  function autoBuy() {
+    if (!meta.autoAll) return;
+    for (let guard = 0; guard < 200; guard++) {
+      const opts = C.RUN_UPG.filter(u => meta.auto[u.id] && run.canBuy(u)).sort((a, b) => run.cost(a) - run.cost(b));
+      if (!opts.length) break;
+      run.buy(opts[0]);
+    }
+  }
+
+  // ---------- Labor ----------
+  function renderLab() {
+    $('labK').textContent = fmt(meta.crystals);
+    const list = $('labList'); list.innerHTML = '';
+    for (const u of C.META_UPG) {
+      const l = C.mlv(meta, u.id), mx = u.max != null && l >= u.max, c = C.metaCost(u, l), ok = !mx && meta.crystals >= c;
+      const el = document.createElement('div'); el.className = 'row';
+      el.style.gridTemplateColumns = '1fr auto';
+      el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}</div></div>
+        <button class="buy num ${mx ? 'max' : 'k-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? (u.unlock ? 'OK' : 'MAX') : fmt(c)}</button>`;
+      el.querySelector('button').addEventListener('click', () => { if (C.metaBuy(meta, u)) { if (run && !run.dead) run.recalc(); save(); renderLab(); } });
+      list.appendChild(el);
+    }
+    $('labStart').textContent = run && !run.dead ? 'Zurück zum Lauf' : 'Lauf starten';
+  }
+  function renderMenu() { $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals); }
+  let resetArmed = false;
+  $('resetBtn').addEventListener('click', () => {
+    if (!resetArmed) { resetArmed = true; $('resetBtn').textContent = 'Nochmal tippen zum Löschen'; setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Spielstand löschen'; }, 3000); return; }
+    meta = C.newMeta(); meta.auto = {}; meta.autoAll = true; run = null; put(RKEY, null); save();
+    resetArmed = false; $('resetBtn').textContent = 'Spielstand löschen'; renderLab();
+  });
+
+  // ---------- Bedienung ----------
+  $('startBtn').addEventListener('click', startRun);
+  $('labStart').addEventListener('click', () => { if (run && !run.dead) { show(null); setPaused(false); } else startRun(); });
+  $('againBtn').addEventListener('click', startRun);
+  $('labBtn').addEventListener('click', () => show('lab'));
+  $('labBtn2').addEventListener('click', () => show('lab'));
+  $('labClose').addEventListener('click', () => { if (run && !run.dead) { show(null); setPaused(false); } else show('menu'); });
+  $('pauseBtn').addEventListener('click', () => { if (run && !run.dead) setPaused(!paused); });
+  let endArmed = 0;
+  $('endBtn').addEventListener('click', () => {
+    if (!run || run.dead) return;
+    if (!endArmed) { endArmed = setTimeout(() => { endArmed = 0; $('endBtn').textContent = 'Beenden'; $('endBtn').classList.remove('armed'); }, 3000); $('endBtn').textContent = 'Wirklich?'; $('endBtn').classList.add('armed'); return; }
+    clearTimeout(endArmed); endArmed = 0; $('endBtn').textContent = 'Beenden'; $('endBtn').classList.remove('armed');
+    endRun(true);
+  });
+  document.querySelectorAll('#ctrl [data-speed]').forEach(b => b.addEventListener('click', () => {
+    speed = +b.dataset.speed;
+    document.querySelectorAll('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  }));
+  document.querySelectorAll('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => {
+    tab = b.dataset.tab;
+    document.querySelectorAll('#tabs [data-tab]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false'));
+    buildList();
+  }));
+  $('strikeBtn').addEventListener('click', () => {
+    if (!run || run.dead || run.charge < 1) return;
+    strikeArmed = !strikeArmed;
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else welcomeBack(false); });
+  window.addEventListener('pagehide', save);
+
+  // Tippen ins Feld: Orbitalschlag setzen oder Gegner markieren
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  cv.addEventListener('pointerdown', ev => {
+    if (!run || run.dead || paused) return;
+    const r = cv.getBoundingClientRect();
+    const wx = (ev.clientX - r.left - view.cx) / view.s, wy = (ev.clientY - r.top - view.cy) / view.s;
+    if (strikeArmed) { if (run.strike(wx, wy)) { strikeArmed = false; shake = 0.35; } }
+    else { const e = run.markAt(wx, wy); if (e) fx.push({ k: 'mark', id: e.id, t: 0, life: 0.5 }); }
+  });
+
+  // ---------- Zeichnen ----------
+  const view = { cx: 0, cy: 0, s: 1 };
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    view.s = Math.min(W / 500, (H - 110) / 440);
+    view.cx = W / 2; view.cy = H - 48 - 22 * view.s;
+  }
+  window.addEventListener('resize', resize);
+  const css = getComputedStyle(document.documentElement);
+  const col = n => css.getPropertyValue(n).trim();
+  const PAL = { core: col('--core'), hostile: col('--hostile'), energy: col('--energy'), crystal: col('--crystal'), heal: col('--heal'), line: col('--line'), dim: col('--ink-dim'), range: col('--range'), void: col('--void'), sky: col('--sky-top') };
+  const SHIP = { grunt: '#ff4f9a', runner: '#ff9447', brute: '#ff5a5a', shooter: '#c9ff4f', boss: '#ff4ff0' };
+  const FONT_NUM = col('--font-num'), FONT_UI = col('--font-ui');
+
+  // Sterne (statisch, leichtes Funkeln)
+  const stars = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.2 + 0.3, p: Math.random() * 6 }));
+
+  function glow(color, w, a) { ctx.strokeStyle = color; ctx.globalAlpha = (a || 1) * 0.28; ctx.lineWidth = w * 3.2; ctx.stroke(); ctx.globalAlpha = a || 1; ctx.lineWidth = w; ctx.stroke(); ctx.globalAlpha = 1; }
+  function hullFill(c) { ctx.fillStyle = '#0d0b22'; ctx.fill(); }
+  function flame(x, y, len, w, c, t, seed) {
+    const f = len * (0.75 + 0.25 * Math.sin(t * 0.03 + seed));
+    const g = ctx.createLinearGradient(x, y, x - f, y);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.25, c); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.moveTo(x, y - w); ctx.quadraticCurveTo(x - f * 0.5, y, x - f, y); ctx.quadraticCurveTo(x - f * 0.5, y, x, y + w); ctx.closePath();
+    ctx.fillStyle = g; ctx.fill();
+  }
+
+  // Raumschiffe: lokale Achse +x = Flugrichtung
+  function drawShip(e, t) {
+    const c = e.flash > 0 ? '#ffffff' : SHIP[e.type], r = e.r, sd = e.seed;
+    ctx.lineJoin = 'round';
+    if (e.type === 'grunt') {
+      flame(-r * 0.7, 0, r * 1.6, r * 0.28, '#ff7ab8', t, sd);
+      ctx.beginPath(); ctx.moveTo(r * 1.3, 0); ctx.lineTo(-r * 0.4, -r * 0.35); ctx.lineTo(-r * 0.9, -r * 1.1); ctx.lineTo(-r * 0.7, 0); ctx.lineTo(-r * 0.9, r * 1.1); ctx.lineTo(-r * 0.4, r * 0.35); ctx.closePath();
+      hullFill(); glow(c, 1.4);
+      ctx.beginPath(); ctx.arc(r * 0.35, 0, r * 0.22, 0, 7); ctx.fillStyle = c; ctx.fill();
+    } else if (e.type === 'runner') {
+      flame(-r * 1.1, 0, r * 4, r * 0.35, '#ffb066', t, sd);
+      ctx.beginPath(); ctx.moveTo(r * 1.8, 0); ctx.lineTo(-r * 1.1, -r * 0.6); ctx.lineTo(-r * 0.7, 0); ctx.lineTo(-r * 1.1, r * 0.6); ctx.closePath();
+      hullFill(); glow(c, 1.2);
+    } else if (e.type === 'brute') {
+      flame(-r * 0.95, -r * 0.45, r * 1.5, r * 0.22, '#ff8a8a', t, sd);
+      flame(-r * 0.95, r * 0.45, r * 1.5, r * 0.22, '#ff8a8a', t, sd + 1);
+      ctx.beginPath(); ctx.moveTo(r * 1.1, -r * 0.3); ctx.lineTo(r * 1.1, r * 0.3); ctx.lineTo(r * 0.4, r * 0.9); ctx.lineTo(-r * 0.95, r * 0.9); ctx.lineTo(-r * 0.95, -r * 0.9); ctx.lineTo(r * 0.4, -r * 0.9); ctx.closePath();
+      hullFill(); glow(c, 2);
+      ctx.beginPath(); ctx.moveTo(-r * 0.5, -r * 0.55); ctx.lineTo(r * 0.5, -r * 0.55); ctx.moveTo(-r * 0.5, r * 0.55); ctx.lineTo(r * 0.5, r * 0.55); glow(c, 1, 0.7);
+    } else if (e.type === 'shooter') {
+      flame(-r * 0.8, 0, r * 1.4, r * 0.3, '#e3ff8a', t, sd);
+      ctx.beginPath(); ctx.moveTo(r * 0.6, -r * 0.5); ctx.lineTo(r * 0.6, r * 0.5); ctx.lineTo(-r * 0.8, r * 1.0); ctx.lineTo(-r * 0.5, 0); ctx.lineTo(-r * 0.8, -r * 1.0); ctx.closePath();
+      hullFill(); glow(c, 1.4);
+      ctx.beginPath(); ctx.moveTo(r * 0.6, 0); ctx.lineTo(r * 1.7, 0); glow(c, 1.8);
+      const ch = e.stop && e.dist <= e.stop ? Math.max(0, 1 - e.shotT / 2) : 0;
+      if (ch > 0) { ctx.beginPath(); ctx.arc(r * 1.8, 0, 1 + ch * 3, 0, 7); ctx.fillStyle = c; ctx.fill(); }
+    } else {
+      // Mutterschiff
+      for (const o of [-0.55, 0, 0.55]) flame(-r * 0.9, r * o, r * 1.2, r * 0.14, '#ff9af7', t, sd + o * 3);
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 1.15, r * 0.95, 0, 0, 7); hullFill(); glow(c, 2.4);
+      ctx.save(); ctx.rotate(t * 0.0012);
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.62, 0, 7); ctx.setLineDash([r * 0.3, r * 0.2]); glow(c, 1.6, 0.8); ctx.setLineDash([]);
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.28, 0, 7); ctx.fillStyle = c; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 0.008); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.moveTo(r * 1.1, -r * 0.4); ctx.lineTo(r * 1.5, -r * 0.4); ctx.moveTo(r * 1.1, r * 0.4); ctx.lineTo(r * 1.5, r * 0.4); glow(c, 1.6);
+    }
+  }
+
+  // Kanone: verändert sich mit den Upgrades
+  let recoil = 0, lastShots = 0, flash = 0;
+  function drawCannon(t) {
+    const s = run.s, L = id => run.L(id);
+    const hpL = L('hp'), arL = L('armor'), rgL = L('regen');
+    const baseW = 30 + Math.min(18, hpL * 0.3);
+    // Schutzkuppel (Panzerung)
+    if (arL > 0) {
+      ctx.beginPath(); ctx.arc(0, 0, baseW + 12, Math.PI, 0);
+      ctx.fillStyle = 'rgba(62,240,255,' + (0.04 + s.armor * 0.12) + ')'; ctx.fill();
+      glow(PAL.core, 1 + s.armor * 2.5, 0.35 + s.armor * 0.6);
+    }
+    // Sockel
+    ctx.beginPath(); ctx.moveTo(-baseW, 14); ctx.lineTo(-baseW * 0.8, -6); ctx.lineTo(baseW * 0.8, -6); ctx.lineTo(baseW, 14); ctx.closePath();
+    ctx.fillStyle = '#0d0b22'; ctx.fill(); glow(PAL.core, 1.8);
+    const plates = Math.min(6, Math.floor(arL / 5));
+    for (let i = 0; i < plates; i++) { const x = -baseW * 0.7 + (i + 0.5) * (baseW * 1.4 / plates); ctx.beginPath(); ctx.moveTo(x - 3, 9); ctx.lineTo(x + 3, 9); glow(PAL.core, 2, 0.8); }
+    // Reparaturlichter
+    const lights = Math.min(5, Math.ceil(rgL / 6));
+    for (let i = 0; i < lights; i++) { const x = (i - (lights - 1) / 2) * 9; ctx.beginPath(); ctx.arc(x, 3, 1.8, 0, 7); ctx.fillStyle = PAL.heal; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 0.005 + i); ctx.fill(); ctx.globalAlpha = 1; }
+    // Turm
+    ctx.save(); ctx.rotate(run.aim + Math.PI / 2);
+    const n = 1 + s.multi, len = 26 + L('range') * 0.7, thick = 4 + Math.min(5, L('dmg') * 0.07), gap = thick * 2.1;
+    const back = recoil * 5;
+    for (let i = 0; i < n; i++) {
+      const ox = (i - (n - 1) / 2) * gap;
+      ctx.beginPath(); ctx.rect(ox - thick / 2, -len + back, thick, len - 6);
+      ctx.fillStyle = '#0d0b22'; ctx.fill(); glow(PAL.core, 1.4);
+      const fins = Math.min(5, Math.floor(L('rate') / 5));
+      for (let f = 0; f < fins; f++) { const y = -10 - f * 5 + back; ctx.beginPath(); ctx.moveTo(ox - thick, y); ctx.lineTo(ox + thick, y); glow(PAL.core, 1, 0.6); }
+      if (L('crit') > 0) { const rings = 1 + Math.min(2, Math.floor(L('critx') / 6)); for (let k = 0; k < rings; k++) { ctx.beginPath(); ctx.moveTo(ox - thick * 0.8, -len + back + 3 + k * 4); ctx.lineTo(ox + thick * 0.8, -len + back + 3 + k * 4); glow(PAL.energy, 1.3); } }
+      if (flash > 0) { ctx.beginPath(); ctx.arc(ox, -len + back - 4, 4 + thick * flash, 0, 7); ctx.fillStyle = 'rgba(255,255,255,' + flash + ')'; ctx.fill(); }
+    }
+    ctx.beginPath(); ctx.arc(0, 0, 13 + Math.min(4, hpL * 0.08), 0, 7);
+    ctx.fillStyle = '#0d0b22'; ctx.fill(); glow(run.hp / s.maxHp < 0.3 ? PAL.hostile : PAL.core, 2.2);
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.fillStyle = PAL.core; ctx.fill();
+    ctx.restore();
+  }
+
+  function spawnBoom(f) {
+    const big = f.type === 'boss' ? 3.2 : f.type === 'brute' ? 1.6 : 1;
+    const c = SHIP[f.type] || PAL.energy;
+    for (let i = 0; i < 14 * big; i++) { const a = Math.random() * 6.28, v = (40 + Math.random() * 120) * Math.sqrt(big); parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35 + Math.random() * 0.4, t: 0, c: Math.random() < 0.4 ? '#fff3c4' : c, k: 'spark' }); }
+    for (let i = 0; i < 4 * big; i++) { const a = Math.random() * 6.28, v = 20 + Math.random() * 60; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + Math.random() * 0.5, t: 0, c, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, sz: f.r * (0.4 + Math.random() * 0.5) }); }
+    if (f.type === 'boss') shake = 0.5;
+  }
+
+  function draw(t, dt) {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, PAL.sky); bg.addColorStop(1, PAL.void);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    for (const st of stars) { ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 0.001 + st.p); ctx.fillStyle = '#d9d4ff'; ctx.fillRect(st.x * W, st.y * H, st.r, st.r); }
+    ctx.globalAlpha = 1;
+
+    let sx = 0, sy = 0;
+    if (shake > 0) { sx = (Math.random() - 0.5) * shake * 14; sy = (Math.random() - 0.5) * shake * 14; shake = Math.max(0, shake - dt); }
+    ctx.save(); ctx.translate(view.cx + sx, view.cy + sy); ctx.scale(view.s, view.s);
+
+    // Bodenlinie und Peilraster
+    ctx.lineWidth = 1 / view.s; ctx.strokeStyle = PAL.line; ctx.globalAlpha = 0.6;
+    for (let r = 100; r <= 500; r += 100) { ctx.beginPath(); ctx.arc(0, 0, r, Math.PI, 0); ctx.stroke(); }
+    for (let i = 1; i < 6; i++) { const a = Math.PI + i * Math.PI / 6; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 40, Math.sin(a) * 40); ctx.lineTo(Math.cos(a) * 520, Math.sin(a) * 520); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    if (!run) { ctx.restore(); return; }
+    const s = run.s;
+
+    // Reichweite: goldener Bogen
+    ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0);
+    ctx.fillStyle = 'rgba(255,209,102,0.05)'; ctx.fill();
+    ctx.setLineDash([10, 7]); ctx.lineDashOffset = -t * 0.012;
+    ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0); glow(PAL.range, 2, 0.9);
+    ctx.setLineDash([]);
+
+    // Minen
+    for (const m of run.mines) { ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(t * 0.003); ctx.beginPath(); ctx.rect(-5, -5, 10, 10); glow(PAL.energy, 1.4); ctx.restore(); }
+
+    // Schiffe
+    for (const e of run.enemies) {
+      const p = run.pos(e);
+      const sway = Math.sin(t * 0.002 + e.seed) * Math.min(1, e.dist / 200) * 0.18;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(e.a + Math.PI + sway); ctx.scale(1.5, 1.5);
+      drawShip(e, t); ctx.restore();
+      if (e.type === 'brute' || e.type === 'boss' || e.hp < e.maxHp) {
+        const w = Math.max(18, e.r * 2.6), hy = p.y - e.r * 1.6 - 8;
+        ctx.fillStyle = '#2a2560'; ctx.fillRect(p.x - w / 2, hy, w, 3);
+        ctx.fillStyle = SHIP[e.type]; ctx.fillRect(p.x - w / 2, hy, w * Math.max(0, e.hp / e.maxHp), 3);
+      }
+      if (run.focus === e) {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(t * 0.004);
+        for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(e.r + 6, -4); ctx.lineTo(e.r + 10, 0); ctx.lineTo(e.r + 6, 4); glow(PAL.range, 1.6); }
+        ctx.restore();
+      }
+    }
+    // Projektile
+    ctx.lineCap = 'round';
+    for (const b of run.bullets) {
+      const tp = run.pos(b.tgt), d = Math.hypot(tp.x - b.x, tp.y - b.y) || 1;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 14, b.y - (tp.y - b.y) / d * 14);
+      glow(b.crit ? PAL.energy : PAL.core, b.crit ? 2.4 : 1.7);
+    }
+    for (const b of run.ebullets) { ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, 7); glow('#c9ff4f', 1.5); }
+    // Orbitklingen
+    if (s.blades) for (let i = 0; i < s.blades; i++) {
+      const a = run.bladeA + i * Math.PI * 2 / s.blades;
+      ctx.save(); ctx.translate(Math.cos(a) * 64, Math.sin(a) * 64); ctx.rotate(a * 3);
+      ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(0, -3); ctx.lineTo(9, 0); ctx.lineTo(0, 3); ctx.closePath(); glow(PAL.heal, 1.6); ctx.restore();
+    }
+    drawCannon(t);
+
+    // Partikel
+    for (const p of parts) {
+      const k = p.t / p.life; ctx.globalAlpha = Math.max(0, 1 - k);
+      if (p.k === 'spark') { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04); ctx.strokeStyle = p.c; ctx.lineWidth = 1.6; ctx.stroke(); }
+      else { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.beginPath(); ctx.moveTo(-p.sz, 0); ctx.lineTo(p.sz * 0.6, -p.sz * 0.4); ctx.lineTo(p.sz * 0.3, p.sz * 0.5); ctx.closePath(); ctx.fillStyle = '#0d0b22'; ctx.fill(); ctx.strokeStyle = p.c; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore(); }
+    }
+    ctx.globalAlpha = 1;
+    // Effekte
+    for (const f of fx) {
+      const k = f.t / f.life, a = Math.max(0, 1 - k);
+      if (f.k === 'boom') {
+        const R = f.r * (f.type === 'boss' ? 3.5 : 2.2);
+        const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, R * (0.4 + k));
+        g.addColorStop(0, `rgba(255,250,220,${a})`); g.addColorStop(0.35, `rgba(255,170,80,${a * 0.7})`); g.addColorStop(1, 'rgba(255,80,140,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, R * (0.4 + k), 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(f.x, f.y, R * (0.6 + k * 1.4), 0, 7); glow(SHIP[f.type], 1.4, a * 0.8);
+      } else if (f.k === 'shock') { ctx.beginPath(); ctx.arc(0, 0, f.r * (0.3 + 0.7 * k), Math.PI, 0); glow(PAL.core, 2.5, a); }
+      else if (f.k === 'mine') { ctx.beginPath(); ctx.arc(f.x, f.y, 45 * (0.3 + 0.7 * k), 0, 7); glow(PAL.energy, 2, a); }
+      else if (f.k === 'strike') {
+        ctx.beginPath(); ctx.moveTo(f.x, f.y - 600); ctx.lineTo(f.x, f.y); glow('#ffffff', 6 * a, a);
+        ctx.beginPath(); ctx.arc(f.x, f.y, C.STRIKE_R * (0.2 + 0.8 * Math.min(1, k * 2)), 0, 7);
+        ctx.fillStyle = `rgba(255,79,154,${0.25 * a})`; ctx.fill(); glow(PAL.hostile, 3, a);
+      } else if (f.k === 'dmg') {
+        ctx.globalAlpha = a; ctx.fillStyle = f.crit ? PAL.energy : '#ffffff';
+        ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM}`; ctx.textAlign = 'center';
+        ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 14 - k * 18); ctx.globalAlpha = 1;
+      }
+    }
+    ctx.restore();
+
+    for (const f of fx) {
+      const k = f.t / f.life;
+      if (f.k === 'hurt') {
+        const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.75);
+        g.addColorStop(0, 'rgba(255,79,154,0)'); g.addColorStop(1, `rgba(255,79,154,${0.22 * (1 - k)})`);
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      } else if (f.k === 'wave') {
+        ctx.globalAlpha = Math.min(1, (1 - k) * 2);
+        ctx.fillStyle = f.boss ? SHIP.boss : PAL.core; ctx.textAlign = 'center';
+        ctx.font = `700 ${Math.round(Math.min(W, H) * 0.08)}px ${FONT_UI}`;
+        ctx.fillText(f.boss ? 'MUTTERSCHIFF' : 'WELLE ' + f.w, W / 2, H * 0.32 - k * 10);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // ---------- Schleife ----------
+  const LIFE = { boom: 0.5, shock: 0.4, mine: 0.35, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.6 };
+  let last = performance.now(), uiT = 0, saveT = 0, autoT = 0;
+  function frame(now) {
+    const realDt = Math.min(0.25, (now - last) / 1000); last = now;
+    const live = run && !run.dead && !paused && ov.back.hidden && ov.lab.hidden;
+    if (live) {
+      let left = realDt * speed;
+      while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
+      autoT += realDt; if (autoT > 0.3) { autoT = 0; autoBuy(); }
+      for (const f of run.fx) {
+        f.life = LIFE[f.k] || 0.5;
+        if (f.k === 'dmg') f.dx = (Math.random() - 0.5) * 16;
+        if (f.k === 'boom') spawnBoom(f);
+        fx.push(f);
+      }
+      run.fx.length = 0;
+      if (run.shots !== lastShots) { lastShots = run.shots; recoil = 1; flash = 1; }
+      if (run.dead) endRun(false);
+    }
+    const fdt = live || !run ? realDt : 0;
+    recoil = Math.max(0, recoil - realDt * 8); flash = Math.max(0, flash - realDt * 10);
+    for (const f of fx) f.t += fdt;
+    for (let i = fx.length - 1; i >= 0; i--) if (fx[i].t >= fx[i].life) fx.splice(i, 1);
+    if (fx.length > 260) fx.splice(0, fx.length - 260);
+    for (const p of parts) { p.t += fdt; p.x += p.vx * fdt; p.y += p.vy * fdt; p.vx *= 1 - 2.5 * fdt; p.vy *= 1 - 2.5 * fdt; if (p.rot != null) p.rot += p.vr * fdt; }
+    for (let i = parts.length - 1; i >= 0; i--) if (parts[i].t >= parts[i].life) parts.splice(i, 1);
+    if (parts.length > 700) parts.splice(0, parts.length - 700);
+
+    uiT += realDt;
+    if (run && uiT > 0.15) {
+      uiT = 0;
+      $('waveNo').textContent = run.wave;
+      $('runK').textContent = fmt(Math.floor(run.crystals));
+      $('myDmg').textContent = fmt(run.s.dmg);
+      $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave));
+      $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
+      $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
+      $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';
+      const ch = run.charge, sb = $('strikeBtn');
+      $('strikeRing').setAttribute('stroke-dashoffset', String(163.4 * (1 - ch)));
+      sb.classList.toggle('ready', ch >= 1); sb.classList.toggle('armed', strikeArmed);
+      $('strikeLbl').innerHTML = strikeArmed ? 'Ziel<br>wählen' : ch >= 1 ? 'Orbital<br>bereit' : 'Orbital<br>' + Math.floor(ch * 100) + ' %';
+      $('hint').hidden = !strikeArmed;
+      refresh();
+    }
+    saveT += realDt; if (saveT > 5) { saveT = 0; if (run && !run.dead) save(); }
+    draw(now, realDt);
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  const snap = load(RKEY);
+  if (snap) {
+    try { run = C.Run.restore(meta, snap); buildList(); welcomeBack(true); }
+    catch (e) { run = null; put(RKEY, null); show('menu'); welcomeBack(false); }
+  } else { show('menu'); welcomeBack(false); }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+// Service Worker: offline spielbar, Updates werden beim nächsten Start aktiv
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        nw && nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            const b = document.createElement('button');
+            b.textContent = 'Neue Version – tippen zum Laden';
+            b.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:50;padding:8px 14px;border-radius:4px;background:#3ef0ff;color:#12102c;font:600 13px system-ui;border:0';
+            b.onclick = () => { try { window.__kwSave && window.__kwSave(); } catch (e) {} location.reload(); };
+            document.body.appendChild(b);
+          }
+        });
+      });
+    }).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

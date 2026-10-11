@@ -1,0 +1,17 @@
+{
+  "name": "Kernwacht",
+  "short_name": "Kernwacht",
+  "description": "Idle Tower Defense im Neon-Look. Ohne Shop, ohne Werbung.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12102c",
+  "theme_color": "#12102c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

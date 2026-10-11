@@ -1,0 +1,53 @@
+// Kernwacht Service Worker
+// Strategie: eigene Dateien "network first" (online immer die neueste Version),
+// offline aus dem Cache. Schriften "cache first".
+// Bei jeder Veröffentlichung VERSION erhöhen, damit alte Caches verschwinden.
+const VERSION = 'kw-1';
+const APP = [
+  './',
+  './index.html',
+  './core.js',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/maskable-512.png',
+  './icons/apple-touch-icon.png',
+];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== 'kw-fonts').map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+
+  // Google Fonts: einmal laden, dann aus dem Cache
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    e.respondWith(
+      caches.open('kw-fonts').then(c => c.match(req).then(hit => hit || fetch(req).then(res => { c.put(req, res.clone()); return res; })))
+    );
+    return;
+  }
+
+  if (url.origin !== location.origin) return;
+
+  // Eigene Dateien: Netz zuerst, Cache als Rückfall
+  e.respondWith(
+    fetch(req, { cache: 'no-cache' })
+      .then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
+        return res;
+      })
+      .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
+  );
+});
