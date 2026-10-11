@@ -111,12 +111,14 @@
     if (w % 10 === 0) e += ENEMY.boss.rw * rwScale(w);
     return e;
   }
-  // Sprungtor: höchste wählbare Startwelle in Fünferschritten (1, 6, 11, 16 …, nie eine Bosswelle)
+  // Sprungtor: höchste wählbare Startwelle = Anteil der Bestwelle, abgerundet; nie direkt eine Bosswelle
   function jumpShare(lvl) { return 0.3 + 0.05 * lvl; }
   function maxStartWave(meta, lvl) {
     if (!mlv(meta, 'u_jump')) return 1;
     const lim = meta.best * jumpShare(lvl == null ? mlv(meta, 'm_jump') : lvl);
-    return Math.max(1, Math.floor((lim - 1) / 5) * 5 + 1);
+    let w = Math.max(1, Math.floor(lim));
+    if (w % 10 === 0) w -= 1;
+    return w;
   }
   // Gewählte Startwelle; ohne eigene Wahl immer die höchste erlaubte
   function startWaveFor(meta) {

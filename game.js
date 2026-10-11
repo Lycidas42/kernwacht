@@ -291,7 +291,7 @@
       if (u.id === 'u_jump' || u.id === 'm_jump') {
         const now = C.mlv(meta, 'u_jump') ? C.maxStartWave(meta) : 1;
         const nextLvl = u.id === 'm_jump' && !mx ? C.mlv(meta, 'm_jump') + 1 : null;
-        const nextMax = u.id === 'u_jump' && !mx ? Math.max(1, Math.floor((meta.best * C.jumpShare(0) - 1) / 5) * 5 + 1) : nextLvl != null ? C.maxStartWave(meta, nextLvl) : null;
+        const nextMax = u.id === 'u_jump' && !mx ? (w => w % 10 === 0 ? w - 1 : w)(Math.max(1, Math.floor(meta.best * C.jumpShare(0)))) : nextLvl != null ? C.maxStartWave(meta, nextLvl) : null;
         extra = ` <b style="color:var(--core)">Start bis Welle ${now}${nextMax != null && nextMax !== now ? ' → ' + nextMax : ''}</b>`;
       }
       el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
@@ -318,7 +318,7 @@
       info = `ab Bestwelle ${need} startest du bei Welle 6`;
     } else {
       const jb = C.jumpBonus(meta, S);
-      info = S > 1 ? `${S === max ? 'höchste Stufe · ' : ''}+${fmt(jb.energy)} Energie · +${fmt(jb.crystals)} Kristalle` : `normaler Start · möglich bis Welle ${max}`;
+      info = S > 1 ? `${S === max ? 'höchste Startwelle · ' : ''}+${fmt(jb.energy)} Energie · +${fmt(jb.crystals)} Kristalle` : `normaler Start · möglich bis Welle ${max}`;
     }
     $$('.jumpbox').forEach(b => {
       b.hidden = !on;
