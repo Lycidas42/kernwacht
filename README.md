@@ -27,6 +27,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `manifest.webmanifest`, `icons/` | PWA-Metadaten und App-Icons |
 | `tools/sim.js` | Simuliert Läufe mit einem Kauf-Bot und gibt die erreichten Wellen aus |
 | `tools/check.js` | Fortschritt über viele Läufe, dazu Sprungtor, Mutterschiff und Schaden pro Quelle |
+| `tools/strategies.js` | Vergleicht Kaufstrategien (nur Angriff, ausgewogen, Abwehr); Varianten per `KW_P='{...}'` |
 | `tools/tune.js` | Zufallssuche über die Balancing-Parameter gegen eine Zielkurve |
 | `tools/build-single.js` | Baut `dist/kernwacht.html` als eigenständige Einzeldatei |
 
@@ -42,6 +43,7 @@ Wer das Spiel offen hat, sieht beim nächsten Laden einen Hinweis „Neue Versio
 
 ```bash
 node tools/check.js 30            # 30 Läufe mit Labor-Käufen, danach Sprungtor- und Boss-Test
+node tools/strategies.js 20       # lohnt sich Abwehr? drei Kaufstrategien im Vergleich
 node tools/sim.js 30              # einfache Simulation
 node tools/tune.js 300 240        # bis zu 300 Varianten, max. 240 s
 ```

@@ -18,7 +18,8 @@
     if (meta.autoAll == null) meta.autoAll = true;
     if (meta.sfx == null) meta.sfx = true;
     if (meta.music == null) meta.music = true;
-    if (meta.startWave == null) meta.startWave = 1;
+    if (meta.startPref === undefined) meta.startPref = null; // null = immer die höchste erlaubte Startwelle
+    delete meta.startWave;
     meta.name = meta.name || '';
   }
   normMeta();
@@ -33,7 +34,7 @@
   const dec = (x, d) => x.toFixed(d).replace('.', ',');
 
   // ---------- Zustand ----------
-  let speed = 1, paused = false, tab = 'atk', strikeArmed = false, adminOk = false;
+  let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
   const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin'];
@@ -52,9 +53,8 @@
   function setPaused(p) { paused = p; $('pauseBtn').textContent = p ? '▶' : 'II'; }
 
   function startRun() {
-    const S = Math.min(meta.startWave || 1, C.maxStartWave(meta));
-    run = new C.Run(meta, { startWave: S });
-    R.clear(); strikeArmed = false; dpsHist.length = 0;
+    run = new C.Run(meta, { startWave: C.startWaveFor(meta) });
+    R.clear(); armed = null; dpsHist.length = 0;
     setPaused(false); show(null); buildList(); save();
   }
   function endRun(early) {
@@ -66,7 +66,9 @@
     if (!early) A.play('gameover');
     $('overTitle').textContent = early ? 'Lauf beendet' : 'Kanone gefallen';
     $('oWave').textContent = res.wave; $('oKills').textContent = fmt(res.kills); $('oK').textContent = '+' + fmt(res.crystals);
-    $('oBest').hidden = !res.newBest;
+    $('oBest').textContent = res.newBest ? 'Neue Bestwelle!' : 'Bestwelle: ' + meta.best;
+    $('oBest').style.color = res.newBest ? '' : 'var(--ink-dim)';
+    renderJump();
     submitScore();
     setTimeout(() => show('over'), early ? 0 : 900);
   }
@@ -159,7 +161,7 @@
   const dpsHist = [];
   function sampleDps() {
     if (!runAlive()) return;
-    dpsHist.push({ t: run.time, d: Object.assign({}, run.dealt) });
+    dpsHist.push({ t: run.time, d: Object.assign({ taken: run.taken || 0, blocked: run.blocked || 0 }, run.dealt) });
     while (dpsHist.length > 2 && run.time - dpsHist[0].t > 10) dpsHist.shift();
   }
   function measured(k) {
@@ -205,6 +207,7 @@
     const kv = [
       ['Gesamt-DPS', fmt(sum)], ['Krit', pct(s.crit) + ' · ' + dec(s.critx, 1) + '×'], ['Reichweite', Math.round(s.range)],
       ['Strukturpunkte', fmt(s.maxHp)], ['Reparatur', fmt(s.regen) + '/s'], ['Panzerung', pct(s.armor)],
+      ['Treffer erhalten', fmt(measured('taken')) + '/s'], ['Abgewehrt', fmt(measured('blocked')) + '/s'],
       ['Energie-Faktor', '×' + dec(s.loot, 2)], ['Wellenprämie', s.waveBonus ? '+' + fmt(run.waveBonusAmount()) : '–'], ['Kristalle (Lauf)', fmt(Math.floor(run.crystals))], ['Abschüsse', fmt(run.kills)],
     ];
     $('kv').innerHTML = kv.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
@@ -217,9 +220,11 @@
     if (!run) return;
     const sb = $('ab-strike'), ch = run.charge;
     setRing(sb, ch);
-    sb.classList.toggle('ready', ch >= 1); sb.classList.toggle('armed', strikeArmed);
-    sb.querySelector('.st').textContent = strikeArmed ? 'Ziel' : ch >= 1 ? 'bereit' : Math.floor(ch * 100) + ' %';
-    $('hint').hidden = !strikeArmed;
+    if (armed && !canArm(armed)) armed = null;
+    sb.classList.toggle('ready', ch >= 1); sb.classList.toggle('armed', armed === 'strike');
+    sb.querySelector('.st').textContent = armed === 'strike' ? 'Ziel' : ch >= 1 ? 'bereit' : Math.floor(ch * 100) + ' %';
+    $('hint').hidden = !armed;
+    if (armed) $('hint').textContent = HINT[armed];
     for (const id of ['freeze', 'over']) {
       const b = $('ab-' + id), un = run.abilityUnlocked(id);
       b.hidden = !un; if (!un) continue;
@@ -227,26 +232,53 @@
       const active = id === 'freeze' ? run.frozen : run.overActive;
       const left = id === 'freeze' ? run.freezeUntil - run.time : run.overUntil - run.time;
       setRing(b, active ? left / A_.dur(l) : 1 - cd / max);
-      b.classList.toggle('ready', cd <= 0); b.classList.toggle('active', active);
+      b.classList.toggle('ready', cd <= 0); b.classList.toggle('active', active); b.classList.toggle('armed', armed === id);
       b.querySelector('.st').textContent = active ? dec(left, 1) + ' s' : cd > 0 ? Math.ceil(cd) + ' s' : 'bereit';
     }
   }
-  $('ab-strike').addEventListener('click', () => { if (!runAlive() || run.charge < 1) return; strikeArmed = !strikeArmed; A.play('click'); });
-  $('ab-freeze').addEventListener('click', () => { if (runAlive() && run.useAbility('freeze')) A.play('freeze'); });
-  $('ab-over').addEventListener('click', () => { if (runAlive() && run.useAbility('over')) A.play('over'); });
+  const HINT = { strike: 'Klick ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen' };
+  function canArm(id) { return runAlive() && (id === 'strike' ? run.charge >= 1 : run.abilityReady(id)); }
+  function fire(id, w) {
+    if (!runAlive()) return false;
+    if (id === 'strike') { if (!w || !run.strike(w.x, w.y)) return false; A.play('strike'); return true; }
+    if (run.useAbility(id)) { A.play(id); return true; }
+    return false;
+  }
+  // Knöpfe: Orbitalschlag braucht ein Ziel, Stasis und Überladung lösen sofort aus
+  $('ab-strike').addEventListener('click', () => { if (!canArm('strike')) return; armed = armed === 'strike' ? null : 'strike'; A.play('click'); });
+  $('ab-freeze').addEventListener('click', () => { armed = null; fire('freeze'); });
+  $('ab-over').addEventListener('click', () => { armed = null; fire('over'); });
+  // Tastatur: 1–5 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. Esc bricht ab.
+  const KEYS = { '1': 'strike', '2': 'freeze', '3': 'over' };
+  window.addEventListener('keydown', ev => {
+    if (ev.target && ev.target.tagName === 'INPUT') return;
+    if (ev.key === 'Escape') { armed = null; return; }
+    const id = KEYS[ev.key];
+    if (!id || current || paused) return;
+    if (!canArm(id)) { A.play('hurt'); return; }
+    armed = armed === id ? null : id; A.play('click');
+  });
 
   // ---------- Labor ----------
   function renderLab() {
     $('labK').textContent = fmt(meta.crystals);
     const list = $('labList'); list.innerHTML = '';
+    renderJump();
     for (const u of C.META_UPG) {
       if (u.req && !C.mlv(meta, u.req)) continue;
       const l = C.mlv(meta, u.id), mx = u.max != null && l >= u.max, c = C.metaCost(u, l), ok = !mx && meta.crystals >= c;
       const el = document.createElement('div'); el.className = 'row';
       el.style.gridTemplateColumns = '1fr auto';
-      el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}</div></div>
+      let extra = '';
+      if (u.id === 'u_jump' || u.id === 'm_jump') {
+        const now = C.mlv(meta, 'u_jump') ? C.maxStartWave(meta) : 1;
+        const nextLvl = u.id === 'm_jump' && !mx ? C.mlv(meta, 'm_jump') + 1 : null;
+        const nextMax = u.id === 'u_jump' && !mx ? Math.max(1, Math.floor((meta.best * C.jumpShare(0) - 1) / 5) * 5 + 1) : nextLvl != null ? C.maxStartWave(meta, nextLvl) : null;
+        extra = ` <b style="color:var(--core)">Start bis Welle ${now}${nextMax != null && nextMax !== now ? ' → ' + nextMax : ''}</b>`;
+      }
+      el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
         <button class="buy num ${mx ? 'max' : 'k-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? (u.unlock ? 'OK' : 'MAX') : fmt(c)}</button>`;
-      el.querySelector('button').addEventListener('click', () => { if (C.metaBuy(meta, u)) { A.play('buy'); if (runAlive()) run.recalc(); save(); renderLab(); } });
+      el.querySelector('button').addEventListener('click', () => { if (C.metaBuy(meta, u)) { A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab(); } });
       list.appendChild(el);
     }
     $('labStart').textContent = runAlive() ? 'Zurück zum Lauf' : 'Lauf starten';
@@ -256,17 +288,33 @@
   function renderMenu() {
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
     const max = C.maxStartWave(meta);
-    $('jumpBox').hidden = !C.mlv(meta, 'u_jump');
-    meta.startWave = Math.min(meta.startWave || 1, max);
-    const S = meta.startWave;
-    $('jumpVal').textContent = 'Welle ' + S;
-    if (S > 1) { const jb = C.jumpBonus(meta, S); $('jumpInfo').textContent = `+${fmt(jb.energy)} Energie · +${fmt(jb.crystals)} Kristalle`; }
-    else $('jumpInfo').textContent = max > 1 ? 'normaler Start · bis Welle ' + max : 'Bestwelle steigern, um zu springen';
-    $('jumpMinus').disabled = S <= 1; $('jumpPlus').disabled = S + 10 > max;
+    renderJump();
     syncSoundBtns();
   }
-  $('jumpMinus').addEventListener('click', () => { meta.startWave = Math.max(1, (meta.startWave || 1) - 10); A.play('click'); save(); renderMenu(); });
-  $('jumpPlus').addEventListener('click', () => { const max = C.maxStartWave(meta); if ((meta.startWave || 1) + 10 <= max) meta.startWave += 10; A.play('click'); save(); renderMenu(); });
+  // Sprungtor-Wahl: im Startmenü, im Labor und nach dem Lauf
+  function renderJump() {
+    const on = C.mlv(meta, 'u_jump') > 0, max = C.maxStartWave(meta), S = C.startWaveFor(meta);
+    let info;
+    if (max <= 1) {
+      const need = Math.ceil(6 / C.jumpShare(C.mlv(meta, 'm_jump')));
+      info = `ab Bestwelle ${need} startest du bei Welle 6`;
+    } else {
+      const jb = C.jumpBonus(meta, S);
+      info = S > 1 ? `${S === max ? 'höchste Stufe · ' : ''}+${fmt(jb.energy)} Energie · +${fmt(jb.crystals)} Kristalle` : `normaler Start · möglich bis Welle ${max}`;
+    }
+    $$('.jumpbox').forEach(b => {
+      b.hidden = !on;
+      b.querySelector('.jv').textContent = 'Welle ' + S;
+      b.querySelector('.ji').textContent = info;
+      b.querySelector('.jm').disabled = S <= 1;
+      b.querySelector('.jp').disabled = S >= max;
+    });
+  }
+  $$('.jumpbox .jm').forEach(b => b.addEventListener('click', () => { meta.startPref = Math.max(1, C.startWaveFor(meta) - 5); A.play('click'); save(); renderJump(); }));
+  $$('.jumpbox .jp').forEach(b => b.addEventListener('click', () => {
+    const max = C.maxStartWave(meta), next = C.startWaveFor(meta) + 5;
+    meta.startPref = next >= max ? null : next; A.play('click'); save(); renderJump();
+  }));
 
   // Titel 5× antippen öffnet den Admin-Zugang
   // Gleiches gilt für die Überschrift im Pausenmenü
@@ -404,12 +452,12 @@
   $('cv').addEventListener('pointerdown', ev => {
     if (!runAlive() || paused || current) return;
     const w = R.toWorld(ev.clientX, ev.clientY);
-    if (strikeArmed) { if (run.strike(w.x, w.y)) { strikeArmed = false; A.play('strike'); } }
+    if (armed) { if (fire(armed, w)) armed = null; }
     else if (run.markAt(w.x, w.y)) A.play('mark');
   });
 
   // ---------- Schleife ----------
-  const SOUND_OF = { bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
+  const SOUND_OF = { eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
   let last = performance.now(), uiT = 0, saveT = 0, autoT = 0, dpsT = 0, lastShots = 0;
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;
@@ -431,6 +479,9 @@
     if (run && uiT > 0.15) {
       uiT = 0;
       $('waveNo').textContent = run.wave;
+      const rec = run.wave > meta.best && meta.best > 0;
+      $('bestNo').textContent = rec ? 'NEUER REKORD' : 'Rekord ' + meta.best;
+      $('bestNo').classList.toggle('rec', rec);
       $('runK').textContent = fmt(Math.floor(run.crystals));
       $('myDmg').textContent = fmt(run.s.dmg);
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave));
@@ -443,7 +494,7 @@
       if (O.configured) O.setStatus(meta.name, run.wave);
     }
     saveT += realDt; if (saveT > 5) { saveT = 0; if (runAlive()) save(); }
-    R.draw(now, realDt, run, { strikeArmed });
+    R.draw(now, realDt, run, { strikeArmed: armed === 'strike', armed });
     requestAnimationFrame(frame);
   }
 

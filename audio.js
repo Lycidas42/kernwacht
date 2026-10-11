@@ -58,8 +58,16 @@
       osc('sawtooth', 200, 1600, 0.25, 0.12, t);
       noise(0.9, 0.5, 4000, 60, 0.9, t + 0.22); osc('sine', 80, 25, 0.8, 0.5, t + 0.22);
     },
-    freeze() { const t = ac.currentTime; [1760, 2093, 2637, 3136].forEach((f, i) => osc('triangle', f, f * 0.98, 0.5, 0.06, t + i * 0.05)); noise(0.6, 0.08, 8000, 2000, 1, t, 'highpass'); },
+    // EMP: dumpfer Schlag, elektrisches Knistern, dann klirrendes Eis
+    freeze() {
+      const t = ac.currentTime;
+      osc('sine', 160, 30, 0.6, 0.45, t);
+      noise(0.5, 0.3, 6000, 300, 6, t, 'bandpass');
+      for (let i = 0; i < 6; i++) osc('square', 2000 + Math.random() * 3000, 400, 0.04, 0.05, t + 0.03 + i * 0.045);
+      [1760, 2093, 2637, 3136].forEach((f, i) => osc('triangle', f, f * 0.98, 0.6, 0.05, t + 0.25 + i * 0.05));
+    },
     over() { const t = ac.currentTime; [220, 330, 440, 660, 880].forEach((f, i) => osc('sawtooth', f, f * 1.02, 0.12, 0.08, t + i * 0.05)); },
+    eshot() { if (throttle('eshot', 140)) return; osc('square', 520, 260, 0.05, 0.018); },
     hurt() { if (throttle('hurt', 160)) return; osc('sawtooth', 110, 70, 0.15, 0.12); },
     wave(o) {
       const t = ac.currentTime;

@@ -41,8 +41,8 @@
     { id: 'm_freeze', name: 'Stasis-Kondensator', desc: '+0,4 s Dauer, −1,5 s Abklingzeit', base: 15, g: 1.3, max: 15, req: 'u_freeze' },
     { id: 'u_over',   name: 'Überladung',         desc: 'Fähigkeit: Feuerrate kurzzeitig stark erhöht', base: 70, g: 1, max: 1, unlock: true },
     { id: 'm_over',   name: 'Überladungsspulen',  desc: '+0,5 s Dauer, +5 % Feuerrate, −1 s Abklingzeit', base: 20, g: 1.3, max: 15, req: 'u_over' },
-    { id: 'u_jump',   name: 'Sprungtor',          desc: 'Spätere Startwelle wählen (bis 30 % der Bestwelle)', base: 50, g: 1, max: 1, unlock: true },
-    { id: 'm_jump',   name: 'Sprungweite',        desc: '+5 % der Bestwelle als Startwelle', base: 30, g: 1.4, max: 8, req: 'u_jump' },
+    { id: 'u_jump',   name: 'Sprungtor',          desc: 'Startet Läufe später, bis 30 % der Bestwelle.', base: 50, g: 1, max: 1, unlock: true },
+    { id: 'm_jump',   name: 'Sprungweite',        desc: '+5 % der Bestwelle als Startwelle.', base: 30, g: 1.4, max: 8, req: 'u_jump' },
   ];
 
   // ---------- Fähigkeiten (aktiv auslösbar) ----------
@@ -73,10 +73,11 @@
   function startEnergy(meta) { const l = mlv(meta, 'm_start'); return l ? Math.round(10 * l * Math.pow(1.12, l)) : 0; }
 
   // Balancing-Stellschrauben
-  const P = root.KW_P || {
+  const P = Object.assign({
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
-    cBase: 2.5, cGrow: 1.01, pDmg: 8, pHp: 60, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
-  };
+    cBase: 2.5, cGrow: 1.01, pDmg: 8, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
+    rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3,
+  }, root.KW_P || {});
   const hpScale = w => Math.pow(1 + P.eHpLin * (w - 1), 2) * Math.pow(P.eHp, w - 1);
   const dmgScale = w => (1 + P.eDmgLin * (w - 1)) * Math.pow(P.eDmg, w - 1);
   const rwScale = w => P.rw0 * (1 + P.eRwLin * (w - 1)) * Math.pow(P.eRw, w - 1);
@@ -90,6 +91,7 @@
   }
 
   const SOURCES = ['gun', 'mine', 'shock', 'blade', 'strike'];
+  const UPG_BY_ID = {}; RUN_UPG.forEach(u => (UPG_BY_ID[u.id] = u));
   const MIX = w => {
     // Wahrscheinlichkeiten der Gegnertypen je Welle (wie in nextWave)
     const p = { grunt: 1, runner: 0, brute: 0, shooter: 0 };
@@ -109,11 +111,17 @@
     if (w % 10 === 0) e += ENEMY.boss.rw * rwScale(w);
     return e;
   }
-  // Sprungtor: höchste wählbare Startwelle (immer direkt nach einem Mutterschiff: 11, 21, 31 …)
-  function maxStartWave(meta) {
+  // Sprungtor: höchste wählbare Startwelle in Fünferschritten (1, 6, 11, 16 …, nie eine Bosswelle)
+  function jumpShare(lvl) { return 0.3 + 0.05 * lvl; }
+  function maxStartWave(meta, lvl) {
     if (!mlv(meta, 'u_jump')) return 1;
-    const lim = meta.best * (0.3 + 0.05 * mlv(meta, 'm_jump'));
-    return Math.max(1, Math.floor((lim - 1) / 10) * 10 + 1);
+    const lim = meta.best * jumpShare(lvl == null ? mlv(meta, 'm_jump') : lvl);
+    return Math.max(1, Math.floor((lim - 1) / 5) * 5 + 1);
+  }
+  // Gewählte Startwelle; ohne eigene Wahl immer die höchste erlaubte
+  function startWaveFor(meta) {
+    const max = maxStartWave(meta);
+    return meta.startPref ? Math.min(meta.startPref, max) : max;
   }
   function jumpBonus(meta, S) {
     let e = 0, k = 0;
@@ -121,6 +129,26 @@
     const loot = 1.25 * (1 + 0.08 * mlv(meta, 'm_loot'));
     return { energy: e * loot, crystals: k * (1 + 0.1 * mlv(meta, 'm_crys')) };
   }
+
+  // Fernkampf je Schiffstyp: ab Distanz `from`, alle `cd` Sekunden, Anteil `dmg` des Kontaktschadens
+  const GUNS = {
+    grunt:   { from: 230, cd: 3.2, dmg: 0.35 },
+    brute:   { from: 260, cd: 2.6, dmg: 0.6, big: true },
+    shooter: { from: 320, cd: 2.0, dmg: 1 },
+  };
+
+  // Flugbahnen: Schlangenlinien, Zickzack und Loopings
+  function flightPath(type, w) {
+    const r = Math.random();
+    const loops = w >= 4 ? { grunt: 0.3, runner: 0.4, shooter: 0.15 }[type] || 0 : 0;
+    const p = { amp: 0, freq: 1.5, loopAt: r < loops ? 190 + Math.random() * 150 : 0, loopDir: Math.random() < 0.5 ? -1 : 1, loopLeft: 0, looped: false };
+    if (type === 'grunt') { p.amp = 0.35 + Math.random() * 0.3; p.freq = 1.1 + Math.random() * 0.8; }
+    else if (type === 'runner') { p.amp = 0.7 + Math.random() * 0.25; p.freq = 2.4 + Math.random(); }
+    else if (type === 'brute') { p.amp = 0.12; p.freq = 0.8; }
+    else if (type === 'shooter') { p.amp = 0.3; p.freq = 1.2; }
+    return p;
+  }
+  const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
 
   class Run {
     constructor(meta, opts) {
@@ -156,7 +184,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'holding', 'startWave', 'god'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'holding', 'startWave', 'god', 'taken', 'blocked'];
       const o = {}; keep.forEach(k => (o[k] = this[k]));
       o.enemies = this.enemies.map(e => Object.assign({}, e));
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -174,7 +202,12 @@
       return r;
     }
 
-    L(id) { return this.lv[id] + (this.free[id] || 0); }
+    // Freigeschaltete Zusatzwaffen beginnen auf Stufe 1
+    L(id) {
+      const u = UPG_BY_ID[id];
+      const unlockFree = u && u.req && mlv(this.meta, u.req) > 0 ? 1 : 0;
+      return this.lv[id] + (this.free[id] || 0) + unlockFree;
+    }
 
     recalc() {
       const M = id => mlv(this.meta, id), L = id => this.L(id);
@@ -187,9 +220,9 @@
       s.multi = L('multi');
       s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp'));
       const rg = L('regen');
-      s.regen = s.maxHp * 0.025 * (rg / (rg + 15)) * (1 + 0.1 * M('m_regen'));
+      s.regen = s.maxHp * P.rgMax * (rg / (rg + P.rgK)) * (1 + 0.1 * M('m_regen'));
       const ar = L('armor');
-      s.armor = Math.min(0.65, 0.55 * ar / (ar + 15) + 0.01 * M('m_armor'));
+      s.armor = Math.min(P.arCap, P.arMax * ar / (ar + P.arK) + 0.01 * M('m_armor'));
       s.knock = L('knock') ? 1.5 + 0.35 * L('knock') : 0;
       s.loot = (1 + 0.1 * L('loot')) * (1 + 0.08 * M('m_loot'));
       // Wellenprämie: Anteil der Abschuss-Energie einer typischen Welle, als fester Bonus pro überstandener Welle
@@ -275,6 +308,8 @@
         dmg: d.dmg * dmgScale(w), rw: d.rw * rwScale(w), r: d.r, stop: d.stop || 0,
         atkT: 0.5, shotT: 1 + Math.random(), bladeHit: 0, kbT: 0, flash: 0, seed: Math.random() * 6.28,
       };
+      e.hd = Math.atan2(-y0, -x0);
+      Object.assign(e, flightPath(type, w));
       if (type === 'boss') {
         e.stop = Math.max(115, Math.min(210, this.s.range - 20));
         e.actT = 3; e.hoverT = 0; e.shieldUntil = 0; e.a0 = e.a; e.acts = 0;
@@ -286,6 +321,26 @@
     spawn(type) { this.spawnAt(type, (Math.random() * 2 - 1) * FIELD_W, -FIELD_H - Math.random() * 30); }
 
     pos(e) { return { x: Math.cos(e.a) * e.dist, y: Math.sin(e.a) * e.dist }; }
+
+    // Ein Flugschritt: Kurs halten, schlängeln oder Looping fliegen
+    fly(e, dt, contact) {
+      if (e.hd == null) e.hd = e.a + Math.PI;
+      let x = Math.cos(e.a) * e.dist, y = Math.sin(e.a) * e.dist;
+      if (e.loopAt && !e.looped && e.dist < e.loopAt) { e.looped = true; e.loopLeft = Math.PI * 2; }
+      if (e.loopLeft > 0) {
+        const rate = e.spd / 32;
+        e.hd += e.loopDir * rate * dt; e.loopLeft -= rate * dt;
+      } else {
+        const fade = Math.min(1, Math.max(0, (e.dist - contact - 20) / 140));
+        const want = Math.atan2(-y, -x) + (e.amp || 0) * fade * Math.sin(this.time * (e.freq || 1.5) + e.seed);
+        const diff = wrapA(want - e.hd), turn = 3.2 * dt;
+        e.hd += Math.max(-turn, Math.min(turn, diff));
+      }
+      x += Math.cos(e.hd) * e.spd * dt; y += Math.sin(e.hd) * e.spd * dt;
+      x = Math.max(-FIELD_W * 1.25, Math.min(FIELD_W * 1.25, x));
+      y = Math.min(-4, y);
+      e.a = Math.atan2(y, x); e.dist = Math.max(contact, Math.hypot(x, y));
+    }
 
     hurt(e, d, crit, src) {
       if (e.hp <= 0) return;
@@ -306,6 +361,8 @@
 
     hitBase(d) {
       if (this.god) return;
+      this.taken = (this.taken || 0) + d * (1 - this.s.armor);
+      this.blocked = (this.blocked || 0) + d * this.s.armor;
       this.hp -= d * (1 - this.s.armor);
       if (this.fxOn) this.fx.push({ k: 'hurt', t: 0 });
       if (this.hp <= 0 && !this.dead) { this.hp = 0; this.dead = true; }
@@ -405,11 +462,24 @@
           }
           continue;
         }
-        if (e.stop && e.dist <= e.stop) {
+        // Beschuss im Anflug: Jäger und Kanonenboote feuern, sobald sie nah genug sind
+        const gun = GUNS[e.type];
+        if (gun && e.dist <= gun.from && e.dist > contact + 4) {
           e.shotT -= dt;
-          if (e.shotT <= 0) { e.shotT = 2; const p = this.pos(e); this.ebullets.push({ x: p.x, y: p.y, dmg: e.dmg }); }
+          if (e.shotT <= 0) {
+            e.shotT = gun.cd * (0.85 + Math.random() * 0.3);
+            const p = this.pos(e); this.ebullets.push({ x: p.x, y: p.y, dmg: e.dmg * gun.dmg, big: gun.big });
+            if (this.fxOn) this.fx.push({ k: 'eshot', t: 0, type: e.type });
+          }
+        }
+        if (e.stop && e.dist <= e.stop) {
+          // Artillerieschiff hält Abstand und feuert nur
         } else if (e.dist > contact) {
-          e.dist = Math.max(contact, e.dist - e.spd * dt);
+          this.fly(e, dt, contact);
+        } else if (e.bomb || e.type === 'runner') {
+          // Bombe und Abfangjäger sprengen sich beim Aufprall
+          this.hitBase(e.dmg * (e.bomb ? 1 : P.kamikaze)); e.hp = 0;
+          if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'boom', x: p.x, y: p.y, t: 0, type: e.bomb ? 'bomb' : 'runner', r: e.bomb ? 18 : 9 }); }
         } else if (e.bomb) {
           this.hitBase(e.dmg); e.hp = 0;
           if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'boom', x: p.x, y: p.y, t: 0, type: 'bomb', r: 18 }); }
@@ -555,5 +625,5 @@
   }
   const enemyHp = (type, w) => ENEMY[type].hp * hpScale(w);
 
-  root.Core = { RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  root.Core = { RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

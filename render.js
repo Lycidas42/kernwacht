@@ -20,7 +20,7 @@
     const HULL = '#0d0b22';
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
-    const LIFE = { bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -211,6 +211,10 @@
       if (f.k === 'boom') boom(f);
       if (f.k === 'mine') mineBoom(f);
       if (f.k === 'strike') shake = Math.max(shake, 0.35);
+      if (f.k === 'freeze') {
+        shake = Math.max(shake, 0.25);
+        for (let i = 0; i < 40; i++) { const a = Math.PI + Math.random() * Math.PI, v = 120 + Math.random() * 260; parts.push({ x: 0, y: -10, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.4 + Math.random() * 0.4, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'spark' }); }
+      }
       fx.push(f);
     }
     function boom(f) {
@@ -288,8 +292,9 @@
       // Schiffe
       for (const e of run.enemies) {
         const p = run.pos(e);
-        const sway = e.type === 'boss' ? 0 : Math.sin(t * 0.002 + e.seed) * Math.min(1, e.dist / 200) * 0.18;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(e.a + Math.PI + sway); ctx.scale(1.5, 1.5);
+        // Schiffe zeigen in Flugrichtung; Mutterschiff und haltende Schützen zur Kanone
+        const facing = e.type === 'boss' || e.hd == null || (e.stop && e.dist <= e.stop) ? e.a + Math.PI : e.hd;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(facing); ctx.scale(1.5, 1.5);
         drawShip(e, t, frozen); ctx.restore();
         if (e.type === 'boss' && e.shieldUntil > run.time) {
           const left = e.shieldUntil - run.time;
@@ -361,6 +366,24 @@
           ctx.globalAlpha = Math.min(1, a * 1.5); ctx.fillStyle = PAL.energy;
           ctx.font = `600 14px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText('+' + fmt(f.v) + ' Prämie', 0, -95 - k * 30); ctx.globalAlpha = 1;
+        } else if (f.k === 'freeze') {
+          // EMP-Welle: gezackter Ring läuft über das Feld, Blitze zu den Schiffen
+          const R = 40 + 620 * Math.min(1, k * 1.6);
+          ctx.beginPath();
+          for (let i = 0; i <= 48; i++) { const an = Math.PI + i * Math.PI / 48, rr = R + (Math.random() - 0.5) * 14; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(an) * rr, -10 + Math.sin(an) * rr); }
+          glow(PAL.frost, 2.6, a);
+          ctx.beginPath(); ctx.arc(0, -10, R * 0.85, Math.PI, 0); glow('#ffffff', 1, a * 0.4);
+          if (k < 0.55) {
+            let n = 0;
+            for (const e of run.enemies) {
+              if (n++ > 10) break;
+              const p = run.pos(e); if (Math.hypot(p.x, p.y) > R) continue;
+              ctx.beginPath(); ctx.moveTo(0, -10);
+              const steps = 6;
+              for (let j = 1; j <= steps; j++) { const q = j / steps; ctx.lineTo(p.x * q + (j < steps ? (Math.random() - 0.5) * 22 : 0), -10 + (p.y + 10) * q + (j < steps ? (Math.random() - 0.5) * 22 : 0)); }
+              glow('#e8fbff', 1.3, a);
+            }
+          }
         } else if (f.k === 'shieldhit') {
           ctx.beginPath(); ctx.arc(f.x, f.y, 30 + k * 10, 0, 7); glow(PAL.frost, 1.5, a * 0.7);
         } else if (f.k === 'dmg') {
@@ -398,7 +421,7 @@
           g.addColorStop(0, 'rgba(255,79,154,0)'); g.addColorStop(1, `rgba(255,79,154,${0.22 * (1 - k)})`);
           ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
         } else if (f.k === 'freeze' || f.k === 'over') {
-          ctx.fillStyle = f.k === 'freeze' ? `rgba(159,232,255,${0.3 * (1 - k)})` : `rgba(255,138,61,${0.22 * (1 - k)})`;
+          ctx.fillStyle = f.k === 'freeze' ? `rgba(220,248,255,${(k < 0.08 ? 0.7 : 0.3) * (1 - k)})` : `rgba(255,138,61,${0.22 * (1 - k)})`;
           ctx.fillRect(0, 0, W, H);
         } else if (f.k === 'wave') {
           ctx.globalAlpha = Math.min(1, (1 - k) * 2);
