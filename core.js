@@ -9,7 +9,7 @@
     { id: 'range',    tab: 'atk', name: 'Reichweite',       desc: '+5 Reichweite',                    base: 10,  g: 1.17, max: 30 },
     { id: 'crit',     tab: 'atk', name: 'Krit-Chance',      desc: '+2,5 % Chance auf Krit',           base: 12,  g: 1.18, max: 16 },
     { id: 'critx',    tab: 'atk', name: 'Krit-Schaden',     desc: '+0,1× Schaden bei Krit',           base: 16,  g: 1.16, max: 15 },
-    { id: 'multi',    tab: 'atk', name: 'Mehrfachschuss',   desc: '+1 Ziel pro Salve',                base: 150, g: 5,    max: 2 },
+    { id: 'multi',    tab: 'atk', name: 'Mehrfachschuss',   desc: '+1 Nebenrohr mit 35 % Schaden',    base: 150, g: 3.2,  max: 3 },
     { id: 'mine',     tab: 'atk', name: 'Minenwerfer',      desc: 'Mehr und stärkere Minen',          base: 60,  g: 1.2,  max: 30, req: 'u_mine' },
     { id: 'hp',       tab: 'def', name: 'Hülle',            desc: '×1,10 Strukturpunkte',             base: 4,   g: 1.12 },
     { id: 'regen',    tab: 'def', name: 'Reparatur',        desc: 'Mehr Regeneration pro Sekunde',    base: 8,   g: 1.15, max: 40 },
@@ -17,7 +17,7 @@
     { id: 'knock',    tab: 'def', name: 'Rückstoß',         desc: 'Treffer stoßen Gegner zurück',     base: 20,  g: 1.2,  max: 20 },
     { id: 'shock',    tab: 'def', name: 'Schockwelle',      desc: 'Druckring bis weit ins Feld',      base: 50,  g: 1.2,  max: 30, req: 'u_shock' },
     { id: 'blade',    tab: 'def', name: 'Orbitklingen',     desc: 'Pendelnde Klingen über der Kanone', base: 70,  g: 1.2,  max: 30, req: 'u_blade' },
-    { id: 'loot',     tab: 'eco', name: 'Energieausbeute',  desc: '+10 % Energie pro Abschuss',       base: 8,   g: 1.16, max: 30 },
+    { id: 'loot',     tab: 'eco', name: 'Energieausbeute',  desc: '+5 % Energie pro Abschuss',        base: 8,   g: 1.16, max: 30 },
     { id: 'interest', tab: 'eco', name: 'Wellenprämie',     desc: 'Energiebonus am Ende jeder Welle', base: 25,  g: 1.22, max: 15 },
     { id: 'crys',     tab: 'eco', name: 'Kristallfilter',   desc: '+6 % Kristalle in diesem Lauf',    base: 40,  g: 1.25, max: 20 },
   ];
@@ -76,7 +76,7 @@
   const P = Object.assign({
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, pDmg: 8, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
-    rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3,
+    rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
   }, root.KW_P || {});
   const hpScale = w => Math.pow(1 + P.eHpLin * (w - 1), 2) * Math.pow(P.eHp, w - 1);
   const dmgScale = w => (1 + P.eDmgLin * (w - 1)) * Math.pow(P.eDmg, w - 1);
@@ -102,7 +102,7 @@
     p.grunt = 1 - used;
     return p;
   };
-  const waveCount = w => { let n = Math.min(70, 5 + Math.floor(1.6 * w)); if (w % 10 === 0) n = Math.floor(n * 0.6); return n; };
+  const waveCount = w => { let n = Math.min(70, 5 + Math.floor(P.nGrow * w)); if (w % 10 === 0) n = Math.floor(n * 0.6); return n; };
   // Erwartete Energie aus Abschüssen einer Welle (ohne Upgrades im Lauf)
   function waveEnergy(w) {
     const p = MIX(w); let avg = 0;
@@ -137,18 +137,6 @@
     shooter: { from: 320, cd: 2.0, dmg: 1 },
   };
 
-  // Flugbahnen: Schlangenlinien, Zickzack und Loopings
-  function flightPath(type, w) {
-    const r = Math.random();
-    const loops = w >= 4 ? { grunt: 0.3, runner: 0.4, shooter: 0.15 }[type] || 0 : 0;
-    const p = { amp: 0, freq: 1.5, loopAt: r < loops ? 190 + Math.random() * 150 : 0, loopDir: Math.random() < 0.5 ? -1 : 1, loopLeft: 0, looped: false };
-    if (type === 'grunt') { p.amp = 0.35 + Math.random() * 0.3; p.freq = 1.1 + Math.random() * 0.8; }
-    else if (type === 'runner') { p.amp = 0.7 + Math.random() * 0.25; p.freq = 2.4 + Math.random(); }
-    else if (type === 'brute') { p.amp = 0.12; p.freq = 0.8; }
-    else if (type === 'shooter') { p.amp = 0.3; p.freq = 1.2; }
-    return p;
-  }
-  const wrapA = a => Math.atan2(Math.sin(a), Math.cos(a));
 
   class Run {
     constructor(meta, opts) {
@@ -218,21 +206,22 @@
       s.crit = 0.025 * L('crit');
       s.critx = 1.5 + 0.1 * L('critx');
       s.multi = L('multi');
+      s.multiDmg = P.multiDmg; // Nebenrohre treffen schwächer als das Hauptrohr
       s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp'));
       const rg = L('regen');
       s.regen = s.maxHp * P.rgMax * (rg / (rg + P.rgK)) * (1 + 0.1 * M('m_regen'));
       const ar = L('armor');
       s.armor = Math.min(P.arCap, P.arMax * ar / (ar + P.arK) + 0.01 * M('m_armor'));
       s.knock = L('knock') ? 1.5 + 0.35 * L('knock') : 0;
-      s.loot = (1 + 0.1 * L('loot')) * (1 + 0.08 * M('m_loot'));
+      s.loot = (1 + P.lootK * L('loot')) * (1 + 0.08 * M('m_loot'));
       // Wellenprämie: Anteil der Abschuss-Energie einer typischen Welle, als fester Bonus pro überstandener Welle
-      s.waveBonus = 0.04 * L('interest');
+      s.waveBonus = P.bonusK * L('interest');
       s.crysMult = (1 + 0.06 * L('crys')) * (1 + 0.1 * M('m_crys'));
       // Schockwelle: Druckring, der mit der Reichweite wächst
       const sh = L('shock');
       s.shockCd = sh ? Math.max(2.5, 6.5 - 0.13 * sh) : 0;
       s.shockR = Math.min(s.range, s.range * (0.7 + 0.01 * sh));
-      s.shockDmg = s.dmg * (1 + 0.15 * sh);
+      s.shockDmg = s.dmg * P.shockK * (1 + 0.15 * sh);
       // Orbitklingen: pendeln über der Kanone, Radius folgt der Reichweite
       const bl = L('blade');
       s.blades = bl ? Math.min(6, 1 + Math.floor(bl / 5)) : 0;
@@ -243,12 +232,12 @@
       // Minen
       const mi = L('mine');
       s.mineCd = mi ? Math.max(1, 4 - 0.1 * mi) : 0;
-      s.mineDmg = s.dmg * (2 + 0.2 * mi);
-      s.mineMax = mi ? 6 + Math.floor(mi / 3) : 0;
+      s.mineDmg = s.dmg * P.mineK * (2 + 0.2 * mi);
+      s.mineMax = mi ? 4 + Math.floor(mi / 5) : 0;
       s.mineTrig = 16;
       s.mineBlast = 45 + mi;
       s.strikeDmg = s.dmg * 25;
-      s.dps = s.dmg * s.rate * (1 + s.crit * (s.critx - 1));
+      s.dps = s.dmg * s.rate * (1 + s.crit * (s.critx - 1)) * (1 + s.multi * s.multiDmg);
       this.s = s;
     }
 
@@ -308,8 +297,6 @@
         dmg: d.dmg * dmgScale(w), rw: d.rw * rwScale(w), r: d.r, stop: d.stop || 0,
         atkT: 0.5, shotT: 1 + Math.random(), bladeHit: 0, kbT: 0, flash: 0, seed: Math.random() * 6.28,
       };
-      e.hd = Math.atan2(-y0, -x0);
-      Object.assign(e, flightPath(type, w));
       if (type === 'boss') {
         e.stop = Math.max(115, Math.min(210, this.s.range - 20));
         e.actT = 3; e.hoverT = 0; e.shieldUntil = 0; e.a0 = e.a; e.acts = 0;
@@ -322,25 +309,7 @@
 
     pos(e) { return { x: Math.cos(e.a) * e.dist, y: Math.sin(e.a) * e.dist }; }
 
-    // Ein Flugschritt: Kurs halten, schlängeln oder Looping fliegen
-    fly(e, dt, contact) {
-      if (e.hd == null) e.hd = e.a + Math.PI;
-      let x = Math.cos(e.a) * e.dist, y = Math.sin(e.a) * e.dist;
-      if (e.loopAt && !e.looped && e.dist < e.loopAt) { e.looped = true; e.loopLeft = Math.PI * 2; }
-      if (e.loopLeft > 0) {
-        const rate = e.spd / 32;
-        e.hd += e.loopDir * rate * dt; e.loopLeft -= rate * dt;
-      } else {
-        const fade = Math.min(1, Math.max(0, (e.dist - contact - 20) / 140));
-        const want = Math.atan2(-y, -x) + (e.amp || 0) * fade * Math.sin(this.time * (e.freq || 1.5) + e.seed);
-        const diff = wrapA(want - e.hd), turn = 3.2 * dt;
-        e.hd += Math.max(-turn, Math.min(turn, diff));
-      }
-      x += Math.cos(e.hd) * e.spd * dt; y += Math.sin(e.hd) * e.spd * dt;
-      x = Math.max(-FIELD_W * 1.25, Math.min(FIELD_W * 1.25, x));
-      y = Math.min(-4, y);
-      e.a = Math.atan2(y, x); e.dist = Math.max(contact, Math.hypot(x, y));
-    }
+
 
     hurt(e, d, crit, src) {
       if (e.hp <= 0) return;
@@ -475,7 +444,7 @@
         if (e.stop && e.dist <= e.stop) {
           // Artillerieschiff hält Abstand und feuert nur
         } else if (e.dist > contact) {
-          this.fly(e, dt, contact);
+          e.dist = Math.max(contact, e.dist - e.spd * dt);
         } else if (e.bomb || e.type === 'runner') {
           // Bombe und Abfangjäger sprengen sich beim Aufprall
           this.hitBase(e.dmg * (e.bomb ? 1 : P.kamikaze)); e.hp = 0;
@@ -509,7 +478,7 @@
             for (let i = 0; i < Math.min(inRange.length, 1 + s.multi); i++) {
               const crit = Math.random() < s.crit;
               const mx = Math.cos(this.aim) * BASE_R * 2.4, my = -8 + Math.sin(this.aim) * BASE_R * 2.4;
-              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.dmg * (crit ? s.critx : 1), crit });
+              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.dmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1), crit });
             }
           }
         } else this.fireT = 1;

@@ -103,7 +103,7 @@
   // ---------- Upgrade-Liste ----------
   const VAL = {
     dmg: s => fmt(s.dmg), rate: s => dec(s.rate, 2) + '/s', range: s => Math.round(s.range),
-    crit: s => pct(s.crit), critx: s => dec(s.critx, 1) + '×', multi: s => (1 + s.multi) + (s.multi ? ' Ziele' : ' Ziel'),
+    crit: s => pct(s.crit), critx: s => dec(s.critx, 1) + '×', multi: s => s.multi ? '+' + s.multi + ' × ' + Math.round(s.multiDmg * 100) + ' %' : '–',
     mine: s => s.mineCd ? fmt(s.mineDmg) : '–', hp: s => fmt(s.maxHp), regen: s => fmt(s.regen) + '/s', armor: s => pct(s.armor),
     knock: s => s.knock ? dec(s.knock, 1) : '–', shock: s => s.shockCd ? fmt(s.shockDmg) : '–',
     blade: s => s.blades ? s.blades + '× ' + fmt(s.bladeDmg) : '–', loot: s => '×' + dec(s.loot, 2),
@@ -260,6 +260,22 @@
   });
 
   // ---------- Labor ----------
+  // Wirkung eines Labor-Upgrades auf Stufe l (für "aktuell → nächste Stufe")
+  const plus = (x, d) => '+' + dec(x, d || 0) + ' %';
+  const LAB_FX = {
+    m_dmg: l => '×' + dec(Math.pow(1.08, l), 2),
+    m_hp: l => '×' + dec(Math.pow(1.08, l), 2),
+    m_rate: l => plus(3 * l),
+    m_regen: l => plus(10 * l),
+    m_armor: l => plus(l),
+    m_loot: l => plus(8 * l),
+    m_start: l => fmt(C.startEnergy({ lv: { m_start: l } })) + ' Energie',
+    m_cheap: l => '−' + dec((1 - Math.pow(0.98, l)) * 100, 0) + ' %',
+    m_head: l => '+' + l + ' Stufen',
+    m_crys: l => plus(10 * l),
+    m_freeze: l => dec(C.ABIL.freeze.dur(l), 1) + ' s, alle ' + dec(C.ABIL.freeze.cd(l), 1) + ' s',
+    m_over: l => dec(C.ABIL.over.mult(l), 2) + '× für ' + dec(C.ABIL.over.dur(l), 1) + ' s, alle ' + C.ABIL.over.cd(l) + ' s',
+  };
   function renderLab() {
     $('labK').textContent = fmt(meta.crystals);
     const list = $('labList'); list.innerHTML = '';
@@ -270,6 +286,8 @@
       const el = document.createElement('div'); el.className = 'row';
       el.style.gridTemplateColumns = '1fr auto';
       let extra = '';
+      const fx = LAB_FX[u.id];
+      if (fx) extra = ` <b style="color:var(--core)">${fx(l)}${mx ? '' : ' → ' + fx(l + 1)}</b>`;
       if (u.id === 'u_jump' || u.id === 'm_jump') {
         const now = C.mlv(meta, 'u_jump') ? C.maxStartWave(meta) : 1;
         const nextLvl = u.id === 'm_jump' && !mx ? C.mlv(meta, 'm_jump') + 1 : null;
