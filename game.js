@@ -105,7 +105,7 @@
     mine: s => s.mineCd ? fmt(s.mineDmg) : '–', hp: s => fmt(s.maxHp), regen: s => fmt(s.regen) + '/s', armor: s => pct(s.armor),
     knock: s => s.knock ? dec(s.knock, 1) : '–', shock: s => s.shockCd ? fmt(s.shockDmg) : '–',
     blade: s => s.blades ? s.blades + '× ' + fmt(s.bladeDmg) : '–', loot: s => '×' + dec(s.loot, 2),
-    interest: s => pct(s.interest), crys: s => '×' + dec(s.crysMult, 2),
+    interest: (s, r) => s.waveBonus ? '+' + fmt(r.waveBonusAmount()) + '/Welle' : '–', crys: s => '×' + dec(s.crysMult, 2),
   };
   let rows = [];
   function buildList() {
@@ -135,7 +135,7 @@
       const u = r.u, avail = run.available(u), mx = run.maxed(u);
       r.el.classList.toggle('locked', !avail);
       r.lvl.textContent = avail ? 'St. ' + run.L(u.id) : 'Labor';
-      r.val.textContent = avail ? VAL[u.id](run.s) : '';
+      r.val.textContent = avail ? VAL[u.id](run.s, run) : '';
       r.autoB.setAttribute('aria-pressed', meta.auto[u.id] ? 'true' : 'false');
       r.autoB.classList.toggle('off', !meta.autoAll);
       r.autoB.disabled = !avail || mx;
@@ -205,7 +205,7 @@
     const kv = [
       ['Gesamt-DPS', fmt(sum)], ['Krit', pct(s.crit) + ' · ' + dec(s.critx, 1) + '×'], ['Reichweite', Math.round(s.range)],
       ['Strukturpunkte', fmt(s.maxHp)], ['Reparatur', fmt(s.regen) + '/s'], ['Panzerung', pct(s.armor)],
-      ['Energie-Faktor', '×' + dec(s.loot, 2)], ['Kristalle (Lauf)', fmt(Math.floor(run.crystals))], ['Abschüsse', fmt(run.kills)],
+      ['Energie-Faktor', '×' + dec(s.loot, 2)], ['Wellenprämie', s.waveBonus ? '+' + fmt(run.waveBonusAmount()) : '–'], ['Kristalle (Lauf)', fmt(Math.floor(run.crystals))], ['Abschüsse', fmt(run.kills)],
     ];
     $('kv').innerHTML = kv.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
   }
@@ -269,11 +269,14 @@
   $('jumpPlus').addEventListener('click', () => { const max = C.maxStartWave(meta); if ((meta.startWave || 1) + 10 <= max) meta.startWave += 10; A.play('click'); save(); renderMenu(); });
 
   // Titel 5× antippen öffnet den Admin-Zugang
+  // Gleiches gilt für die Überschrift im Pausenmenü
   let titleTaps = 0, titleT = 0;
-  $('title').addEventListener('click', () => {
+  function adminTap() {
     const n = Date.now(); if (n - titleT > 1500) titleTaps = 0; titleT = n;
     if (++titleTaps >= 5) { titleTaps = 0; show('admin'); }
-  });
+  }
+  $('title').addEventListener('click', adminTap);
+  $('pauseTitle').addEventListener('click', adminTap);
 
   // ---------- Ton ----------
   function syncSoundBtns() {
@@ -406,7 +409,7 @@
   });
 
   // ---------- Schleife ----------
-  const SOUND_OF = { boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
+  const SOUND_OF = { bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
   let last = performance.now(), uiT = 0, saveT = 0, autoT = 0, dpsT = 0, lastShots = 0;
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;

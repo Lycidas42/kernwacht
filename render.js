@@ -20,7 +20,7 @@
     const HULL = '#0d0b22';
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
-    const LIFE = { boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -357,6 +357,10 @@
           ctx.beginPath(); ctx.moveTo(f.x, f.y - 700); ctx.lineTo(f.x, f.y); glow('#ffffff', 7 * a, a);
           ctx.beginPath(); ctx.arc(f.x, f.y, C.STRIKE_R * (0.2 + 0.8 * Math.min(1, k * 2)), 0, 7);
           ctx.fillStyle = `rgba(255,79,154,${0.25 * a})`; ctx.fill(); glow(PAL.hostile, 3, a);
+        } else if (f.k === 'bonus') {
+          ctx.globalAlpha = Math.min(1, a * 1.5); ctx.fillStyle = PAL.energy;
+          ctx.font = `600 14px ${FONT_NUM()}`; ctx.textAlign = 'center';
+          ctx.fillText('+' + fmt(f.v) + ' Prämie', 0, -95 - k * 30); ctx.globalAlpha = 1;
         } else if (f.k === 'shieldhit') {
           ctx.beginPath(); ctx.arc(f.x, f.y, 30 + k * 10, 0, 7); glow(PAL.frost, 1.5, a * 0.7);
         } else if (f.k === 'dmg') {

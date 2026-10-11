@@ -18,7 +18,7 @@
     { id: 'shock',    tab: 'def', name: 'Schockwelle',      desc: 'Druckring bis weit ins Feld',      base: 50,  g: 1.2,  max: 30, req: 'u_shock' },
     { id: 'blade',    tab: 'def', name: 'Orbitklingen',     desc: 'Pendelnde Klingen über der Kanone', base: 70,  g: 1.2,  max: 30, req: 'u_blade' },
     { id: 'loot',     tab: 'eco', name: 'Energieausbeute',  desc: '+10 % Energie pro Abschuss',       base: 8,   g: 1.16, max: 30 },
-    { id: 'interest', tab: 'eco', name: 'Zinsen',           desc: '+1 % Zinsen pro Welle',            base: 25,  g: 1.22, max: 15 },
+    { id: 'interest', tab: 'eco', name: 'Wellenprämie',     desc: 'Energiebonus am Ende jeder Welle', base: 25,  g: 1.22, max: 15 },
     { id: 'crys',     tab: 'eco', name: 'Kristallfilter',   desc: '+6 % Kristalle in diesem Lauf',    base: 40,  g: 1.25, max: 20 },
   ];
 
@@ -192,7 +192,8 @@
       s.armor = Math.min(0.65, 0.55 * ar / (ar + 15) + 0.01 * M('m_armor'));
       s.knock = L('knock') ? 1.5 + 0.35 * L('knock') : 0;
       s.loot = (1 + 0.1 * L('loot')) * (1 + 0.08 * M('m_loot'));
-      s.interest = 0.01 * L('interest');
+      // Wellenprämie: Anteil der Abschuss-Energie einer typischen Welle, als fester Bonus pro überstandener Welle
+      s.waveBonus = 0.04 * L('interest');
       s.crysMult = (1 + 0.06 * L('crys')) * (1 + 0.1 * M('m_crys'));
       // Schockwelle: Druckring, der mit der Reichweite wächst
       const sh = L('shock');
@@ -232,12 +233,15 @@
       return true;
     }
 
+    waveBonusAmount(w) { return this.s.waveBonus ? waveEnergy(w || this.wave) * this.s.loot * this.s.waveBonus : 0; }
+
     bossAlive() { return this.enemies.some(e => e.type === 'boss' && e.hp > 0) || (this.queue || []).includes('boss'); }
 
     nextWave() {
       if (this.wave > 0 && !this.skipCrystalsOnce) {
         this.crystals += waveCrystals(this.wave) * this.s.crysMult;
-        if (this.s.interest) this.energy += Math.min(this.energy * this.s.interest, 40 * rwScale(this.wave) * (1 + this.s.interest * 10));
+        const bonus = this.waveBonusAmount();
+        if (bonus > 0) { this.energy += bonus; if (this.fxOn) this.fx.push({ k: 'bonus', t: 0, v: bonus }); }
       }
       this.skipCrystalsOnce = false;
       this.wave++;

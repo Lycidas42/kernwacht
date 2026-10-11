@@ -59,7 +59,7 @@ Der anon Key ist für den Browser gedacht und darf öffentlich sein. Jeder Spiel
 
 ## Admin-Modus
 
-Im Startmenü fünfmal schnell auf den Titel tippen, dann Passwort eingeben. Danach gibt es auch im Pausenmenü einen Admin-Knopf.
+Fünfmal schnell auf den Titel im Startmenü oder auf „Pause“ im Pausenmenü tippen, dann Passwort eingeben. Nach der Anmeldung gibt es im Pausenmenü zusätzlich einen Admin-Knopf.
 
 Passwort ändern: Hash erzeugen und in `game.js` bei `ADMIN_HASH` eintragen.
 
