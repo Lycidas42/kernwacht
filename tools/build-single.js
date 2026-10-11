@@ -4,8 +4,8 @@
 const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const core = fs.readFileSync(path.join(root, 'core.js'), 'utf8');
-html = html.replace('<script src="core.js"></script>', () => '<script>\n' + core + '\n</script>');
+// Alle lokalen Skripte einbetten
+html = html.replace(/<script src="([\w.-]+\.js)"><\/script>/g, (m, f) => '<script>\n' + fs.readFileSync(path.join(root, f), 'utf8') + '\n</script>');
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '').replace(/<link rel="(icon|apple-touch-icon)"[^>]*>\n?/g, '');
 html = html.replace(/<script>\s*\/\/ Service Worker[\s\S]*?<\/script>\n?/, '');
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
