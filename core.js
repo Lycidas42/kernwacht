@@ -138,7 +138,8 @@
   function moduleValue(m) {
     if (!m) return 0;
     const M = MODULES[m.type], k = RARITY[m.rar].mult * (1 + 0.15 * (Math.min(10, m.copies) - 1));
-    return M.add ? M.base + M.add * (k - 1) + M.add : M.base * k;
+    const ms = 1 + 0.05 * (m.mast || 0); // Meisterung (Werkstatt, nach legendär 10/10)
+    return (M.add ? M.base + M.add * (k - 1) + M.add : M.base * k) * ms;
   }
   // Beute würfeln: Typ aus dem Sektor der Welle, Seltenheit steigt mit der Welle
   function rollModule(w) {
@@ -378,9 +379,24 @@
   const achPoints = m => ACH.reduce((s, a) => s + achTier(m, a), 0);
   // Dauerhafte Boni aus Challenges und Erfolgen zusammen
   function permBonus(m) {
-    const c = chalBonus(m), a = achBonus(m);
-    return { hp: c.hp * a.hp * a.all, rate: c.rate * a.rate * a.all, dmg: c.dmg * a.dmg * a.all, loot: c.loot * a.loot * a.all, crys: c.crys * a.crys * a.all,
-      boss: a.boss, mod: a.mod, strike: a.strike, frag: a.frag, mine: a.mine };
+    const c = chalBonus(m), a = achBonus(m), r = researchBonus(m);
+    return { hp: c.hp * a.hp * a.all * r.hp, rate: c.rate * a.rate * a.all * r.rate, dmg: c.dmg * a.dmg * a.all * r.dmg, loot: c.loot * a.loot * a.all * r.loot, crys: c.crys * a.crys * a.all,
+      boss: a.boss * r.boss, mod: a.mod, strike: a.strike, frag: a.frag, mine: a.mine };
+  }
+  // ---------- Planetenforschung: dauerhafte Boni, bezahlt mit der Ressource des Planeten ----------
+  const RESEARCH = {
+    ast:  { b: 'dmg',  step: 0.03, name: 'Schaden' },
+    ice:  { b: 'hp',   step: 0.03, name: 'Strukturpunkte' },
+    lava: { b: 'rate', step: 0.02, name: 'Feuerrate' },
+    red:  { b: 'loot', step: 0.03, name: 'Energie im Lauf' },
+    void: { b: 'boss', step: 0.03, name: 'Schaden gegen Mutterschiffe' },
+  };
+  const researchCost = l => Math.ceil(500 * Math.pow(1.25, l));
+  const researchLv = (m, id) => (m.mine && m.mine.res && m.mine.res[id]) || 0;
+  function researchBonus(m) {
+    const b = { dmg: 1, hp: 1, rate: 1, loot: 1, boss: 1 };
+    for (const id in RESEARCH) b[RESEARCH[id].b] += RESEARCH[id].step * researchLv(m, id);
+    return b;
   }
   // Was eine Herausforderung im Lauf sperrt
   const BLOCK = {
@@ -1378,8 +1394,16 @@
     M.ore[P_.id] -= MOD_CRAFT;
     const drop = rollModule((sector - 1) * 50 + 25); drop.result = addModule(m, drop); return drop;
   }
+  const modMastCost = mod => Math.ceil(5000 * Math.pow(1.4, mod.mast || 0));
+  // Forschung kaufen
+  function research(m, id) {
+    const M = mineState(m), P_ = PDEF(id); if (!P_ || !RESEARCH[id] || !planetOpen(m, P_)) return false;
+    const l = researchLv(m, id), c = researchCost(l); if ((M.ore[id] || 0) < c) return false;
+    M.ore[id] -= c; M.res = M.res || {}; M.res[id] = l + 1; return true;
+  }
   function modImprove(m, type, what) {
     const mod = m.modules && m.modules[type], P_ = planetForModule(type), M = mineState(m); if (!mod || !P_) return false;
+    if (what === 'mast') { if (mod.copies < 10 || mod.rar < 3) return false; const c = modMastCost(mod); if ((M.ore[P_.id] || 0) < c) return false; M.ore[P_.id] -= c; mod.mast = (mod.mast || 0) + 1; return true; }
     if (what === 'copy') { if (mod.copies >= 10) return false; const c = modBoostCost(mod); if ((M.ore[P_.id] || 0) < c) return false; M.ore[P_.id] -= c; mod.copies++; return true; }
     if (mod.rar >= 3) return false; const c = modRarCost(mod); if ((M.ore[P_.id] || 0) < c) return false; M.ore[P_.id] -= c; mod.rar++; return true;
   }
@@ -1443,6 +1467,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.4.4'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  const VERSION = '0.4.5'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

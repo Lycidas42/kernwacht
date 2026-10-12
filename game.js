@@ -1139,22 +1139,33 @@
       rows.push(`<div class="rrow" style="--pc:${Q.col}"><div>Neues Modul aus Sektor ${Q.sector}<small>zufälliger Typ, ${C.MOD_CRAFT} ${Q.ore}</small></div><span></span><button data-craft="${Q.sector}" ${ore >= C.MOD_CRAFT ? '' : 'disabled'}>Herstellen</button></div>`);
       for (const t in (meta.modules || {})) {
         const mod = meta.modules[t]; if (C.MODULES[t].sector !== Q.sector) continue;
-        const cc = C.modBoostCost(mod), rc = C.modRarCost(mod);
-        rows.push(`<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${C.RARITY[mod.rar].name} · Fund ${mod.copies}/10</small></div>
+        const cc = C.modBoostCost(mod), rc = C.modRarCost(mod), full = mod.copies >= 10 && mod.rar >= 3, mc = C.modMastCost(mod);
+        const sub = `${C.RARITY[mod.rar].name} · Fund ${mod.copies}/10${mod.mast ? ' · Meister ' + mod.mast : ''}`;
+        rows.push(full
+          ? `<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${sub} · +${5 * (mod.mast || 0)} % Wirkung</small></div><span></span>
+            <button data-imp="${t}" data-w="mast" ${ore < mc ? 'disabled' : ''}>Meistern +5 %<br>${fmt(mc)} ${Q.ore}</button></div>`
+          : `<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${sub}</small></div>
           <button data-imp="${t}" data-w="copy" ${mod.copies >= 10 || ore < cc ? 'disabled' : ''}>${mod.copies >= 10 ? 'Fund MAX' : `+1 Fund<br>${fmt(cc)} ${Q.ore}`}</button>
           <button data-imp="${t}" data-w="rar" ${mod.rar >= 3 || ore < rc ? 'disabled' : ''}>${mod.rar >= 3 ? 'legendär' : `Seltener<br>${fmt(rc)} ${Q.ore}`}</button></div>`);
       }
     }
     $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
+    // Forschung
+    $('research').innerHTML = C.PLANETS.filter(Q => C.planetOpen(meta, Q) && C.RESEARCH[Q.id]).map(Q => {
+      const R = C.RESEARCH[Q.id], l = C.researchLv(meta, Q.id), c = C.researchCost(l), ore = M.ore[Q.id] || 0;
+      return `<div class="rrow" style="--pc:${Q.col}"><div>${R.name} <b class="num">+${Math.round(R.step * 100 * l)} %</b><small>${Q.ore} · St. ${l} → +${Math.round(R.step * 100 * (l + 1))} %</small></div><span></span>
+        <button data-res="${Q.id}" ${ore < c ? 'disabled' : ''}>Forschen<br>${fmt(c)} ${Q.ore}</button></div>`;
+    }).join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
+    $$('#research [data-res]').forEach(b => b.addEventListener('click', () => { if (C.research(meta, b.dataset.res)) { A.play('buy'); const R = C.RESEARCH[b.dataset.res]; mineNote(`Forschung: ${R.name} jetzt +${Math.round(R.step * 100 * C.researchLv(meta, b.dataset.res))} %.`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
     $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); modReveal(d.type, d.rar, d.result, d); if (runAlive()) run.recalc(); save(); renderMine(); } }));
-    $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.imp, w = b.dataset.w; if (C.modImprove(meta, t, w)) { A.play('loot'); modReveal(t, null, w === 'rar' ? 'besser' : 'kopie'); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.imp, w = b.dataset.w; if (C.modImprove(meta, t, w)) { A.play('loot'); modReveal(t, null, w === 'rar' ? 'besser' : w === 'mast' ? 'meister' : 'kopie'); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     syncMineBadge();
   }
   // Ergebnis aus der Werkstatt groß anzeigen: was ist es, welche Seltenheit, was bewirkt es jetzt
   function modReveal(type, fundRar, result, d) {
     const M = C.MODULES[type], m = meta.modules[type], R = C.RARITY, eq = (meta.equip || []).includes(type);
-    const head = result === 'neu' ? 'Neues Modul!' : result === 'besser' ? 'Seltenheit verbessert!' : result === 'erz' ? 'Modul schon voll: in Erz umgewandelt' : 'Modul verstärkt!';
+    const head = result === 'neu' ? 'Neues Modul!' : result === 'besser' ? 'Seltenheit verbessert!' : result === 'erz' ? 'Modul schon voll: in Erz umgewandelt' : result === 'meister' ? `Meisterstufe ${m.mast}!` : 'Modul verstärkt!';
     const fund = (fundRar != null ? `<br><span style="color:var(--ink-dim)">Fund: ${R[fundRar].name}</span>` : '') + (d && d.ore ? `<br><span style="color:var(--heat)">+${fmt(d.ore)} ${d.oreName}</span>` : '');
     const html = `<div class="reveal r${m.rar}">${R_.iconSvg(type, m.rar, 40)}<div><b>${head}</b><br><span class="rn">${M.name}</span> · <span class="rr">${R[m.rar].name}</span> · Fund ${m.copies}/10${fund}<br><span class="rd">${M.desc(C.moduleValue(m))}</span>${eq ? '' : '<br><span style="color:var(--energy)">Noch nicht ausgerüstet: unter „Module“ auswählen.</span>'}</div></div>`;
     toast(html, 6000);
