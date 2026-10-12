@@ -5,9 +5,10 @@
   // Balancing-Stellschrauben (Überschreiben per root.KW_P für Simulationen)
   const P0 = Object.assign({
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
-    cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 8, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
+    cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
     labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.35, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
+    gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1,
   }, root.KW_P || {});
 
   // ---------- Upgrades im Lauf (Energie) ----------
@@ -113,7 +114,7 @@
   // Wirkung = Grundwert × Seltenheit × (1 + 15 % je zusätzlichem Fund, max. 10 Funde)
   const MODULES = {
     chain:     { sector: 1, name: 'Kettenblitz',       desc: v => `${pctS(v)} Chance, dass ein Treffer auf 2 Schiffe überspringt`, base: 0.10 },
-    splinter:  { sector: 1, name: 'Splittermunition',  desc: v => `Abschüsse sprengen ${pctS(v)} der Ziel-LP in die Umgebung`, base: 0.12 },
+    splinter:  { sector: 1, name: 'Splittermunition',  desc: v => `Abschüsse explodieren mit ${v.toFixed(1).replace('.', ',')}× Kanonenschaden im Umkreis`, base: 0.42 },
     cryoammo:  { sector: 2, name: 'Kryo-Munition',     desc: v => `Treffer verlangsamen um ${pctS(v)}`, base: 0.10 },
     scanner:   { sector: 2, name: 'Zielerfassung',     desc: v => `+${pctS(v)} Krit-Chance, Tarnung wirkungslos`, base: 0.04 },
     overcharge:{ sector: 3, name: 'Überspannung',      desc: v => `Jeder 12. Schuss macht ${v.toFixed(1).replace('.', ',')}× Schaden`, base: 2, add: 1 },
@@ -435,6 +436,7 @@
       s.range = 150 + 5 * L('range');
       s.crit = 0.025 * L('crit');
       s.critx = 1.5 + 0.1 * L('critx');
+      s.gunDmg = s.dmg * P.gunK; // Treffer der Hauptkanone
       s.multi = L('multi');
       s.multiDmg = P.multiDmg; // Nebenrohre treffen schwächer als das Hauptrohr
       s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp')) * s.fusion * cb.hp * (this.rule === 'glass' ? 0.25 : 1);
@@ -452,7 +454,7 @@
       const sh = L('shock');
       s.shockCd = sh ? Math.max(2.5, 6.5 - 0.13 * sh) : 0;
       s.shockR = Math.min(s.range, s.range * (0.7 + 0.01 * sh));
-      s.shockDmg = s.dmg * P.shockK * (1 + 0.15 * sh);
+      s.shockDmg = s.dmg * P.shockK * (1 + P.shockLv * sh);
       // Orbitklingen: pendeln über der Kanone, Radius folgt der Reichweite
       const bl = L('blade');
       s.blades = bl ? Math.min(6, 1 + Math.floor(bl / 5)) : 0;
@@ -463,7 +465,7 @@
       // Minen
       const mi = L('mine');
       s.mineCd = mi ? Math.max(1, 4 - 0.1 * mi) : 0;
-      s.mineDmg = s.dmg * P.mineK * (2 + 0.2 * mi);
+      s.mineDmg = s.dmg * P.mineK * (2 + P.mineLv * mi);
       s.mineMax = mi ? 4 + Math.floor(mi / 5) : 0;
       s.mineTrig = 16;
       s.mineBlast = 45 + mi;
@@ -471,7 +473,7 @@
       // Raketenwerfer (links): langsam, zielsuchend, großer Explosionsradius
       const ro = L('rocket');
       s.rocketCd = ro ? Math.max(2.6, 5 - 0.08 * ro) : 0;
-      s.rocketDmg = s.dmg * (1.6 + 0.13 * ro);
+      s.rocketDmg = s.dmg * (1.6 + P.rockLv * ro);
       s.rocketR = 60 + 2 * ro;
       // Kryowerfer (rechts): schneller Frostbolzen, verlangsamt im kleinen Umkreis
       const cr = L('cryo');
@@ -491,7 +493,7 @@
       if (this.rule === 'glass') s.regen = 0;
       s.noGun = this.rule === 'mines';
       if (s.noGun) { s.rocketCd = 0; s.cryoCd = 0; s.shockCd = 0; s.blades = 0; }
-      s.dps = s.dmg * s.rate * (1 + s.crit * (s.critx - 1)) * (1 + s.multi * s.multiDmg);
+      s.dps = s.gunDmg * s.rate * (1 + s.crit * (s.critx - 1)) * (1 + s.multi * s.multiDmg);
       this.s = s;
     }
 
@@ -609,7 +611,7 @@
         if (this.fxOn && this.s.mod && (this.s.mod.leech || this.s.mod.crysmod) && Math.random() < 0.5) { const p = this.pos(e); this.fx.push({ k: this.s.mod.leech ? 'leech' : 'crysfx', x: p.x, y: p.y, t: 0 }); }
         if (!this.s.noGun) this.charge = Math.min(1, this.charge + (e.type === 'boss' ? 0.35 : e.type === 'bomb' ? 0 : 1 / STRIKE_KILLS));
         if (this.s.mod.splinter && src !== 'mod') {
-          const p = this.pos(e), dmg = e.maxHp * this.s.mod.splinter;
+          const p = this.pos(e), dmg = this.s.gunDmg * this.s.mod.splinter * P.splK;
           for (const o of this.enemies) if (o !== e && o.hp > 0) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 45 + o.r) this.hurt(o, dmg, false, 'mod'); }
           if (this.fxOn) this.fx.push({ k: 'splinter', x: p.x, y: p.y, t: 0 });
         }
@@ -836,7 +838,7 @@
               const crit = Math.random() < s.crit;
               const mx = Math.cos(this.aim) * BASE_R * 2.4, my = -8 + Math.sin(this.aim) * BASE_R * 2.4;
               const oc = s.mod.overcharge && i === 0 && this.shots % 12 === 0 ? s.mod.overcharge : 1;
-              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.dmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1 });
+              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1 });
             }
           }
         } else this.fireT = 1;
@@ -851,7 +853,7 @@
           if (s.mod.cryoammo && t.hp > 0) { t.slow = Math.max(t.slowUntil > this.time ? t.slow : 0, s.mod.cryoammo * (t.type === 'boss' ? 0.4 : 1)); t.slowUntil = this.time + 1.5; }
           if (s.mod.chain && Math.random() < s.mod.chain) {
             const others = this.enemies.filter(o => o !== t && o.hp > 0).map(o => ({ o, d: Math.hypot(this.pos(o).x - p.x, this.pos(o).y - p.y) })).filter(x => x.d < 110).sort((a, b) => a.d - b.d).slice(0, 2);
-            for (const x of others) { this.hurt(x.o, b.dmg * 0.5, false, 'mod'); if (this.fxOn) { const q = this.pos(x.o); this.fx.push({ k: 'chain', x1: p.x, y1: p.y, x2: q.x, y2: q.y, t: 0 }); } }
+            for (const x of others) { this.hurt(x.o, b.dmg * 0.5, false, 'gun'); if (this.fxOn) { const q = this.pos(x.o); this.fx.push({ k: 'chain', x1: p.x, y1: p.y, x2: q.x, y2: q.y, t: 0 }); } }
           }
           if (s.knock && t.hp > 0 && t.kbT <= this.time && t.type !== 'boss') { t.kbT = this.time + 0.8; t.dist += s.knock * (t.type === 'brute' ? 0.4 : 1); }
         } else { b.x += dx / d * v; b.y += dy / d * v; }

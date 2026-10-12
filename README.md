@@ -40,6 +40,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `tools/curve.js` | Schnelle Fortschrittskurve des ersten Zyklus, Varianten per `KW_P` |
 | `tools/diag_boss.js` | Protokolliert einen Mutterschiff-Kampf bei einer Welle |
 | `tools/tune.js` | Zufallssuche über die Balancing-Parameter gegen eine Zielkurve |
+| `tools/shares.js` | Schadensanteile je Quelle in späten Läufen, mit verschiedenen Modulen |
 | `tools/challenges.js` | Herausforderungen und Tageslauf: welche Wellen ein Bot bei typischem Fortschritt schafft |
 | `tools/build-single.js` | Baut `dist/kernwacht.html` als eigenständige Einzeldatei |
 

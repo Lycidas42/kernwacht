@@ -212,7 +212,7 @@
 
   // ---------- Upgrade-Liste ----------
   const VAL = {
-    dmg: s => fmt(s.dmg), rate: s => dec(s.rate, 2) + '/s', range: s => Math.round(s.range),
+    dmg: s => fmt(s.gunDmg), rate: s => dec(s.rate, 2) + '/s', range: s => Math.round(s.range),
     crit: s => pct(s.crit), critx: s => dec(s.critx, 1) + '×', multi: s => s.multi ? '+' + s.multi + ' × ' + Math.round(s.multiDmg * 100) + ' %' : '–',
     mine: s => s.mineCd ? fmt(s.mineDmg) : '–', hp: s => fmt(s.maxHp), regen: s => fmt(s.regen) + '/s', armor: s => pct(s.armor),
     knock: s => s.knock ? dec(s.knock, 1) : '–', shock: s => s.shockCd ? fmt(s.shockDmg) : '–',
@@ -281,7 +281,7 @@
     return dt > 0 ? (b.d[k] - a.d[k]) / dt : 0;
   }
   const SRC = [
-    { k: 'gun', name: 'Kanone', hit: s => s.dmg, rate: (s, r) => dec(r.rateNow, 2) + '/s' + (s.multi ? ' ×' + (1 + s.multi) : ''), on: () => true },
+    { k: 'gun', name: 'Kanone', hit: s => s.gunDmg, rate: (s, r) => dec(r.rateNow, 2) + '/s' + (s.multi ? ' ×' + (1 + s.multi) : ''), on: () => true },
     { k: 'rocket', name: 'Raketen', hit: s => s.rocketDmg, rate: s => 'alle ' + dec(s.rocketCd, 1) + ' s', on: s => s.rocketCd > 0 },
     { k: 'cryo', name: 'Kryowerfer', hit: s => s.cryoDmg, rate: s => 'alle ' + dec(s.cryoCd, 1) + ' s', on: s => s.cryoCd > 0 },
     { k: 'mine', name: 'Minen', hit: s => s.mineDmg, rate: s => 'alle ' + dec(s.mineCd, 1) + ' s', on: s => s.mineCd > 0 },
@@ -776,7 +776,7 @@
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
-      $('myDmg').textContent = fmt(run.s.dmg);
+      $('myDmg').textContent = fmt(run.s.gunDmg);
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));
       $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
