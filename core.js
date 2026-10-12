@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 8, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.35, fragExp: 2.3, rwExp: 0, strikePct: 0.12,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.35, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
   }, root.KW_P || {});
 
   // ---------- Upgrades im Lauf (Energie) ----------
@@ -179,7 +179,7 @@
     bomb:    { hp: 1,   spd: 34, dmg: 0,   rw: 0.5, r: 8,  col: 'bomb' },
   };
 
-  const FIELD_W = 240, FIELD_H = 430, BASE_R = 22, WALL_R = 58, WAVE_LEN = 20, SPAWN_LEN = 15;
+  const FIELD_W = 240, FIELD_H = 430, BASE_R = 22, WALL_R = 50, WAVE_LEN = 20, SPAWN_LEN = 15;
   const STRIKE_KILLS = 30, STRIKE_R = 80;
 
   function newMeta() {
@@ -220,7 +220,7 @@
   // Rechnerische Gegnerzahl (bestimmt Energie und Gesamt-LP einer Welle)
   const waveCount = w => Math.min(70, 5 + Math.floor(P.nGrow * w));
   // Tatsächlich gespawnte Schiffe: weniger, dafür entsprechend kräftiger
-  const shipCount = w => Math.min(36, 4 + Math.floor(0.75 * w));
+  const shipCount = w => Math.min(P.shipCap, 4 + Math.floor(0.75 * w));
 
   // ---------- Wellentypen: Abwechslung statt immer gleicher Masse ----------
   const WAVE_TYPES = {
@@ -230,7 +230,7 @@
     artillery: { name: 'Artillerie',     n: 0.85, hp: 1.15, spd: 1,    mix: { shooter: 0.45 } },
   };
   function pickWaveType(w) {
-    if (w < 12 || w % 10 === 0) return 'normal';
+    if (!P.waveTypes || w < 12 || w % 10 === 0) return 'normal';
     const r = Math.random();
     if (r < 0.2) return 'swarm';
     if (r < 0.38) return 'heavy';
@@ -398,13 +398,13 @@
       s.strikeDmg = s.dmg * 25;
       // Raketenwerfer (links): langsam, zielsuchend, großer Explosionsradius
       const ro = L('rocket');
-      s.rocketCd = ro ? Math.max(3, 5 - 0.07 * ro) : 0;
-      s.rocketDmg = s.dmg * (1.2 + 0.1 * ro);
+      s.rocketCd = ro ? Math.max(2.6, 5 - 0.08 * ro) : 0;
+      s.rocketDmg = s.dmg * (1.6 + 0.13 * ro);
       s.rocketR = 60 + 2 * ro;
       // Kryowerfer (rechts): schneller Frostbolzen, verlangsamt im kleinen Umkreis
       const cr = L('cryo');
-      s.cryoCd = cr ? Math.max(0.8, 1.6 - 0.03 * cr) : 0;
-      s.cryoDmg = s.dmg * (0.25 + 0.015 * cr);
+      s.cryoCd = cr ? Math.max(0.7, 1.6 - 0.03 * cr) : 0;
+      s.cryoDmg = s.dmg * (0.3 + 0.025 * cr);
       s.cryoSlow = Math.min(0.6, 0.3 + 0.01 * cr);
       s.cryoR = 40 + cr;
       // Ausgerüstete Module
@@ -454,7 +454,7 @@
       // Gesamt-LP und Energie der Welle bleiben gleich, verteilt auf weniger bzw. mehr Schiffe
       const comp = waveCount(w) / n;
       this.waveType = wt;
-      this.waveMod = { hp: comp * (wt === 'swarm' ? 0.8 : wt === 'heavy' ? 1.1 : 1), rw: comp, dmg: Math.sqrt(comp), spd: WT.spd, big: WT.big || 1 };
+      this.waveMod = { hp: comp * (wt === 'swarm' ? 0.8 : wt === 'heavy' ? 0.95 : 1), rw: comp, dmg: Math.pow(comp, P.wmDmg), spd: WT.spd, big: WT.big || 1 };
       const list = [];
       const sec = sectorOf(w).n;
       // Sektor-Gegner: der neue Typ des Sektors häufig, frühere Typen seltener
@@ -665,7 +665,7 @@
       if (!frozen) for (const e of this.enemies) {
         if (e.hp <= 0) continue;
         e.flash = Math.max(0, e.flash - dt);
-        const contact = WALL_R + e.r * 0.6;
+        const contact = WALL_R + e.r * 0.3;
         if (e.type === 'boss') {
           if (e.dist > e.stop && !e.enraged) { e.dist = Math.max(e.stop, e.dist - e.spd * dt); }
           else {

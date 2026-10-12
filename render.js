@@ -621,10 +621,12 @@
       } else if (sec === 2) {
         // Eisplanet mit grünem Leuchten, Kristallsplitter
         planet(g, W * 0.15, H * 0.16, m * 0.16, 'rgba(160,255,230,0.7)', 'rgba(10,70,70,0.75)', 'rgba(80,255,200,0.3)');
-        for (let i = 0; i < 9; i++) {
-          const x = W * (0.25 + 0.7 * ((i * 37) % 100) / 100), y = H * (0.08 + 0.5 * ((i * 53) % 100) / 100), r = 3 + (i % 3) * 3;
-          g.save(); g.translate(x, y); g.rotate(i); g.beginPath(); g.moveTo(0, -r * 2); g.lineTo(r * 0.6, 0); g.lineTo(0, r * 2); g.lineTo(-r * 0.6, 0); g.closePath();
-          g.fillStyle = 'rgba(120,255,210,0.12)'; g.fill(); g.strokeStyle = 'rgba(160,255,230,0.4)'; g.lineWidth = 1; g.stroke(); g.restore();
+        // Eisbrocken: unregelmäßig, matt, mit hellem Rand oben
+        for (let i = 0; i < 8; i++) {
+          const x = W * (0.3 + 0.65 * ((i * 37) % 100) / 100), y = H * (0.06 + 0.45 * ((i * 53) % 100) / 100), r = 4 + (i % 3) * 4;
+          g.save(); g.translate(x, y); g.rotate(i * 1.3); g.beginPath();
+          for (let j = 0; j < 7; j++) { const an = j / 7 * 6.28, rr = r * (0.7 + 0.3 * Math.sin(i * 3.1 + j * 2.3)); g[j ? 'lineTo' : 'moveTo'](Math.cos(an) * rr, Math.sin(an) * rr); }
+          g.closePath(); g.fillStyle = 'rgba(12,45,45,0.9)'; g.fill(); g.strokeStyle = 'rgba(150,240,220,0.3)'; g.lineWidth = 1; g.stroke(); g.restore();
         }
       } else if (sec === 3) {
         // Glühender Planet mit Lavaadern, Asteroidengürtel
