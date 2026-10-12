@@ -727,7 +727,7 @@
     btn.classList.remove('armed'); btn.textContent = 'Fusion auslösen'; fuseArmed = 0;
     if (runAlive()) { btn.disabled = true; note.textContent = 'Beende zuerst den laufenden Lauf.'; note.className = 'note err'; }
     else if (!gain) { btn.disabled = true; note.textContent = `Möglich ab Bestwelle ${C.FUSION_MIN}. Je weiter du kommst, desto mehr Fragmente.`; note.className = 'note'; note.style.color = 'var(--ink-dim)'; }
-    else { btn.disabled = false; note.style.color = ''; note.className = 'note'; const fr = w => fmt(Math.floor(C.P.fragK * Math.pow(w / 10, C.P.fragExp) * (1 + 0.2 * C.flv(meta, 'f_frag'))));
+    else { btn.disabled = false; note.style.color = ''; note.className = 'note'; const fr = w => fmt(C.fragmentsFor(Object.assign({}, meta, { best: w }))); // gleiche Formel wie die Fusion, inkl. Erfolgsbonus
       const w1 = Math.ceil((meta.best + 1) / 10) * 10, w2 = w1 + 20;
       note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
     const list = $('fusList'); list.innerHTML = '';
