@@ -39,7 +39,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'daily'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -51,14 +51,21 @@
     if (name === 'pause') syncSoundBtns();
     if (name === 'fusion') renderFusion();
     if (name === 'modules') renderModules();
+    if (name === 'chal') renderChal();
+    if (name === 'daily') renderDaily();
     syncMetaBtns();
   }
   const runAlive = () => run && !run.dead;
   function home() { show(runAlive() ? 'pause' : 'menu'); }
   function setPaused(p) { paused = p; $('pauseBtn').textContent = p ? '▶' : 'II'; }
 
-  function startRun() {
-    run = new C.Run(meta, { startWave: C.startWaveFor(meta) });
+  let lastMode = null, dayOverride = null;
+  const today = () => dayOverride || C.dayKey();
+  function startRun(mode) {
+    mode = mode && mode.kind ? mode : null;
+    if (mode && mode.kind === 'daily') mode = { kind: 'daily', day: today() };
+    lastMode = mode;
+    run = new C.Run(meta, { startWave: C.startWaveFor(meta), mode });
     R.clear(); armed = null; dpsHist.length = 0;
     setPaused(false); show(null); buildList(); save();
   }
@@ -70,6 +77,9 @@
     if (run.admin) meta.adminTainted = true;
     put(RKEY, null); save();
     if (!early) A.play('gameover');
+    lastMode = run.mode;
+    $('againBtn').textContent = res.mode ? (res.mode.kind === 'daily' ? 'Tageslauf nochmal' : 'Nochmal: ' + chalOf(res.mode.id).name) : 'Sofort neu starten';
+    if (res.mode) { endMode(res, early, recBefore); return; }
     $('overTitle').textContent = early ? 'Lauf beendet' : 'Kanone gefallen';
     $('oWave').textContent = res.wave; $('oKills').textContent = fmt(res.kills); $('oK').textContent = '+' + fmt(res.crystals);
     $('oBest').textContent = res.newBest ? 'Neue Bestwelle!' : 'Bestwelle: ' + meta.best;
@@ -88,6 +98,90 @@
     submitScore();
     setTimeout(() => show('over'), early ? 0 : 900);
   }
+
+  // Ergebnis eines Sonderlaufs
+  function endMode(res, early) {
+    const ex = [];
+    $('oWave').textContent = res.wave; $('oKills').textContent = fmt(res.kills); $('oK').textContent = '+' + fmt(res.crystals);
+    if (res.mode.kind === 'chal') {
+      const c = chalOf(res.mode.id);
+      $('overTitle').textContent = c.name + (early ? ' beendet' : ' gescheitert');
+      if (res.newTier) { $('overTitle').textContent = c.name + ': Stufe ' + res.tier + '!'; }
+      $('oBest').textContent = res.newTier ? `Stufe ${res.tier} geschafft. Bonus jetzt: ${chalBonusTxt(c, res.tier)}` : `Bester Versuch: Welle ${res.best}`;
+      $('oBest').style.color = res.newTier ? '' : 'var(--ink-dim)';
+      for (let t = res.tierBefore + 1; t <= res.tier; t++) ex.push(`<div class="unl">Stufe ${t} (Welle ${c.goals[t - 1]}): +${Math.round(c.step * 100)} % ${c.bname}, dauerhaft</div>`);
+      const nx = c.goals[res.tier];
+      ex.push(`<div>${nx ? `Nächste Stufe bei Welle ${nx}.` : 'Alle Stufen geschafft.'} Kristalle gibt es in Herausforderungen zur Hälfte.</div>`);
+      if (res.newTier) A.play('loot');
+    } else {
+      $('overTitle').textContent = 'Tageslauf ' + (early ? 'beendet' : 'vorbei');
+      $('oBest').textContent = res.newBest ? (res.prevBest ? `Neues Tagesbestes! Vorher Welle ${res.prevBest}.` : 'Dein erstes Ergebnis für heute.') : `Bestes heute: Welle ${res.best}`;
+      $('oBest').style.color = res.newBest ? '' : 'var(--ink-dim)';
+      if (res.bonus) ex.push(`<div class="unl">Tagesbonus: +${fmt(res.crystals)} Kristalle für deinen ersten Tageslauf</div>`);
+      ex.push(`<div>Heute: ${twistOf(res.mode.day).name}. Morgen gibt es neue Wellen.</div>`);
+      if (res.newBest) submitDaily();
+    }
+    $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
+    renderJump(); $$('#over .jumpbox').forEach(b => (b.hidden = true));
+    renderRoadmap();
+    setTimeout(() => show('over'), early ? 0 : 900);
+  }
+
+  // ---------- Herausforderungen ----------
+  const chalOf = id => C.CHALLENGES.find(c => c.id === id);
+  const chalBonusTxt = (c, t) => '+' + Math.round(c.step * 100 * t) + ' % ' + c.bname;
+  function renderChal() {
+    const tot = C.CHALLENGES.map(c => ({ c, t: C.chalTier(meta, c.id) })).filter(x => x.t);
+    $('chalBonus').innerHTML = tot.length ? 'Deine Boni: ' + tot.map(x => `<b>${chalBonusTxt(x.c, x.t)}</b>`).join(' · ') : 'Noch keine Boni. Die erste Stufe ist meist schnell geschafft.';
+    const list = $('chalList'); list.innerHTML = '';
+    for (const c of C.CHALLENGES) {
+      const t = C.chalTier(meta, c.id), st = (meta.chal || {})[c.id], el = document.createElement('div');
+      el.className = 'chal' + (t >= c.goals.length ? ' done' : '');
+      el.innerHTML = `<div class="hd"><b>${c.name}</b><span>${st && st.best ? 'Bestes: Welle ' + st.best : 'noch nicht gespielt'}</span></div>
+        <div class="rule">${c.rule}</div>
+        <div class="tiers">${c.goals.map((g, i) => `<div class="tier${i < t ? ' ok' : ''}"><b>Welle ${g}</b>${i < t ? '✓ ' : ''}+${Math.round(c.step * 100)} % ${c.bname}</div>`).join('')}</div>
+        <button class="go">${runAlive() ? 'Erst laufenden Lauf beenden' : t >= c.goals.length ? 'Nochmal spielen' : 'Starten'}</button>`;
+      const b = el.querySelector('.go'); b.disabled = runAlive();
+      b.addEventListener('click', () => { if (!runAlive()) startRun({ kind: 'chal', id: c.id }); });
+      list.appendChild(el);
+    }
+  }
+  $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
+  $('chalClose').addEventListener('click', home);
+
+  // ---------- Tageslauf ----------
+  const twistOf = day => C.TWISTS.find(t => t.id === C.dailyOf(day).twist);
+  const dailyToday = () => (meta.daily && meta.daily.day === today() ? meta.daily : null);
+  function renderDaily() {
+    const day = today(), tw = twistOf(day), d = dailyToday();
+    $('dDay').textContent = day.split('-').reverse().join('.');
+    $('dTwist').textContent = tw.name; $('dTwistTxt').textContent = tw.desc;
+    $('dBest').textContent = d && d.best ? d.best : '–';
+    $('dTries').textContent = d ? d.tries : 0;
+    $('dBonus').textContent = d && d.bonus ? 'erhalten' : '+' + fmt(C.dailyBonus(meta));
+    $('dNote').textContent = d && d.bonus ? 'Der Tagesbonus ist für heute abgeholt. Weitere Versuche zählen für die Bestenliste.' : 'Dein erster Tageslauf heute bringt den Tagesbonus, egal wie weit du kommst.';
+    $('dStart').disabled = runAlive(); $('dStart').textContent = runAlive() ? 'Erst laufenden Lauf beenden' : 'Tageslauf starten';
+    renderDailyBoard($('dStatus'), $('dBody'));
+  }
+  async function renderDailyBoard(st, body) {
+    body.innerHTML = '';
+    if (!O.configured) { st.textContent = 'Der Vergleich mit anderen startet, sobald der Online-Dienst verbunden ist. Bis dahin zählt dein eigenes Tagesbestes.'; return; }
+    if (!meta.name) st.textContent = 'Gib in der Bestenliste einen Namen ein, um hier zu erscheinen.';
+    else st.textContent = 'Wird geladen …';
+    const data = await O.topDaily(today(), 20);
+    if (!data) { st.textContent = 'Die Tagesliste ist gerade nicht erreichbar.'; return; }
+    if (meta.name) st.textContent = data.length ? '' : 'Heute noch keine Einträge. Sei die oder der Erste.';
+    const me = O.pid();
+    body.innerHTML = data.map((r, i) => `<tr class="${r.player_id === me ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.name)}</td><td>Welle ${r.wave}</td></tr>`).join('');
+  }
+  function submitDaily() {
+    const d = dailyToday();
+    if (!O.configured || !meta.name || meta.adminTainted || !d || !d.best) return;
+    O.submitDaily(d.day, meta.name, d.best, d.kills || 0);
+  }
+  $$('.daily-btn').forEach(b => b.addEventListener('click', () => show('daily')));
+  $('dStart').addEventListener('click', () => { if (!runAlive()) startRun({ kind: 'daily' }); });
+  $('dClose').addEventListener('click', home);
 
   // ---------- Offline / Rückkehr ----------
   function offlineCrystals() {
@@ -153,7 +247,7 @@
     for (const r of rows) {
       const u = r.u, avail = run.available(u), mx = run.maxed(u);
       r.el.classList.toggle('locked', !avail);
-      r.lvl.textContent = avail ? 'St. ' + run.L(u.id) : 'Labor';
+      r.lvl.textContent = avail ? 'St. ' + run.L(u.id) : run.isBlocked(u) ? 'Handicap' : 'Labor';
       r.val.textContent = avail ? VAL[u.id](run.s, run) : '';
       r.autoB.setAttribute('aria-pressed', meta.auto[u.id] ? 'true' : 'false');
       r.autoB.classList.toggle('off', !meta.autoAll);
@@ -413,7 +507,11 @@
     $$('.fus-btn').forEach(b => { b.hidden = !showFus; b.classList.toggle('ready', canFuse); });
     const showMod = C.record(meta) >= C.MODULES_AT || Object.keys(meta.modules || {}).length > 0;
     $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
+    const rec = C.record(meta), d = dailyToday();
+    $$('.chal-btn').forEach(b => { b.hidden = !(rec >= C.CHAL_AT || meta.chal && Object.keys(meta.chal).length); });
+    $$('.daily-btn').forEach(b => { b.hidden = rec < C.DAILY_AT; b.classList.toggle('ready', !(d && d.bonus)); });
     // Leere Zweierreihen ausblenden
+    $$('.daily-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
     $$('.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
   }
   const F_FX = {
@@ -516,9 +614,12 @@
     if (!O.configured || !meta.name || meta.adminTainted || !meta.best) return;
     O.submit(meta.name, meta.best, meta.runs);
   }
+  let lbTab = 'all';
+  $$('[data-lb]').forEach(b => b.addEventListener('click', () => { lbTab = b.dataset.lb; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false')); A.play('click'); renderBoard(); }));
   async function renderBoard() {
     const st = $('lbStatus'), body = $('lbBody');
     body.innerHTML = '';
+    if (lbTab === 'day') { $('lbName').hidden = !O.configured; $('nameInput').value = meta.name || ''; const d = dailyToday(); await renderDailyBoard(st, body); if (!O.configured && d && d.best) st.textContent += ` Dein Tagesbestes: Welle ${d.best}.`; return; }
     $('lbName').hidden = !O.configured;
     $('nameInput').value = meta.name || '';
     if (!O.configured) { st.textContent = 'Die Bestenliste ist noch nicht eingerichtet. Sie wird aktiv, sobald der Online-Dienst verbunden ist.'; return; }
@@ -533,7 +634,7 @@
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   $('nameInput').addEventListener('change', () => {
     meta.name = $('nameInput').value.trim().slice(0, 16); save();
-    O.setStatus(meta.name, run ? run.wave : 0); submitScore(); setTimeout(renderBoard, 600);
+    O.setStatus(meta.name, run ? run.wave : 0); submitScore(); submitDaily(); setTimeout(renderBoard, 600);
   });
   if (O.configured) {
     O.start(meta.name);
@@ -571,6 +672,10 @@
     sector: () => { if (runAlive()) { run.jumpTo((Math.floor((run.wave - 1) / 50) + 1) * 50 + 1); run.admin = true; } },
     rec100: () => { meta.bestEver = Math.max(meta.bestEver || 0, 100); meta.best = Math.max(meta.best, 100); meta.adminTainted = true; },
     rec0: () => { meta.bestEver = 0; meta.best = 0; },
+    chalall: () => { meta.chal = {}; for (const c of C.CHALLENGES) meta.chal[c.id] = { best: c.goals[c.goals.length - 1], tier: c.goals.length }; meta.adminTainted = true; if (runAlive()) run.recalc(); },
+    chalreset: () => { meta.chal = {}; if (runAlive()) run.recalc(); },
+    dailyreset: () => { meta.daily = null; },
+    dailytom: () => { const t = new Date(Date.now() + 864e5); dayOverride = dayOverride ? null : C.dayKey(t); },
     loot: () => { const d = C.rollModule(Math.max(10, meta.best || 10) + Math.floor(Math.random() * 250)); C.addModule(meta, d); meta.adminTainted = true; if (runAlive()) run.recalc(); },
     best50: () => { meta.best = 50; meta.adminTainted = true; },
     best0: () => { meta.best = 0; },
@@ -593,8 +698,8 @@
   if (adminOk) { $('adminPill').hidden = false; $('admBtn').hidden = false; }
 
   // ---------- Bedienung ----------
-  $('startBtn').addEventListener('click', startRun);
-  $('againBtn').addEventListener('click', startRun);
+  $('startBtn').addEventListener('click', () => startRun());
+  $('againBtn').addEventListener('click', () => startRun(lastMode));
   $('labStart').addEventListener('click', () => { if (runAlive()) { show(null); setPaused(false); } else startRun(); });
   $('labBtn').addEventListener('click', () => show('lab'));
   $('labBtn2').addEventListener('click', () => show('lab'));
@@ -660,9 +765,16 @@
     if (run && uiT > 0.15) {
       uiT = 0;
       $('waveNo').textContent = run.wave;
-      const rec = run.wave > meta.best && meta.best > 0;
-      $('bestNo').textContent = rec ? 'NEUER REKORD' : 'Rekord ' + meta.best;
-      $('bestNo').classList.toggle('rec', rec);
+      if (run.mode) {
+        let txt, hit;
+        if (run.mode.kind === 'chal') { const c = chalOf(run.mode.id), t = c.goals.filter(g => run.wave >= g).length, nx = c.goals[t]; txt = c.name + (nx ? ' · Ziel ' + nx : ' · alle Stufen'); hit = t > C.chalTier(meta, c.id); }
+        else { const d = dailyToday(), b = d ? d.best : 0; txt = 'Tageslauf' + (b ? ' · heute ' + b : ''); hit = b > 0 && run.wave > b; }
+        $('bestNo').textContent = txt; $('bestNo').classList.toggle('rec', !!hit);
+      } else {
+        const rec = run.wave > meta.best && meta.best > 0;
+        $('bestNo').textContent = rec ? 'NEUER REKORD' : 'Rekord ' + meta.best;
+        $('bestNo').classList.toggle('rec', rec);
+      }
       $('runK').textContent = fmt(Math.floor(run.crystals));
       $('myDmg').textContent = fmt(run.s.dmg);
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));

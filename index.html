@@ -238,6 +238,34 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .extra { display: grid; gap: 6px; font-size: .84rem; }
 .extra .loot { border-left: 2px solid var(--rc); padding-left: 8px; }
 .extra .loot b { color: var(--rc); }
+/* Herausforderungen und Tageslauf */
+.chal-btn { border-color: color-mix(in srgb, var(--hostile) 55%, var(--line)); color: var(--hostile); }
+.daily-btn { border-color: color-mix(in srgb, var(--heal) 55%, var(--line)); color: var(--heal); }
+.daily-btn.ready { background: color-mix(in srgb, var(--heal) 14%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--heal) 30%, transparent); }
+#chalList { display: grid; gap: 10px; }
+.chal { border: 1px solid var(--line); border-left: 2px solid var(--hostile); border-radius: 4px; padding: 10px 12px; display: grid; gap: 6px; }
+.chal.done { border-left-color: var(--heal); }
+.chal .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.chal .hd b { font-size: .98rem; }
+.chal .hd span { font-family: var(--font-num); font-size: .74rem; color: var(--ink-dim); }
+.chal .rule { font-size: .8rem; color: var(--ink-dim); line-height: 1.4; }
+.tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tier { border: 1px solid var(--line); border-radius: 3px; padding: 5px 6px; font-size: .72rem; text-align: center; color: var(--ink-dim); }
+.tier b { display: block; font-family: var(--font-num); font-size: .84rem; color: var(--ink); }
+.tier.ok { border-color: var(--heal); color: var(--heal); background: color-mix(in srgb, var(--heal) 8%, transparent); }
+.tier.ok b { color: var(--heal); }
+.chal .go { height: 36px; border-radius: 4px; border: 1px solid var(--hostile); color: var(--hostile); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: .8rem; }
+.bonusline { font-size: .82rem; color: var(--ink-dim); line-height: 1.5; }
+.bonusline b { color: var(--heal); font-family: var(--font-num); font-weight: 600; }
+.twist { border: 1px solid color-mix(in srgb, var(--heal) 45%, var(--line)); border-radius: 4px; padding: 10px 12px; display: grid; gap: 3px; }
+.twist .l { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.twist b { font-size: 1.05rem; color: var(--heal); }
+.twist span { font-size: .82rem; color: var(--ink-dim); }
+.lbtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.lbtabs button { height: 34px; border: 1px solid var(--line); border-radius: 4px; font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
+.lbtabs button[aria-selected="true"] { border-color: var(--core); color: var(--core); }
+.modetag { color: var(--hostile); }
+.modetag.daily { color: var(--heal); }
 .extra .ms { color: var(--crystal); }
 
 @media (min-height: 940px) { .row .ds { display: block; } }
@@ -335,6 +363,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
         <button class="sec mod-btn" id="modBtn">Module</button>
         <button class="sec fus-btn" id="fusBtn">Kernfusion</button>
       </div>
+      <div class="actions two">
+        <button class="sec daily-btn" id="dailyBtn">Tageslauf</button>
+        <button class="sec chal-btn" id="chalBtn">Herausforderungen</button>
+      </div>
     </div>
     <div class="actions two">
       <button class="sec" id="sfxBtn" aria-pressed="true">Ton an</button>
@@ -409,6 +441,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
         <button class="sec mod-btn" id="modBtn2">Module</button>
         <button class="sec fus-btn" id="fusBtn2">Kernfusion</button>
       </div>
+      <div class="actions two">
+        <button class="sec daily-btn" id="dailyBtn2">Tageslauf</button>
+        <button class="sec chal-btn" id="chalBtn2">Herausforderungen</button>
+      </div>
       <button class="sec" id="againBtn">Sofort neu starten</button>
     </div>
   </div>
@@ -449,6 +485,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 <div class="ov" id="board" hidden>
   <div class="card">
     <h2>Bestenliste</h2>
+    <div class="lbtabs"><button data-lb="all" aria-selected="true">Bestwelle</button><button data-lb="day" aria-selected="false">Tageslauf heute</button></div>
     <div id="lbName" hidden>
       <h3>Dein Name</h3>
       <input id="nameInput" maxlength="16" autocomplete="nickname" placeholder="Name für die Bestenliste">
@@ -484,6 +521,35 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
     <div class="slots" id="modSlots"></div>
     <div id="modList"></div>
     <div class="actions"><button class="sec" id="modClose">Zurück</button></div>
+  </div>
+</div>
+
+<div class="ov" id="chal" hidden>
+  <div class="card">
+    <h2>Herausforderungen</h2>
+    <p>Läufe mit Handicap ab Welle 1. Jede erreichte Stufe gibt einen dauerhaften Bonus, der auch jede Kernfusion überdauert. Sprungtor, Bestwelle und Module zählen hier nicht, Kristalle gibt es zur Hälfte.</p>
+    <p class="bonusline" id="chalBonus"></p>
+    <div id="chalList"></div>
+    <div class="actions"><button class="sec" id="chalClose">Zurück</button></div>
+  </div>
+</div>
+
+<div class="ov" id="daily" hidden>
+  <div class="card">
+    <div class="labhead"><h2>Tageslauf</h2><span class="num" id="dDay"></span></div>
+    <p>Alle spielen heute dieselben Wellen mit derselben Standard-Ausrüstung. Labor, Fusion und Module zählen nicht, nur dein Können. Du hast beliebig viele Versuche, dein bester zählt.</p>
+    <div class="twist"><span class="l">Besonderheit heute</span><b id="dTwist"></b><span id="dTwistTxt"></span></div>
+    <div class="stats">
+      <div class="stat"><div class="l">Bestes heute</div><div class="v num" id="dBest">–</div></div>
+      <div class="stat"><div class="l">Versuche</div><div class="v num" id="dTries">0</div></div>
+      <div class="stat"><div class="l">Tagesbonus</div><div class="v num k" id="dBonus">0</div></div>
+    </div>
+    <p class="note" id="dNote"></p>
+    <button class="cta" id="dStart">Tageslauf starten</button>
+    <h3>Heute online</h3>
+    <p id="dStatus"></p>
+    <table class="lb"><tbody id="dBody"></tbody></table>
+    <div class="actions"><button class="sec" id="dClose">Zurück</button></div>
   </div>
 </div>
 
@@ -531,6 +597,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
         <button data-adm="best0">Bestwelle 0</button>
         <button data-adm="rec100">Rekord 100 (alles frei)</button>
         <button data-adm="rec0">Rekord 0 (Anfänger)</button>
+      </div>
+      <h3>Herausforderungen und Tageslauf</h3>
+      <div class="adm">
+        <button data-adm="chalall">Alle Stufen erreicht</button>
+        <button data-adm="chalreset">Stufen zurücksetzen</button>
+        <button data-adm="dailyreset">Tageslauf zurücksetzen</button>
+        <button data-adm="dailytom">Morgigen Tag testen</button>
       </div>
     </div>
     <div class="actions"><button class="sec" id="admClose">Schließen</button></div>

@@ -229,9 +229,11 @@
     heavy:     { name: 'Panzerverband',  n: 0.4,  hp: 2.7,  spd: 0.75, mix: { brute: 0.7 }, big: 1.25 },
     artillery: { name: 'Artillerie',     n: 0.85, hp: 1.15, spd: 1,    mix: { shooter: 0.45 } },
   };
-  function pickWaveType(w) {
+  function pickWaveType(w, rnd, bias) {
+    rnd = rnd || Math.random;
+    if (bias && w >= 6 && w % 10 && rnd() < 0.5) return bias;
     if (!P.waveTypes || w < 12 || w % 10 === 0) return 'normal';
-    const r = Math.random();
+    const r = rnd();
     if (r < 0.2) return 'swarm';
     if (r < 0.38) return 'heavy';
     if (r < 0.52 && w >= 15) return 'artillery';
@@ -243,11 +245,12 @@
   const MODULES_AT = 30, FUSION_AT = 50;
   const ROADMAP = [
     { w: 10, label: 'Erstes Mutterschiff' },
-    { w: 15, label: 'Stasisfeld im Labor' },
+    { w: 15, label: 'Stasisfeld im Labor, Tageslauf' },
     { w: 20, label: 'Orbitklingen im Labor' },
     { w: 25, label: 'Überladung und Sprungtor im Labor' },
     { w: 30, label: 'Boss-Module: Mutterschiffe lassen Beute fallen' },
     { w: 35, label: 'Minenwerfer im Labor' },
+    { w: 40, label: 'Herausforderungen: Läufe mit Handicap für dauerhafte Boni' },
     { w: 50, label: 'Kernfusion' },
     { w: 51, label: 'Sektor 2: Smaragdnebel' },
     { w: 101, label: 'Sektor 3: Glutgürtel' },
@@ -294,10 +297,73 @@
   };
 
 
+  // ---------- Herausforderungen: Läufe mit Handicap, Stufen bringen dauerhafte Boni (überdauern die Fusion) ----------
+  const CHAL_AT = 40, DAILY_AT = 15;
+  const CHALLENGES = [
+    { id: 'nodef', name: 'Ohne Abwehr',  rule: 'Keine Abwehr-Upgrades im Lauf: Hülle, Reparatur, Panzerung, Rückstoß, Schockwelle und Klingen bleiben gesperrt.', goals: [15, 25, 40], bonus: 'hp',   step: 0.05, bname: 'Strukturpunkte' },
+    { id: 'fast',  name: 'Hetzjagd',     rule: 'Alle Gegner fliegen doppelt so schnell.', goals: [30, 50, 70], bonus: 'rate', step: 0.04, bname: 'Feuerrate' },
+    { id: 'mines', name: 'Nur Minen',    rule: 'Kanone, Nebenkanonen, Schockwelle, Klingen und Orbitalschlag schweigen. Nur der Minenwerfer arbeitet, er ist von Beginn an aktiv.', goals: [30, 50, 70], bonus: 'crys', step: 0.08, bname: 'Kristalle' },
+    { id: 'glass', name: 'Glaskanone',   rule: 'Nur ein Viertel der Strukturpunkte und keine Reparatur.', goals: [20, 40, 55], bonus: 'dmg',  step: 0.04, bname: 'Schaden' },
+    { id: 'poor',  name: 'Sparflamme',   rule: 'Abschüsse bringen nur halb so viel Energie, keine Wellenprämie.', goals: [20, 40, 60], bonus: 'loot', step: 0.06, bname: 'Energie' },
+  ];
+  const CHAL_BY_ID = {}; CHALLENGES.forEach(c => (CHAL_BY_ID[c.id] = c));
+  const chalTier = (m, id) => (m.chal && m.chal[id] && m.chal[id].tier) || 0;
+  function chalBonus(m) {
+    const b = { hp: 1, rate: 1, dmg: 1, loot: 1, crys: 1 };
+    for (const c of CHALLENGES) b[c.bonus] += c.step * chalTier(m, c.id);
+    return b;
+  }
+  // Was eine Herausforderung im Lauf sperrt
+  const BLOCK = {
+    nodef: u => u.tab === 'def',
+    mines: u => (u.tab === 'atk' && u.id !== 'dmg' && u.id !== 'mine') || u.id === 'shock' || u.id === 'blade',
+    glass: u => u.id === 'regen',
+    poor:  u => u.id === 'interest',
+  };
+
+  // ---------- Tageslauf: gleiche Wellen und gleiche Ausrüstung für alle ----------
+  // Feste Labor-Ausrüstung, keine Fusion, keine Module, kein Sprungtor
+  const STD_LV = { m_dmg: 12, m_hp: 12, m_rate: 8, m_regen: 8, m_armor: 5, m_loot: 8, m_start: 5, m_head: 3, u_shock: 1, u_freeze: 1, m_freeze: 3, u_over: 1, m_over: 2, u_blade: 1 };
+  const TWISTS = [
+    { id: 'plain',  name: 'Standard',        desc: 'Keine Besonderheit, reines Können.' },
+    { id: 'fast',   name: 'Schnelle Gegner', desc: 'Gegner fliegen 40 % schneller.', spd: 1.4 },
+    { id: 'swarm',  name: 'Schwarmtag',      desc: 'Viele Schwarm-Wellen mit wendigen Abfangjägern.', bias: 'swarm' },
+    { id: 'heavy',  name: 'Panzertag',       desc: 'Viele Panzerverbände mit schweren Kreuzern.', bias: 'heavy' },
+    { id: 'rich',   name: 'Reiche Beute',    desc: '+50 % Energie, dafür 30 % zähere Gegner.', loot: 1.5, ehp: 1.3 },
+    { id: 'nodef',  name: 'Ohne Abwehr',     desc: 'Keine Abwehr-Upgrades im Lauf.', block: 'nodef' },
+    { id: 'glass',  name: 'Glaskanone',      desc: 'Ein Viertel der Strukturpunkte, keine Reparatur.', block: 'glass' },
+  ];
+  function hashStr(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  // Tag nach deutscher Zeit, damit alle zur selben Mitternacht wechseln
+  function dayKey(d) {
+    d = d || new Date();
+    try { return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); }
+    catch (e) { return d.toISOString().slice(0, 10); }
+  }
+  function dailyOf(day) {
+    day = day || dayKey();
+    const seed = hashStr('kernwacht:' + day);
+    return { day, seed, twist: TWISTS[seed % TWISTS.length].id };
+  }
+  function stdMeta() { const m = newMeta(); m.lv = Object.assign({}, STD_LV); m.flv = {}; m.modules = {}; m.equip = []; m.chal = {}; return m; }
+  // Tagesbonus: einmal pro Tag Kristalle wie nach 4 Stunden Abwesenheit
+  const dailyBonus = m => Math.max(50, Math.floor(4 * offlinePerHour(m)));
+
   class Run {
     constructor(meta, opts) {
       opts = opts || {};
+      // Sondermodus: { kind: 'chal', id } oder { kind: 'daily', day }
+      this.mode = opts.mode || null;
+      this.home = meta;
+      if (this.mode && this.mode.kind === 'daily') {
+        const D = dailyOf(this.mode.day); this.mode.day = D.day; this.mode.twist = D.twist; this.seed = D.seed;
+        meta = stdMeta();
+      }
       this.meta = meta;
+      this.rng = Math.random;
+      const tw = this.twist(), cid = this.mode && this.mode.kind === 'chal' ? this.mode.id : tw && tw.block;
+      this.block = (cid && BLOCK[cid]) || null; this.rule = cid || null;
       this.fxOn = !opts.noFx;
       this.lv = {};
       RUN_UPG.forEach(u => (this.lv[u.id] = 0));
@@ -315,7 +381,7 @@
       this.holding = false; this.god = false; this.ring = null;
       this.rockets = []; this.bolts = []; this.rocketT = 0; this.cryoT = 0; this.reinfT = 0; this.loot = []; this.novaT = 0;
       this.startWave = 1;
-      const S = Math.min(opts.startWave || 1, maxStartWave(meta));
+      const S = this.mode ? 1 : Math.min(opts.startWave || 1, maxStartWave(meta));
       if (S > 1) {
         const jb = jumpBonus(meta, S);
         this.energy += jb.energy; this.crystals += jb.crystals;
@@ -329,7 +395,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'mode', 'waveType', 'waveMod'];
       const o = {}; keep.forEach(k => (o[k] = this[k]));
       o.enemies = this.enemies.map(e => Object.assign({}, e));
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -337,7 +403,7 @@
       return JSON.parse(JSON.stringify(o));
     }
     static restore(meta, o) {
-      const r = new Run(meta, { noFx: true });
+      const r = new Run(meta, { noFx: true, mode: o.mode });
       Object.assign(r, o);
       r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.focus = null; r.dead = false; r.ring = null;
       r.cd = Object.assign({ freeze: 0, over: 0 }, o.cd || {});
@@ -347,9 +413,13 @@
       return r;
     }
 
+    twist() { return this.mode && this.mode.kind === 'daily' ? TWISTS.find(t => t.id === dailyOf(this.mode.day).twist) : null; }
+    isBlocked(u) { return !!(this.block && u && this.block(u)); }
     // Freigeschaltete Zusatzwaffen beginnen auf Stufe 1
     L(id) {
       const u = UPG_BY_ID[id];
+      if (this.isBlocked(u)) return 0;
+      if (id === 'mine' && this.rule === 'mines') return this.lv.mine + 1;
       const unlockFree = u && (u.req && mlv(this.meta, u.req) > 0 || u.freq && flv(this.meta, u.freq) > 0) ? 1 : 0;
       return this.lv[id] + (this.free[id] || 0) + unlockFree;
     }
@@ -359,23 +429,25 @@
       const s = {};
       const F = id => flv(this.meta, id);
       s.fusion = Math.pow(P.fCore, F('f_core'));
-      s.dmg = P.pDmg * Math.pow(P.lvDmg, L('dmg')) * Math.pow(1.08, M('m_dmg')) * s.fusion;
-      s.rate = 1.2 * (1 + 0.05 * L('rate')) * (1 + 0.03 * M('m_rate'));
+      const cb = chalBonus(this.meta); s.chal = cb;
+      s.dmg = P.pDmg * Math.pow(P.lvDmg, L('dmg')) * Math.pow(1.08, M('m_dmg')) * s.fusion * cb.dmg;
+      s.rate = 1.2 * (1 + 0.05 * L('rate')) * (1 + 0.03 * M('m_rate')) * cb.rate;
       s.range = 150 + 5 * L('range');
       s.crit = 0.025 * L('crit');
       s.critx = 1.5 + 0.1 * L('critx');
       s.multi = L('multi');
       s.multiDmg = P.multiDmg; // Nebenrohre treffen schwächer als das Hauptrohr
-      s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp')) * s.fusion;
+      s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp')) * s.fusion * cb.hp * (this.rule === 'glass' ? 0.25 : 1);
       const rg = L('regen');
       s.regen = s.maxHp * P.rgMax * (rg / (rg + P.rgK)) * (1 + 0.1 * M('m_regen'));
       const ar = L('armor');
       s.armor = Math.min(P.arCap, P.arMax * ar / (ar + P.arK) + 0.01 * M('m_armor'));
       s.knock = L('knock') ? 1.5 + 0.35 * L('knock') : 0;
-      s.loot = (1 + P.lootK * L('loot')) * (1 + 0.08 * M('m_loot'));
+      const tw = this.twist();
+      s.loot = (1 + P.lootK * L('loot')) * (1 + 0.08 * M('m_loot')) * cb.loot * (this.rule === 'poor' ? 0.5 : 1) * ((tw && tw.loot) || 1);
       // Wellenprämie: Anteil der Abschuss-Energie einer typischen Welle, als fester Bonus pro überstandener Welle
       s.waveBonus = P.bonusK * L('interest');
-      s.crysMult = (1 + 0.06 * L('crys')) * (1 + 0.1 * M('m_crys')) * (1 + P.fCrys * F('f_crys'));
+      s.crysMult = (1 + 0.06 * L('crys')) * (1 + 0.1 * M('m_crys')) * (1 + P.fCrys * F('f_crys')) * cb.crys;
       // Schockwelle: Druckring, der mit der Reichweite wächst
       const sh = L('shock');
       s.shockCd = sh ? Math.max(2.5, 6.5 - 0.13 * sh) : 0;
@@ -416,12 +488,19 @@
       if (mod.plating) s.armor = Math.min(P.arCap + 0.1, s.armor + mod.plating);
       if (mod.leech) s.loot *= 1 + mod.leech;
       if (mod.crysmod) s.crysMult *= 1 + mod.crysmod;
+      if (this.rule === 'glass') s.regen = 0;
+      s.noGun = this.rule === 'mines';
+      if (s.noGun) { s.rocketCd = 0; s.cryoCd = 0; s.shockCd = 0; s.blades = 0; }
       s.dps = s.dmg * s.rate * (1 + s.crit * (s.critx - 1)) * (1 + s.multi * s.multiDmg);
       this.s = s;
     }
 
     cost(u) { return Math.ceil(u.base * Math.pow(u.g, this.lv[u.id]) * cheapMult(this.meta)); }
-    available(u) { return (!u.req || mlv(this.meta, u.req) > 0) && (!u.freq || flv(this.meta, u.freq) > 0); }
+    available(u) {
+      if (this.isBlocked(u)) return false;
+      if (u.id === 'mine' && this.rule === 'mines') return true;
+      return (!u.req || mlv(this.meta, u.req) > 0) && (!u.freq || flv(this.meta, u.freq) > 0);
+    }
     maxed(u) { return u.max != null && this.L(u.id) >= u.max; }
     canBuy(u) { return this.available(u) && !this.maxed(u) && this.energy >= this.cost(u); }
     buy(u) {
@@ -450,7 +529,10 @@
       this.holding = false;
       const w = this.wave;
       const boss = w % 10 === 0;
-      const wt = boss ? 'normal' : pickWaveType(w), WT = WAVE_TYPES[wt];
+      // Tageslauf: jede Welle aus eigenem Startwert, damit alle dieselben Wellen bekommen
+      if (this.seed != null) this.rng = mulberry32(hashStr(this.seed + ':' + w));
+      const rnd = this.rng, tw = this.twist();
+      const wt = boss ? 'normal' : pickWaveType(w, rnd, tw && tw.bias), WT = WAVE_TYPES[wt];
       const n = Math.max(3, Math.round(shipCount(w) * WT.n));
       // Gesamt-LP und Energie der Welle bleiben gleich, verteilt auf weniger bzw. mehr Schiffe
       const comp = waveCount(w) / n;
@@ -462,12 +544,12 @@
       const special = [];
       for (let k = 2; k <= sec; k++) special.push({ t: SECTORS[k - 1].enemy, p: k === sec ? 0.14 : 0.06 });
       for (let i = 0; i < n; i++) {
-        let r = Math.random(), t = 'grunt';
+        let r = rnd(), t = 'grunt';
         if (w >= 15 && r < 0.08) t = 'shooter';
         else if (w >= 6 && r < 0.22) t = 'brute';
         else if (w >= 3 && r < 0.45) t = 'runner';
-        else { let q = Math.random(); for (const sp of special) { if (q < sp.p) { t = sp.t; break; } q -= sp.p; } }
-        if (WT.mix) { let q = Math.random(); for (const k in WT.mix) { if (q < WT.mix[k]) { t = k; break; } q -= WT.mix[k]; } }
+        else { let q = rnd(); for (const sp of special) { if (q < sp.p) { t = sp.t; break; } q -= sp.p; } }
+        if (WT.mix) { let q = rnd(); for (const k in WT.mix) { if (q < WT.mix[k]) { t = k; break; } q -= WT.mix[k]; } }
         list.push(t);
       }
       if (boss) list.splice(Math.floor(n / 3), 0, 'boss');
@@ -482,10 +564,12 @@
       const d = ENEMY[type], w = this.wave;
       // Frühe Mutterschiffe schwächer, volle Stärke ab etwa Welle 60
       const wm = type === 'boss' || type === 'bomb' || !this.waveMod ? { hp: 1, rw: 1, dmg: 1, spd: 1, big: 1 } : this.waveMod;
-      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1);
+      const tw = this.twist();
+      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1);
+      const spdK = (this.rule === 'fast' ? 2 : 1) * ((tw && tw.spd) || 1);
       const e = {
         id: ++this.uid, type, a: Math.atan2(y0, x0), dist: Math.hypot(x0, y0), hp, maxHp: hp,
-        spd: d.spd * (1 + Math.min(0.6, w * 0.006)) * wm.spd,
+        spd: d.spd * (1 + Math.min(0.6, w * 0.006)) * wm.spd * spdK,
         dmg: d.dmg * dmgScale(w) * wm.dmg, rw: d.rw * rwScale(w) * wm.rw, r: d.r * (wm.big > 1 && type === 'brute' ? wm.big : 1) * (type !== 'boss' && wm.hp > 1.6 ? 1.1 : 1), stop: d.stop || 0,
         atkT: 0.5, shotT: 1 + Math.random(), bladeHit: 0, kbT: 0, flash: 0, seed: Math.random() * 6.28, fac: sectorOf(w).n,
       };
@@ -497,7 +581,7 @@
       this.enemies.push(e);
       return e;
     }
-    spawn(type) { this.spawnAt(type, (Math.random() * 2 - 1) * FIELD_W, -FIELD_H - Math.random() * 30); }
+    spawn(type) { this.spawnAt(type, (this.rng() * 2 - 1) * FIELD_W, -FIELD_H - this.rng() * 30); }
     // Getarnte Schiffe sind auf Distanz nicht anvisierbar (Flächenschaden trifft sie trotzdem)
     cloaked(e) { if (this.s.mod && this.s.mod.scanner) return false; return (e.type === 'phantom' && e.dist > ENEMY.phantom.cloakFrom) || (e.cloakUntil && e.cloakUntil > this.time); }
 
@@ -523,7 +607,7 @@
         this.energy += e.rw * this.s.loot;
         this.kills++;
         if (this.fxOn && this.s.mod && (this.s.mod.leech || this.s.mod.crysmod) && Math.random() < 0.5) { const p = this.pos(e); this.fx.push({ k: this.s.mod.leech ? 'leech' : 'crysfx', x: p.x, y: p.y, t: 0 }); }
-        this.charge = Math.min(1, this.charge + (e.type === 'boss' ? 0.35 : e.type === 'bomb' ? 0 : 1 / STRIKE_KILLS));
+        if (!this.s.noGun) this.charge = Math.min(1, this.charge + (e.type === 'boss' ? 0.35 : e.type === 'bomb' ? 0 : 1 / STRIKE_KILLS));
         if (this.s.mod.splinter && src !== 'mod') {
           const p = this.pos(e), dmg = e.maxHp * this.s.mod.splinter;
           for (const o of this.enemies) if (o !== e && o.hp > 0) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 45 + o.r) this.hurt(o, dmg, false, 'mod'); }
@@ -533,7 +617,7 @@
           this.crystals += P.cBoss * waveCrystals(this.wave) * this.s.crysMult;
           const modOk = Math.max(record(this.meta), this.wave) >= MODULES_AT;
           const first = !this.meta.modules || !Object.keys(this.meta.modules).length;
-          if (!this.admin && modOk && (first && !this.loot.length || Math.random() < dropChance(this.wave))) {
+          if (!this.admin && !this.mode && modOk && (first && !this.loot.length || Math.random() < dropChance(this.wave))) {
             const drop = rollModule(this.wave); this.loot.push(drop);
             if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'loot', x: p.x, y: p.y, t: 0, drop }); }
           }
@@ -735,6 +819,7 @@
       // Feuern (markiertes Ziel zuerst, Bomben vor normalen Schiffen)
       if (this.focus && (this.focus.hp <= 0 || this.time > this.focusUntil)) this.focus = null;
       this.fireT += dt * this.rateNow;
+      if (s.noGun) this.fireT = 0;
       if (this.fireT >= 1) {
         const inRange = this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.range && !this.cloaked(e)).sort((a, b) => (a.bomb ? a.dist - 1000 : a.dist) - (b.bomb ? b.dist - 1000 : b.dist));
         // Bosskampf: nach Wellenende hat das Mutterschiff Vorrang, außer ein Schiff ist schon nah an der Kanone
@@ -901,6 +986,7 @@
 
     finish() {
       this.dead = true;
+      if (this.mode) return this.finishMode();
       const m = this.meta, c = Math.floor(this.crystals);
       m.crystals += c; m.totalCrystals = (m.totalCrystals || 0) + c;
       m.runs++; m.kills += this.kills;
@@ -915,6 +1001,29 @@
       }
       const loot = this.loot.map(d => ({ type: d.type, rar: d.rar, result: addModule(m, d) }));
       return { crystals: c, wave: this.wave, kills: this.kills, time: this.time, newBest, milestones: ms, loot };
+    }
+    // Sonderläufe: keine Bestwelle, keine Meilensteine, keine Module
+    finishMode() {
+      const m = this.home, w = this.wave, res = { wave: w, kills: this.kills, time: this.time, crystals: 0, mode: this.mode, milestones: [], loot: [] };
+      m.runs++; m.kills += this.kills;
+      if (this.mode.kind === 'chal') {
+        const C = CHAL_BY_ID[this.mode.id];
+        // Halbe Kristalle: der Lauf ist nicht verschenkt, lohnt sich aber vor allem wegen der Stufen
+        const c = Math.floor(this.crystals * 0.5); m.crystals += c; m.totalCrystals = (m.totalCrystals || 0) + c; res.crystals = c;
+        m.chal = m.chal || {};
+        const st = m.chal[C.id] = m.chal[C.id] || { best: 0, tier: 0 };
+        const before = st.tier;
+        if (!this.admin) { st.best = Math.max(st.best, w); st.tier = Math.max(st.tier, C.goals.filter(g => w >= g).length); }
+        res.tierBefore = before; res.tier = st.tier; res.best = st.best; res.newTier = st.tier > before;
+      } else {
+        const d = m.daily && m.daily.day === this.mode.day ? m.daily : (m.daily = { day: this.mode.day, best: 0, kills: 0, tries: 0, bonus: false });
+        d.tries++;
+        res.prevBest = d.best;
+        if (!this.admin && (w > d.best || (w === d.best && this.kills > d.kills))) { d.best = w; d.kills = this.kills; res.newBest = true; }
+        if (!this.admin && !d.bonus) { d.bonus = true; const k = dailyBonus(m); m.crystals += k; m.totalCrystals = (m.totalCrystals || 0) + k; res.crystals = k; res.bonus = true; }
+        res.best = d.best;
+      }
+      return res;
     }
   }
 
@@ -959,5 +1068,5 @@
   }
   const enemyHp = (type, w) => ENEMY[type].hp * hpScale(w);
 
-  root.Core = { dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  root.Core = { CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

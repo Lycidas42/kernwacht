@@ -2,6 +2,10 @@
 
 Idle Tower Defense im Neon-Look. Deine Kanone steht unten, Raumschiffe greifen von oben an. Wenn sie fällt, gibt es Kristalle für dauerhafte Upgrades im Labor.
 
+Herausforderungen (ab Rekordwelle 40): Läufe mit Handicap wie „Ohne Abwehr“, „Hetzjagd“ oder „Nur Minen“. Jede erreichte Stufe gibt einen dauerhaften Bonus, der auch die Kernfusion überdauert.
+
+Tageslauf (ab Rekordwelle 15): Alle spielen am selben Tag dieselben Wellen mit derselben Standard-Ausrüstung und einer Tages-Besonderheit. Der erste Versuch am Tag bringt einen Kristallbonus, der beste Versuch kommt in die Tages-Bestenliste. Das ist die Vorstufe zum späteren Battle Mode.
+
 Langzeit-Ziele: Alle 50 Wellen beginnt ein neuer Sektor mit eigenem Biom, neuem Gegnertyp und neuer Boss-Fähigkeit. Mutterschiffe lassen Module fallen (je Sektor eigene Typen). Ab Bestwelle 50 setzt die Kernfusion Labor und Kristalle zurück und bringt Kernfragmente für dauerhafte Technik, darunter Raketen- und Kryowerfer.
 
 Kein Shop, keine Werbung, keine Premiumwährung. Die Kurven sind auf faires Tempo ohne Kaufdruck ausgelegt.
@@ -34,6 +38,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `tools/curve.js` | Schnelle Fortschrittskurve des ersten Zyklus, Varianten per `KW_P` |
 | `tools/diag_boss.js` | Protokolliert einen Mutterschiff-Kampf bei einer Welle |
 | `tools/tune.js` | Zufallssuche über die Balancing-Parameter gegen eine Zielkurve |
+| `tools/challenges.js` | Herausforderungen und Tageslauf: welche Wellen ein Bot bei typischem Fortschritt schafft |
 | `tools/build-single.js` | Baut `dist/kernwacht.html` als eigenständige Einzeldatei |
 
 ## Neue Version veröffentlichen
@@ -50,6 +55,7 @@ Wer das Spiel offen hat, sieht beim nächsten Laden einen Hinweis „Neue Versio
 node tools/check.js 30            # 30 Läufe mit Labor-Käufen, danach Sprungtor- und Boss-Test
 node tools/strategies.js 20       # lohnt sich Abwehr? drei Kaufstrategien im Vergleich
 node tools/fusion.js 120          # Fusionszyklen: kommt man nach jeder Fusion schnell zurück?
+node tools/challenges.js 45 6     # Herausforderungen bei Bestwelle 45, je 6 Läufe
 node tools/sim.js 30              # einfache Simulation
 node tools/tune.js 300 240        # bis zu 300 Varianten, max. 240 s
 ```
@@ -59,7 +65,7 @@ node tools/tune.js 300 240        # bis zu 300 Varianten, max. 240 s
 Läuft über [Supabase](https://supabase.com) (kostenloser Tarif reicht). Ohne Eintrag in `config.js` bleibt alles aus.
 
 1. Projekt anlegen, Region **Frankfurt (eu-central-1)** wählen.
-2. Im **SQL Editor** den Inhalt von `supabase.sql` ausführen.
+2. Im **SQL Editor** den Inhalt von `supabase.sql` ausführen (legt die Bestenliste und die Tages-Bestenliste an).
 3. Unter **Project Settings → API** die *Project URL* und den *anon public* Key in `config.js` eintragen.
 4. `sw.js`: `VERSION` erhöhen, committen, pushen.
 

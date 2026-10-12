@@ -52,5 +52,16 @@
     const { data, error } = await client.from('scores').select('player_id,name,best_wave,runs').order('best_wave', { ascending: false }).limit(limit || 20);
     return error ? null : data;
   }
-  root.KWOnline = { configured, start, setStatus, submit, top, pid, onCount: f => listeners.push(f), get count() { return count; } };
+  // Tageslauf: nur der beste Versuch des Tages wird eingetragen (das Spiel schickt nur Verbesserungen)
+  async function submitDaily(day, name, wave, kills) {
+    if (!client || !name) return false;
+    const { error } = await client.from('daily_scores').upsert({ day, player_id: pid(), name, wave, kills, updated_at: new Date().toISOString() });
+    return !error;
+  }
+  async function topDaily(day, limit) {
+    if (!client) return null;
+    const { data, error } = await client.from('daily_scores').select('player_id,name,wave,kills').eq('day', day).order('wave', { ascending: false }).order('kills', { ascending: false }).limit(limit || 20);
+    return error ? null : data;
+  }
+  root.KWOnline = { configured, start, setStatus, submit, top, submitDaily, topDaily, pid, onCount: f => listeners.push(f), get count() { return count; } };
 })(window);
