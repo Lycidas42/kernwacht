@@ -327,7 +327,7 @@ window.KW_EN = {
   'Energie im Lauf': 'Energy per run',
   'Werkstatt': 'Workshop', 'Erz eines Planeten wirkt auf die Module aus dem gleichen Sektor. Legendäre Module mit {0}/{1} Funden lassen sich weiter meistern ({2} % Wirkung je Stufe).': 'A planet’s ore works on modules from the same sector. Legendary modules with {0}/{1} finds can be mastered further ({2} % effect per level).',
   'Neues Modul aus Sektor {0}': 'New module from sector {0}', 'zufälliger Typ, {0} {1}': 'random type, {0} {1}', 'Herstellen': 'Craft',
-  '+1 Fund': '+1 find', 'Fund MAX': 'Find MAX', 'Seltener': 'Rarer', 'Meistern {0} %': 'Master {0} %', 'Meister {0}': 'Master {0}',
+  '+1 Fund': '+1 find', 'Fund MAX': 'Find MAX', 'Seltener': 'Rarer', 'Meistern {0} %': 'Master {0} %', 'Meister {0}': 'Master {0}', 'Meister {0} (+{1} %)': 'Master {0} (+{1} %)', 'Fund {0}/{1} · Meister {2} (+{3} %)': 'Find {0}/{1} · Master {2} (+{3} %)', '{0} ★{1}': '{0} ★{1}',
   '{0} · Fund {1}/{2}': '{0} · find {1}/{2}', '{0} · +{1} % Wirkung': '{0} · +{1} % effect', '+{0} % Wirkung': '+{0} % effect', 'Ab Rekordwelle {0}.': 'From record wave {0}.',
 
   'Ausbau': 'Build', 'Planet noch nicht erreichbar.': 'Planet not reachable yet.', 'Erz gegen Kristalle. Kristalle verfallen bei der Kernfusion.': 'Ore for crystals. Crystals are lost on core fusion.',

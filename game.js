@@ -521,7 +521,7 @@
     $('kv').innerHTML = kv.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
     const eq = (meta.equip || []).filter(t => meta.modules[t]);
     $('stMods').innerHTML = eq.length
-      ? '<h4>Ausgerüstete Module · Beitrag zum Schaden</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}</span>${modShare(t, total)}<br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
+      ? '<h4>Ausgerüstete Module · Beitrag zum Schaden</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span>${modShare(t, total)}<br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
         + '<p class="stnote">Kettenblitz, Kältebruch, Überspannung und Zielerfassung verstärken die Kanone; ihr Anteil steckt dort mit drin. Splitter, Dornenwall und Nova stehen unter „Module (direkt)“.</p>'
       : (C.record(meta) >= C.MODULES_AT ? '<h4>Module</h4><p>Keine Module ausgerüstet. Mutterschiffe lassen sie fallen.</p>' : `<h4>Module</h4><p>Ab Rekordwelle ${C.MODULES_AT} lassen Mutterschiffe Module fallen.</p>`);
   }
@@ -811,7 +811,7 @@
       const t = eq[i], m = t && mods[t];
       const d = document.createElement('div');
       d.className = 'slot' + (m ? ' on r' + m.rar : '');
-      d.innerHTML = m ? `${R_.iconSvg(t, m.rar, 26)}<b>${C.MODULES[t].name}</b>${C.RARITY[m.rar].name}<i class="unequip" aria-hidden="true">×</i>` : 'freier Platz';
+      d.innerHTML = m ? `${R_.iconSvg(t, m.rar, 26)}<b>${C.MODULES[t].name}</b>${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}<i class="unequip" aria-hidden="true">×</i>` : 'freier Platz';
       if (m) { d.title = 'Tippen zum Ablegen'; d.setAttribute('role', 'button'); d.addEventListener('click', () => { meta.equip = meta.equip.filter(x => x !== t); A.play('click'); if (runAlive()) run.recalc(); save(); renderModules(); }); }
       slots.appendChild(d);
     }
@@ -827,7 +827,7 @@
         el.className = 'row modrow' + (m ? ' r' + m.rar : ' unknown') + (on ? ' eq' : '');
         el.style.gridTemplateColumns = '1fr auto';
         el.innerHTML = m
-          ? `<div><div class="nm">${R_.iconSvg(t, m.rar, 20)}${M.name}<span class="rar">${C.RARITY[m.rar].name}</span><small>Fund ${m.copies}/10</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
+          ? `<div><div class="nm">${R_.iconSvg(t, m.rar, 20)}${M.name}<span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span><small>Fund ${m.copies}/10${m.mast ? ' · Meister ' + m.mast + ' (+' + 5 * m.mast + ' %)' : ''}</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
           : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Mutterschiffen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
         if (m) el.addEventListener('click', () => {
           if (on) meta.equip = eq.filter(x => x !== t);
@@ -1227,7 +1227,7 @@
     const M = C.MODULES[type], m = meta.modules[type], R = C.RARITY, eq = (meta.equip || []).includes(type);
     const head = result === 'neu' ? 'Neues Modul!' : result === 'besser' ? 'Seltenheit verbessert!' : result === 'erz' ? 'Modul schon voll: in Erz umgewandelt' : result === 'meister' ? `Meisterstufe ${m.mast}!` : 'Modul verstärkt!';
     const fund = (fundRar != null ? `<br><span style="color:var(--ink-dim)">Fund: ${R[fundRar].name}</span>` : '') + (d && d.ore ? `<br><span style="color:var(--heat)">+${fmt(d.ore)} ${d.oreName}</span>` : '');
-    const html = `<div class="reveal r${m.rar}">${R_.iconSvg(type, m.rar, 40)}<div><b>${head}</b><br><span class="rn">${M.name}</span> · <span class="rr">${R[m.rar].name}</span> · Fund ${m.copies}/10${fund}<br><span class="rd">${M.desc(C.moduleValue(m))}</span>${eq ? '' : '<br><span style="color:var(--energy)">Noch nicht ausgerüstet: unter „Module“ auswählen.</span>'}</div></div>`;
+    const html = `<div class="reveal r${m.rar}">${R_.iconSvg(type, m.rar, 40)}<div><b>${head}</b><br><span class="rn">${M.name}</span> · <span class="rr">${R[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span> · Fund ${m.copies}/10${fund}<br><span class="rd">${M.desc(C.moduleValue(m))}</span>${eq ? '' : '<br><span style="color:var(--energy)">Noch nicht ausgerüstet: unter „Module“ auswählen.</span>'}</div></div>`;
     toast(html, 6000);
     mineNote(`${head} ${M.name} (${R[m.rar].name}, Fund ${m.copies}/10): ${M.desc(C.moduleValue(m))}`);
   }

@@ -387,10 +387,10 @@
   const RESEARCH = {
     // spätere Planeten öffnen später und haben weniger Vorrat angesammelt: günstigerer Einstieg
     ast:  { b: 'dmg',  step: 0.03, name: 'Schaden', c0: 500 },
-    ice:  { b: 'hp',   step: 0.03, name: 'Strukturpunkte', c0: 400 },
-    lava: { b: 'rate', step: 0.02, name: 'Feuerrate', c0: 300 },
-    red:  { b: 'loot', step: 0.03, name: 'Energie im Lauf', c0: 200 },
-    void: { b: 'boss', step: 0.03, name: 'Schaden gegen Mutterschiffe', c0: 150 },
+    ice:  { b: 'hp',   step: 0.04, name: 'Strukturpunkte', c0: 400 },
+    lava: { b: 'rate', step: 0.04, name: 'Feuerrate', c0: 300 },
+    red:  { b: 'loot', step: 0.02, name: 'Energie im Lauf', c0: 200 },
+    void: { b: 'boss', step: 0.05, name: 'Schaden gegen Mutterschiffe', c0: 150 },
   };
   const researchCost = (l, id) => Math.ceil(((RESEARCH[id] && RESEARCH[id].c0) || 500) * Math.pow(1.25, l));
   const researchLv = (m, id) => (m.mine && m.mine.res && m.mine.res[id]) || 0;
@@ -1474,6 +1474,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.5.3'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.5.4'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
