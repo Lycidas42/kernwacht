@@ -55,7 +55,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 2. In `sw.js` die Konstante `VERSION` erhöhen (z. B. `kw-1` → `kw-2`).
 3. Committen und auf `main` pushen. GitHub Pages ist nach etwa einer Minute aktuell.
 
-Wer das Spiel offen hat, sieht beim nächsten Laden einen Hinweis „Neue Version“. Installierte Apps holen sich die neue Version beim nächsten Start mit Internet.
+Das Spiel prüft beim Start, alle 5 Minuten und beim Zurückkehren in die App, ob es eine neue Version gibt (Vergleich mit `VERSION` in `sw.js`), und zeigt dann oben „Neue Version – tippen zum Laden“. Im Startmenü steht die aktuelle Version mit dem Knopf „Nach Update suchen“. `VERSION` in `core.js` muss deshalb immer gleich `sw.js` sein.
 
 ## Balancing testen
 

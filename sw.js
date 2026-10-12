@@ -2,7 +2,7 @@
 // Strategie: eigene Dateien "network first" (online immer die neueste Version),
 // offline aus dem Cache. Schriften "cache first".
 // Bei jeder Veröffentlichung VERSION erhöhen, damit alte Caches verschwinden.
-const VERSION = 'kw-26';
+const VERSION = 'kw-27';
 const APP = [
   './',
   './index.html',
@@ -24,6 +24,8 @@ const APP = [
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
 });
+
+self.addEventListener('message', e => { if (e.data === 'skip') self.skipWaiting(); });
 
 self.addEventListener('activate', e => {
   e.waitUntil(

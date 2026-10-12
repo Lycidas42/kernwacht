@@ -1205,6 +1205,15 @@
   $('admBtn').addEventListener('click', () => show('admin'));
   if (adminOk) { $('adminPill').hidden = false; $('admBtn').hidden = false; }
 
+  // ---------- Version und Update ----------
+  $('verTxt').textContent = 'Version ' + C.VERSION;
+  $('updBtn').addEventListener('click', async () => {
+    const b = $('updBtn'); b.disabled = true; b.textContent = 'Suche …';
+    const r = window.KWUpdate ? await window.KWUpdate.check(true) : { error: true };
+    if (r.update) { b.textContent = 'Update laden (' + r.v + ')'; b.disabled = false; b.onclick = () => window.KWUpdate.apply(); return; }
+    b.textContent = r.error ? 'Keine Verbindung' : 'Aktuell ✓'; setTimeout(() => { b.textContent = 'Nach Update suchen'; b.disabled = false; }, 2500);
+  });
+
   // ---------- Bedienung ----------
   $('startBtn').addEventListener('click', () => startRun());
   $('againBtn').addEventListener('click', () => startRun(lastMode));

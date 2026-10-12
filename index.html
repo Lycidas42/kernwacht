@@ -358,6 +358,7 @@ textarea { resize: vertical; min-height: 70px; }
 .vols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .vols label { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
 .vol { height: 28px; padding: 0; background: transparent; border: 0; accent-color: var(--core); width: 100%; }
+.verline { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-family: var(--font-num); font-size: .72rem; color: var(--ink-dim); }
 /* Herausforderungen und Tageslauf */
 .chal-btn { border-color: color-mix(in srgb, var(--hostile) 55%, var(--line)); color: var(--hostile); }
 .daily-btn { border-color: color-mix(in srgb, var(--heal) 55%, var(--line)); color: var(--heal); }
@@ -511,6 +512,7 @@ textarea { resize: vertical; min-height: 70px; }
       <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. N ruft die nächste Welle.</li>
       <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, sobald alle Schiffe gestartet sind. Die gesparte Zeit bringt Bonus-Energie.</li>
     </ul>
+    <div class="verline"><span id="verTxt"></span><button class="mini" id="updBtn">Nach Update suchen</button></div>
     <ul class="fair">
       <li>Kein Shop, keine Werbung, keine Premiumwährung</li>
       <li>Tempo 4× und Auto-Kauf sind von Anfang an frei</li>
@@ -880,25 +882,54 @@ textarea { resize: vertical; min-height: 70px; }
 <script src="online.js"></script>
 <script src="game.js"></script>
 <script>
-// Service Worker: offline spielbar, Updates werden beim nächsten Start aktiv
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      reg.addEventListener('updatefound', () => {
-        const nw = reg.installing;
-        nw && nw.addEventListener('statechange', () => {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            const b = document.createElement('button');
-            b.textContent = 'Neue Version – tippen zum Laden';
-            b.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:50;padding:8px 14px;border-radius:4px;background:#3ef0ff;color:#12102c;font:600 13px system-ui;border:0';
-            b.onclick = () => { try { window.__kwSave && window.__kwSave(); } catch (e) {} location.reload(); };
-            document.body.appendChild(b);
-          }
+// Service Worker: offline spielbar. Updates: regelmäßige Prüfung, Hinweis-Knopf und manuelle Suche im Menü.
+(function () {
+  let reg = null, shown = false;
+  function banner(ver) {
+    if (shown) return; shown = true;
+    const b = document.createElement('button');
+    b.textContent = 'Neue Version' + (ver ? ' (' + ver + ')' : '') + ' – tippen zum Laden';
+    b.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:50;padding:10px 16px;border-radius:4px;background:#3ef0ff;color:#12102c;font:600 14px system-ui;border:0;box-shadow:0 0 18px rgba(62,240,255,.5)';
+    b.onclick = applyUpdate;
+    document.body.appendChild(b);
+  }
+  async function applyUpdate() {
+    try { window.__kwSave && window.__kwSave(); } catch (e) {}
+    try { if (reg) { await reg.update(); if (reg.waiting) reg.waiting.postMessage('skip'); } } catch (e) {}
+    location.reload();
+  }
+  // Neueste Version direkt vom Server lesen (an der Konstante VERSION in sw.js)
+  async function remoteVersion() {
+    const r = await fetch('sw.js?v=' + Date.now(), { cache: 'no-store' });
+    const m = (await r.text()).match(/VERSION = '([^']+)'/);
+    return m ? m[1] : null;
+  }
+  async function check(manual) {
+    try {
+      const v = await remoteVersion(), cur = window.Core && Core.VERSION;
+      if (v && cur && v !== cur) { banner(v); return { update: true, v }; }
+      return { update: false, v: cur };
+    } catch (e) { return { error: true }; }
+  }
+  window.KWUpdate = { check, apply: applyUpdate };
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(r => {
+        reg = r;
+        r.addEventListener('updatefound', () => {
+          const nw = r.installing;
+          nw && nw.addEventListener('statechange', () => { if (nw.state === 'installed' && navigator.serviceWorker.controller) banner(); });
         });
-      });
-    }).catch(() => {});
-  });
-}
+      }).catch(() => {});
+    });
+  }
+  // Regelmäßig prüfen: beim Start, alle 5 Minuten und beim Zurückkehren in die App
+  if (location.protocol !== 'file:') {
+    setTimeout(check, 4000);
+    setInterval(() => { if (!document.hidden) check(); }, 5 * 60e3);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  }
+})();
 </script>
 </body>
 </html>
