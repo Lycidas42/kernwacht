@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunPct: 0.005, gunFocus: 5, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 24, mendMax: 2, wmDmg: 0.35,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.02, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.35,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -236,12 +236,12 @@
   // Rechnerische Gegnerzahl (bestimmt Energie und Gesamt-LP einer Welle)
   const waveCount = w => Math.min(70, 5 + Math.floor(P.nGrow * w));
   // Tatsächlich gespawnte Schiffe: weniger, dafür entsprechend kräftiger
-  const shipCount = w => Math.min(P.shipCap, 4 + Math.floor(0.75 * w));
+  const shipCount = w => Math.min(P.shipCap, 4 + Math.floor(0.4 * w));
 
   // ---------- Wellentypen: Abwechslung statt immer gleicher Masse ----------
   const WAVE_TYPES = {
     normal:    { name: '',               n: 1,    hp: 1,    spd: 1 },
-    swarm:     { name: 'Schwarm',        n: 1.8,  hp: 0.45, spd: 1.15, mix: { runner: 0.75 } },
+    swarm:     { name: 'Schwarm',        n: 1.5,  hp: 0.45, spd: 1.15, mix: { runner: 0.75 } },
     heavy:     { name: 'Panzerverband',  n: 0.4,  hp: 2.7,  spd: 0.75, mix: { brute: 0.7 }, big: 1.25 },
     artillery: { name: 'Artillerie',     n: 0.85, hp: 1.15, spd: 1,    mix: { shooter: 0.45 } },
   };
@@ -879,7 +879,7 @@
       this.waveT += dt * (this.isChal && this.rule === 'fast' ? P.chalFastWave : 1);
       for (const k in this.cd) this.cd[k] = Math.max(0, this.cd[k] - dt);
       this.spawnT += dt;
-      while (this.queue.length && this.spawnT >= this.spawnGap) { this.spawnT -= this.spawnGap; this.spawn(this.queue.shift()); }
+      while (this.queue.length && this.spawnT >= this.spawnGap) { if (this.enemies.length >= P.aliveCap) { this.spawnT = this.spawnGap; break; } this.spawnT -= this.spawnGap; this.spawn(this.queue.shift()); } // volles Feld: Nachschub wartet
       if (this.waveT >= WAVE_LEN) {
         if (this.bossAlive()) {
           this.waveT = WAVE_LEN; this.holding = true;
@@ -1018,8 +1018,8 @@
         if (d <= v + t.r) {
           b.done = true;
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
-          // Präzision: zusätzlich ein Anteil der max. Lebenspunkte des Ziels (nicht bei Mutterschiffen), markierte Ziele dreifach
-          const pct = t.type === 'boss' ? 0 : t.maxHp * P.gunPct * (b.pk || 1) * (t === this.focus ? P.gunFocus : 1);
+          // Präzision: markierte Ziele (außer Mutterschiffen) verlieren zusätzlich 2 % ihrer max. Lebenspunkte je Treffer
+          const pct = t.type === 'boss' || t !== this.focus ? 0 : t.maxHp * P.gunFocusPct * (b.pk || 1); // nur markierte Ziele (keine Mutterschiffe)
           const eff = this.hurt(t, (b.dmg + pct) * brittle, b.crit, 'gun');
           if (eff > 0) {
             // Zusatzschaden den Modulen zurechnen: Anteil, der ohne das Modul fehlen würde
@@ -1474,6 +1474,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.5.2'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.5.3'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
