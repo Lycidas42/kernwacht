@@ -125,8 +125,8 @@
     plating:   { sector: 3, name: 'Dornenwall',        desc: v => `Schiffe am Schutzwall erleiden ${v.toFixed(1).replace('.', ',')}× Kanonenschaden pro Sekunde, +5 % Panzerung`, base: P0.modK.thorn },
     leech:     { sector: 4, name: 'Energieleck',       desc: v => `+${pctS(v)} Energie pro Abschuss, Orbitalschlag lädt ${pctS(v / 2)} schneller`, base: P0.modK.leech },
     nova:      { sector: 4, name: 'Nova-Impuls',       desc: v => `Alle 12 s eine Nova mit ${v.toFixed(1).replace('.', ',')}× Kanonenschaden auf alle Schiffe in Reichweite (sofort, wenn die Hülle unter 30 % fällt)`, base: P0.modK.nova },
-    echo:      { sector: 5, name: 'Echo',              desc: v => `−${pctS(v)} Abklingzeit der Fähigkeiten`, base: 0.08 },
-    crysmod:   { sector: 5, name: 'Kristallresonator', desc: v => `+${pctS(v)} Kristalle`, base: 0.15 },
+    echo:      { sector: 5, name: 'Echo',              desc: v => `−${pctS(Math.min(0.6, v))} Abklingzeit, +${pctS(v / 2)} Dauer von Stasis und Überladung. Wirkt auch in Challenges`, base: 0.1 },
+    crysmod:   { sector: 5, name: 'Kristallresonator', desc: v => `+${pctS(v)} Kristalle. In Challenges haben Gegner ${pctS(1 - 1 / (1 + 0.4 * v))} weniger Lebenspunkte`, base: 0.15 },
   };
   const RARITY = [
     { id: 0, name: 'gewöhnlich', mult: 1 },
@@ -573,7 +573,7 @@
       s.cryoR = 40 + cr;
       s.cryoRange = s.range; // gleiche Reichweite wie die Hauptkanone
       // Ausgerüstete Module
-      const mod = {}; const eq = this.isChal ? [] : (this.meta.equip || []); // Challenges ohne Module
+      const mod = {}; const eq = (this.meta.equip || []).filter(t => !this.isChal || (MODULES[t] && MODULES[t].sector === 5)); // in Challenges wirken nur Leere-Module (Sektor 5)
       for (const t of eq) { const m = this.meta.modules && this.meta.modules[t]; if (m) mod[t] = moduleValue(m) * cb.mod; }
       s.mod = mod;
       if (mod.scanner) s.crit += mod.scanner;
@@ -675,7 +675,7 @@
       // Frühe Mutterschiffe schwächer, volle Stärke ab etwa Welle 60
       const wm = type === 'boss' || type === 'bomb' || !this.waveMod ? { hp: 1, rw: 1, dmg: 1, spd: 1, big: 1 } : this.waveMod;
       const tw = this.twist();
-      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1) * (this.isChal ? P.chalHp : 1);
+      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1) * (this.isChal ? P.chalHp / (1 + 0.4 * ((this.s && this.s.mod && this.s.mod.crysmod) || 0)) : 1);
       const spdK = (this.rule === 'fast' ? 2 : 1) * ((tw && tw.spd) || 1);
       const e = {
         id: ++this.uid, type, a: Math.atan2(y0, x0), dist: Math.hypot(x0, y0), hp, maxHp: hp,
@@ -816,8 +816,9 @@
       if (!this.abilityReady(id)) return false;
       const A = ABIL[id], l = this.abilityLv(id);
       this.cd[id] = A.cd(l) * (1 - Math.min(0.6, (this.s.mod && this.s.mod.echo) || 0));
-      if (id === 'freeze') this.freezeUntil = this.time + A.dur(l);
-      if (id === 'over') this.overUntil = this.time + A.dur(l);
+      const ext = 1 + 0.5 * ((this.s.mod && this.s.mod.echo) || 0); // Echo verlängert auch die Wirkdauer
+      if (id === 'freeze') this.freezeUntil = this.time + A.dur(l) * ext;
+      if (id === 'over') this.overUntil = this.time + A.dur(l) * ext;
       if (this.fxOn) this.fx.push({ k: id, t: 0 });
       if (this.fxOn && this.s.mod && this.s.mod.echo) this.fx.push({ k: 'echo', t: 0 });
       return true;
@@ -1467,6 +1468,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.4.5'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.4.6'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
