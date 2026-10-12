@@ -333,7 +333,7 @@
   // Einstieg in eine Challenge: am zuletzt erreichten Stufenziel (Bosswellen werden um eine Welle vorgezogen)
   function chalStart(m, id) {
     const C_ = CHAL_BY_ID[id], t = chalTier(m, id); if (!C_ || !t) return 1;
-    let w = C_.goals[Math.min(t, C_.goals.length) - 1]; if (w % 10 === 0) w -= 1; return Math.max(1, w);
+    const best = (m.chal[id] && m.chal[id].best) || 0; let w = Math.min(C_.goals[Math.min(t, C_.goals.length) - 1], best || Infinity); if (w % 10 === 0) w -= 1; return Math.max(1, w); // nie über die eigene Bestwelle hinaus
   }
 
   // ---------- Erfolge: mehrere Stufen je Erfolg, jede Stufe gibt einen dauerhaften Bonus ----------
@@ -1414,6 +1414,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.3.2'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.3.3'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
