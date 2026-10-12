@@ -392,6 +392,8 @@
 
     // ---------- Effekte ----------
     function pushFx(f) {
+      // Schadenszahlen begrenzen, damit große Gefechte lesbar bleiben (Krits und Mutterschiff bevorzugt)
+      if (f.k === 'dmg') { let n = 0; for (const x of fx) if (x.k === 'dmg') n++; if (n >= (f.crit ? 10 : 5)) return; }
       f.life = LIFE[f.k] || 0.5;
       if (f.k === 'dmg') f.dx = (Math.random() - 0.5) * 16;
       if (f.k === 'wave' && f.sector) f.life = 3.2;
@@ -494,7 +496,7 @@
         // Schiffe zeigen in Flugrichtung; Mutterschiff und haltende Schützen zur Kanone
         const facing = e.type === 'boss' || e.hd == null || (e.stop && e.dist <= e.stop) ? e.a + Math.PI : e.hd;
         const cloak = run.cloaked(e);
-        if (e.type === 'mender') { ctx.beginPath(); ctx.arc(p.x, p.y, 90, 0, 7); ctx.fillStyle = 'rgba(141,255,125,0.04)'; ctx.fill(); ctx.setLineDash([4, 6]); ctx.strokeStyle = SHIP.mender; ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 0.004 + e.seed); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
+        if (e.type === 'mender') { ctx.beginPath(); ctx.arc(p.x, p.y, 90, 0, 7); ctx.setLineDash([3, 9]); ctx.strokeStyle = SHIP.mender; ctx.globalAlpha = 0.12 + 0.06 * Math.sin(t * 0.004 + e.seed); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; } // dezenter Heilradius
         if (e.type === 'boss' && e.laser > 0) {
           // Laser lädt: Zielstrahl zur Kanone, Balken zeigt, wie viel Schaden ihn abbricht
           const k = 1 - e.laser / 2;

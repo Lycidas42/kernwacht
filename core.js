@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, mend: 0.03, mendBoss: 0.002, mendSelf: 0.03, mendCalm: 1.5, gunPct: 0.015, gunFocus: 3, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, mend: 0.03, mendBoss: 0.002, mendSelf: 0.03, mendCalm: 1.5, gunPct: 0.015, gunFocus: 3, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 24, mendMax: 2, wmDmg: 0.35,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -644,6 +644,8 @@
         if (WT.mix) { let q = rnd(); for (const k in WT.mix) { if (q < WT.mix[k]) { t = k; break; } q -= WT.mix[k]; } }
         list.push(t);
       }
+      // höchstens wenige Heiler pro Welle, der Rest wird zu normalen Jägern
+      let mends = 0; for (let i = 0; i < list.length; i++) if (list[i] === 'mender' && ++mends > P.mendMax) list[i] = 'grunt';
       if (boss) list.splice(Math.floor(n / 3), 0, 'boss');
       this.queue = list;
       this.spawnGap = SPAWN_LEN / list.length;
@@ -969,6 +971,8 @@
           const boss = inRange.find(e => e.type === 'boss');
           if (boss && !inRange.some(e => e !== boss && e.dist < 95)) { inRange.splice(inRange.indexOf(boss), 1); inRange.unshift(boss); }
         }
+        // Ohne Markierung: Heiler in Reichweite zuerst (nach Bomben)
+        if (!this.focus) { const h = inRange.find(e => e.type === 'mender'); if (h && !inRange[0].bomb) { inRange.splice(inRange.indexOf(h), 1); inRange.unshift(h); } }
         if (this.focus && inRange.includes(this.focus)) { inRange.splice(inRange.indexOf(this.focus), 1); inRange.unshift(this.focus); }
         if (inRange.length) {
           this.aim = inRange[0].a;
@@ -1438,6 +1442,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.3.9'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.4.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
