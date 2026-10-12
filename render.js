@@ -202,11 +202,21 @@
         crys: M('m_crys'), loot: M('m_loot'), head: M('m_head'), cheap: M('m_cheap'),
       };
     }
+    // Farbe mit Deckkraft (Hex oder HSL)
+    function alpha(col, a) {
+      if (col[0] === '#') { const n = parseInt(col.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+      return col.replace('hsl(', 'hsla(').replace(')', `,${a})`);
+    }
+    // Hangar-Einstellungen des Spielers
+    function skinLook(meta, t) {
+      const sk = (meta && meta.skin) || {}, c = C.SKIN.color.find(x => x.id === sk.color) || C.SKIN.color[0];
+      return { col: c.col || `hsl(${Math.round((t * 0.04) % 360)},100%,66%)`, turret: sk.turret || 'hex', base: sk.base || 'bunker', deco: new Set(sk.deco || []) };
+    }
     function drawCannon(run, t) {
-      const s = run.s, L = id => run.L(id), V = cannonLook(run);
+      const s = run.s, L = id => run.L(id), V = cannonLook(run), SK = skinLook(run.meta, t), CC = SK.col;
       const hpL = V.hp, arL = V.armor, rgL = V.regen, dmgL = V.dmg;
       const over = run.overActive;
-      const coreCol = over ? PAL.heat : PAL.core;
+      const coreCol = over ? PAL.heat : CC;
       const w = 34 + Math.min(16, hpL * 0.25);
       ctx.save(); ctx.scale(0.95, 0.95);
 
@@ -214,12 +224,12 @@
       if (arL > 0) {
         ctx.beginPath(); ctx.arc(0, 4, w + 4, Math.PI, 0);
         const g = ctx.createRadialGradient(0, 4, w, 0, 4, w + 4);
-        g.addColorStop(0, 'rgba(62,240,255,0)'); g.addColorStop(1, 'rgba(62,240,255,' + (0.06 + s.armor * 0.22) + ')');
+        g.addColorStop(0, alpha(CC, 0)); g.addColorStop(1, alpha(CC, 0.06 + s.armor * 0.22));
         ctx.fillStyle = g; ctx.fill();
-        ctx.beginPath(); ctx.arc(0, 4, w + 4, Math.PI, 0); glow(PAL.core, 0.8 + s.armor * 2.2, 0.3 + s.armor * 0.7);
+        ctx.beginPath(); ctx.arc(0, 4, w + 4, Math.PI, 0); glow(CC, 0.8 + s.armor * 2.2, 0.3 + s.armor * 0.7);
         // Wabenmuster als Andeutung
         ctx.globalAlpha = 0.18 + s.armor * 0.4;
-        for (let i = 0; i < 7; i++) { const a = Math.PI + (i + 0.5) * Math.PI / 7; ctx.save(); ctx.translate(Math.cos(a) * (w - 2), 4 + Math.sin(a) * (w - 2)); hexPath(4, 0); ctx.strokeStyle = PAL.core; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
+        for (let i = 0; i < 7; i++) { const a = Math.PI + (i + 0.5) * Math.PI / 7; ctx.save(); ctx.translate(Math.cos(a) * (w - 2), 4 + Math.sin(a) * (w - 2)); hexPath(4, 0); ctx.strokeStyle = CC; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
         ctx.globalAlpha = 1;
       }
 
@@ -241,20 +251,62 @@
         ctx.restore();
       }
 
-      // Fundament mit Stützbeinen
-      ctx.lineJoin = 'round';
-      for (const sx of [-1, 1]) {
-        ctx.beginPath(); ctx.moveTo(sx * w * 0.55, 10); ctx.lineTo(sx * (w + 10), 24); ctx.lineTo(sx * (w + 2), 24);
-        glow(PAL.core, 1.6, 0.8);
+      // Anbauteile hinter dem Fundament
+      if (SK.deco.has('wings')) for (const sx of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(sx * w * 0.7, 0); ctx.lineTo(sx * (w + 22), -18); ctx.lineTo(sx * (w + 16), -6); ctx.lineTo(sx * (w + 26), -4); ctx.lineTo(sx * (w + 8), 10); ctx.closePath();
+        ctx.fillStyle = alpha(CC, 0.12); ctx.fill(); glow(CC, 1.3, 0.85);
       }
-      ctx.beginPath();
-      ctx.moveTo(-w, 22); ctx.lineTo(-w * 0.86, 2); ctx.lineTo(-w * 0.55, -8); ctx.lineTo(w * 0.55, -8); ctx.lineTo(w * 0.86, 2); ctx.lineTo(w, 22); ctx.closePath();
-      fillHull(); glow(PAL.core, 1.8);
+      if (SK.deco.has('pennant')) {
+        const px = -w * 0.78, wav = Math.sin(t * 0.006) * 2;
+        ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, -34); glow(CC, 1.1, 0.8);
+        ctx.beginPath(); ctx.moveTo(px, -34); ctx.quadraticCurveTo(px - 8, -31 + wav, px - 16, -30 + wav * 1.5); ctx.lineTo(px, -25); ctx.closePath();
+        ctx.fillStyle = alpha(PAL.hostile, 0.75); ctx.fill(); glow(PAL.hostile, 1, 0.8);
+      }
+      if (SK.deco.has('antenna')) for (let i = 0; i < 5; i++) {
+        const a = Math.PI * (1.15 + i * 0.175), r0 = w * 0.62, r1 = r0 + 10 + (i % 2) * 6;
+        ctx.beginPath(); ctx.moveTo(Math.cos(a) * r0, -2 + Math.sin(a) * r0 * 0.5); ctx.lineTo(Math.cos(a) * r1, -2 + Math.sin(a) * r1 * 0.55); glow(CC, 0.9, 0.7);
+        ctx.beginPath(); ctx.arc(Math.cos(a) * r1, -2 + Math.sin(a) * r1 * 0.55, 1.4, 0, 7); ctx.fillStyle = Math.sin(t * 0.008 + i) > 0 ? PAL.hostile : CC; ctx.fill();
+      }
+      // Fundament je nach Bauform
+      ctx.lineJoin = 'round';
+      if (SK.base === 'hover') {
+        const bob = Math.sin(t * 0.003) * 1.5;
+        ctx.save(); ctx.translate(0, bob);
+        const gl = ctx.createRadialGradient(0, 22, 2, 0, 22, w); gl.addColorStop(0, alpha(CC, 0.45)); gl.addColorStop(1, alpha(CC, 0));
+        ctx.fillStyle = gl; ctx.fillRect(-w, 12, w * 2, 16);
+        ctx.beginPath(); ctx.moveTo(-w, 8); ctx.lineTo(-w * 0.7, -8); ctx.lineTo(w * 0.7, -8); ctx.lineTo(w, 8); ctx.lineTo(w * 0.8, 15); ctx.lineTo(-w * 0.8, 15); ctx.closePath();
+        fillHull(); glow(CC, 1.8);
+        for (const sx of [-0.55, 0, 0.55]) { ctx.beginPath(); ctx.ellipse(sx * w, 16, 5, 2, 0, 0, 7); ctx.fillStyle = alpha(CC, 0.6 + 0.3 * Math.sin(t * 0.01 + sx)); ctx.fill(); }
+        ctx.restore();
+      } else if (SK.base === 'tracks') {
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-w - 4, 10, w * 2 + 8, 14, 7) : ctx.rect(-w - 4, 10, w * 2 + 8, 14); fillHull(); glow(CC, 1.6);
+        const off = (t * 0.02) % 8;
+        for (let x = -w; x <= w; x += 8) { ctx.beginPath(); ctx.moveTo(x + off - 4, 10); ctx.lineTo(x + off - 4, 12); ctx.strokeStyle = alpha(CC, 0.5); ctx.lineWidth = 1; ctx.stroke(); }
+        for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(-w + 2 + i * (w * 2 - 4) / 4, 17, 3.5, 0, 7); fillHull(); glow(CC, 1, 0.8); }
+        ctx.beginPath(); ctx.moveTo(-w * 0.8, 10); ctx.lineTo(-w * 0.6, -8); ctx.lineTo(w * 0.6, -8); ctx.lineTo(w * 0.8, 10); ctx.closePath(); fillHull(); glow(CC, 1.8);
+      } else if (SK.base === 'fortress') {
+        ctx.beginPath(); ctx.moveTo(-w - 4, 24); ctx.lineTo(-w - 4, -2);
+        for (let i = 0; i < 7; i++) { const x0 = -w - 4 + i * (w * 2 + 8) / 7, x1 = x0 + (w * 2 + 8) / 14; ctx.lineTo(x0, -10); ctx.lineTo(x1, -10); ctx.lineTo(x1, -4); ctx.lineTo(x0 + (w * 2 + 8) / 7, -4); }
+        ctx.lineTo(w + 4, -2); ctx.lineTo(w + 4, 24); ctx.closePath(); fillHull(); glow(CC, 1.8);
+        for (const sx of [-1, 1]) { ctx.beginPath(); ctx.rect(sx * (w + 4) - 7, -18, 14, 42); fillHull(); glow(CC, 1.5); ctx.beginPath(); ctx.moveTo(sx * (w + 4) - 9, -18); ctx.lineTo(sx * (w + 4), -26); ctx.lineTo(sx * (w + 4) + 9, -18); ctx.closePath(); fillHull(); glow(CC, 1.3); }
+      } else {
+        for (const sx of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(sx * w * 0.55, 10); ctx.lineTo(sx * (w + 10), 24); ctx.lineTo(sx * (w + 2), 24);
+          glow(CC, 1.6, 0.8);
+        }
+        ctx.beginPath();
+        ctx.moveTo(-w, 22); ctx.lineTo(-w * 0.86, 2); ctx.lineTo(-w * 0.55, -8); ctx.lineTo(w * 0.55, -8); ctx.lineTo(w * 0.86, 2); ctx.lineTo(w, 22); ctx.closePath();
+        fillHull(); glow(CC, 1.8);
+      }
+      if (SK.deco.has('thrusters')) for (const sx of [-1, 1]) {
+        ctx.save(); ctx.translate(sx * (w - 6), 22); ctx.rotate(Math.PI / 2);
+        flame(0, 0, -(10 + 4 * Math.sin(t * 0.03 + sx)), 3, PAL.heat, t, sx); ctx.restore();
+      }
       // Panzerplatten
       const plates = Math.min(6, Math.ceil(arL / 6));
       for (let i = 0; i < plates; i++) {
         const x = -w * 0.72 + (i + 0.5) * (w * 1.44 / plates);
-        ctx.beginPath(); ctx.rect(x - 4, 10, 8, 6); ctx.fillStyle = 'rgba(62,240,255,.18)'; ctx.fill(); glow(PAL.core, 1, 0.8);
+        ctx.beginPath(); ctx.rect(x - 4, 10, 8, 6); ctx.fillStyle = alpha(CC, 0.18); ctx.fill(); glow(CC, 1, 0.8);
       }
       // Reparatur-Dioden
       const lights = Math.min(6, Math.ceil(rgL / 6));
@@ -284,12 +336,12 @@
         fillHull(); glow(coreCol, 1.4);
         // Energiekern im Lauf (Schaden)
         const g = ctx.createLinearGradient(0, -ln + bk, 0, -8);
-        g.addColorStop(0, over ? '#fff1d6' : '#ffffff'); g.addColorStop(1, 'rgba(62,240,255,0)');
+        g.addColorStop(0, over ? '#fff1d6' : '#ffffff'); g.addColorStop(1, alpha(CC, 0));
         ctx.fillStyle = g; ctx.globalAlpha = 0.25 + Math.min(0.5, dmgL * 0.008) + heat * 0.3;
         ctx.fillRect(ox - thick * 0.18, -ln + bk + 4, thick * 0.36, ln - 14); ctx.globalAlpha = 1;
         // Kühlrippen (Feuerrate)
         const fins = Math.min(7, Math.ceil(V.rate / 4));
-        for (let f = 0; f < fins; f++) { const y = -14 - f * 5 + bk; ctx.beginPath(); ctx.moveTo(ox - thick * 0.95, y); ctx.lineTo(ox + thick * 0.95, y); glow(over ? PAL.heat : PAL.core, 1, 0.65); }
+        for (let f = 0; f < fins; f++) { const y = -14 - f * 5 + bk; ctx.beginPath(); ctx.moveTo(ox - thick * 0.95, y); ctx.lineTo(ox + thick * 0.95, y); glow(over ? PAL.heat : CC, 1, 0.65); }
         // Mündungsbremse
         ctx.beginPath(); ctx.rect(ox - thick * 0.85, -ln + bk - 2, thick * 1.7, 6); fillHull(); glow(coreCol, 1.3);
         // Krit-Schienen
@@ -304,9 +356,18 @@
           ctx.fillStyle = over ? `rgba(255,170,90,${flash})` : `rgba(255,255,255,${flash})`; ctx.fill();
         }
       }
-      // Turmkörper
-      ctx.beginPath(); ctx.moveTo(-15, 8); ctx.lineTo(-17, -6); ctx.lineTo(-9, -16); ctx.lineTo(9, -16); ctx.lineTo(17, -6); ctx.lineTo(15, 8); ctx.closePath();
+      // Turmkörper je nach Form
+      ctx.beginPath();
+      if (SK.turret === 'dome') { ctx.arc(0, 2, 17, Math.PI, 0); ctx.lineTo(17, 8); ctx.lineTo(-17, 8); }
+      else if (SK.turret === 'wedge') { ctx.moveTo(-18, 8); ctx.lineTo(-12, -8); ctx.lineTo(0, -22); ctx.lineTo(12, -8); ctx.lineTo(18, 8); }
+      else if (SK.turret === 'orb') { ctx.arc(0, -2, 15, 0, Math.PI * 2); }
+      else if (SK.turret === 'crystal') { ctx.moveTo(0, -24); ctx.lineTo(10, -10); ctx.lineTo(16, 2); ctx.lineTo(8, 10); ctx.lineTo(-8, 10); ctx.lineTo(-16, 2); ctx.lineTo(-10, -10); }
+      else { ctx.moveTo(-15, 8); ctx.lineTo(-17, -6); ctx.lineTo(-9, -16); ctx.lineTo(9, -16); ctx.lineTo(17, -6); ctx.lineTo(15, 8); }
+      ctx.closePath();
       fillHull(); glow(run.hp / s.maxHp < 0.3 ? PAL.hostile : coreCol, 2);
+      if (SK.turret === 'crystal') { ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(0, 10); ctx.moveTo(-10, -10); ctx.lineTo(10, -10); ctx.moveTo(-16, 2); ctx.lineTo(16, 2); glow(coreCol, 0.7, 0.45); }
+      if (SK.turret === 'orb') { ctx.beginPath(); ctx.ellipse(0, -2, 21, 6, t * 0.001, 0, 7); glow(coreCol, 1, 0.6); }
+      if (SK.turret === 'dome') { ctx.beginPath(); ctx.arc(0, 2, 11, Math.PI * 1.15, Math.PI * 1.85); glow(coreCol, 0.8, 0.5); }
       ctx.restore();
       // Fusionskern: Ringe um den Kern, je Fusionsstufe heller
       if (V.core > 0) {
@@ -317,6 +378,11 @@
       ctx.beginPath(); ctx.arc(0, -6, 7, 0, 7); fillHull(); glow(coreCol, 1.6);
       const pulse = 3 + 1.2 * Math.sin(t * 0.008);
       ctx.beginPath(); ctx.arc(0, -6, pulse, 0, 7); ctx.fillStyle = coreCol; ctx.fill();
+      if (SK.deco.has('halo')) { ctx.beginPath(); ctx.ellipse(0, -44 + Math.sin(t * 0.003) * 2, 14, 4, 0, 0, 7); glow(PAL.energy, 1.6, 0.85); }
+      if (SK.deco.has('stars')) for (let i = 0; i < 6; i++) {
+        const a = t * 0.0007 + i * 1.047, r = w + 8 + 6 * Math.sin(t * 0.002 + i), x = Math.cos(a) * r, y = -6 - Math.abs(Math.sin(a)) * r * 0.8, k = 0.5 + 0.5 * Math.sin(t * 0.01 + i * 2);
+        ctx.save(); ctx.translate(x, y); ctx.rotate(t * 0.002); ctx.beginPath(); ctx.moveTo(-3 * k, 0); ctx.lineTo(3 * k, 0); ctx.moveTo(0, -3 * k); ctx.lineTo(0, 3 * k); glow('#ffffff', 1, k); ctx.restore();
+      }
       ctx.restore();
       if (over && Math.random() < 0.5) parts.push({ x: (Math.random() - 0.5) * 20, y: -20, vx: (Math.random() - 0.5) * 30, vy: -40 - Math.random() * 40, life: 0.5, t: 0, c: PAL.heat, k: 'spark' });
     }

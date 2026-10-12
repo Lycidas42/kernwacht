@@ -44,7 +44,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'daily', 'profile', 'feedback', 'poll'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -62,6 +62,8 @@
     if (name === 'profile') renderProfile();
     if (name === 'feedback') renderFeedback();
     if (name === 'poll') renderPoll();
+    if (name === 'hangar') renderHangar();
+    if (name === 'mine') renderMine();
     syncMetaBtns();
   }
   const runAlive = () => run && !run.dead;
@@ -75,6 +77,7 @@
     if (mode && mode.kind === 'daily') mode = { kind: 'daily', day: today() };
     lastMode = mode;
     run = new C.Run(meta, { startWave: C.startWaveFor(meta), mode });
+    A.nextRandom();
     R.clear(); armed = null; dpsHist.length = 0;
     setPaused(false); show(null); buildList(); save();
   }
@@ -106,6 +109,7 @@
     else if (res.bossKills && !(res.loot || []).length) ex.push(`<div>${res.bossKills} Mutterschiff${res.bossKills === 1 ? '' : 'e'} besiegt, diesmal ohne Beute. Beim nächsten steigt die Chance um ${10 * (meta.dry || 0)} Prozentpunkte.</div>`);
     else if (!res.bossKills && C.record(meta) >= C.MODULES_AT && res.wave < 30) ex.push('<div>Module gibt es erst von Mutterschiffen ab Welle 30.</div>');
     if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
+    ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderRoadmap();
     if ((res.loot || []).length) A.play('loot');
@@ -136,6 +140,7 @@
       if (res.newBest) submitDaily();
     }
     if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
+    ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderJump(); $$('#over .jumpbox').forEach(b => (b.hidden = true));
     submitScore(); cloudAuto();
@@ -602,6 +607,7 @@
     const showMod = C.record(meta) >= C.MODULES_AT || Object.keys(meta.modules || {}).length > 0;
     $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
     const rec = C.record(meta), d = dailyToday();
+    if (typeof syncMineBadge === 'function') try { syncMineBadge(); syncNewBadges(); } catch (e) {}
     $$('.chal-btn').forEach(b => { b.hidden = !(rec >= C.CHAL_AT || meta.chal && Object.keys(meta.chal).length); });
     $$('.daily-btn').forEach(b => { b.hidden = rec < C.DAILY_AT; b.classList.toggle('ready', !(d && d.bonus)); });
     // Leere Zweierreihen ausblenden
@@ -699,6 +705,17 @@
   function toggleMusic() { meta.music = !meta.music; A.init(); A.setMusic(meta.music); syncSoundBtns(); save(); }
   ['sfxBtn', 'sfxBtn2'].forEach(id => $(id).addEventListener('click', toggleSfx));
   ['musicBtn', 'musicBtn2'].forEach(id => $(id).addEventListener('click', toggleMusic));
+  // Musikstück: Liste der Stile plus Zufall (wechselt bei jedem Laufstart)
+  const TRACK_ORDER = A.tracks().map(x => x.id).concat('random');
+  const trackName = id => id === 'random' ? 'Zufall (jeder Lauf neu)' : (A.tracks().find(x => x.id === id) || {}).name || id;
+  function syncTrackBtns() { $$('.trackbtn').forEach(b => { b.textContent = 'Stück: ' + trackName(meta.track || 'synth'); }); }
+  $$('.trackbtn').forEach(b => b.addEventListener('click', () => {
+    const i = TRACK_ORDER.indexOf(meta.track || 'synth');
+    meta.track = TRACK_ORDER[(i + 1) % TRACK_ORDER.length]; A.init(); A.setTrack(meta.track);
+    if (!meta.music) { meta.music = true; A.setMusic(true); syncSoundBtns(); }
+    syncTrackBtns(); save();
+  }));
+  A.setTrack(meta.track || 'synth'); syncTrackBtns();
   A.setSfx(meta.sfx); A.setMusic(meta.music);
   // Audio darf erst nach einer Berührung starten
   window.addEventListener('pointerdown', () => { A.init(); A.setSfx(meta.sfx); A.setMusic(meta.music); }, { once: true, capture: true });
@@ -920,6 +937,111 @@
   $('xPick').addEventListener('click', () => $('xFileIn').click());
   $('xFileIn').addEventListener('change', () => { const f = $('xFileIn').files[0]; if (!f) return; f.text().then(t => { $('xText').value = t; impArmed = 0; tryImport(t); }); $('xFileIn').value = ''; });
 
+  // ---------- Hangar: Aussehen der Kanone ----------
+  let hangR = null, hangRun = null;
+  meta.skin = meta.skin || { color: 'cyan', turret: 'hex', base: 'bunker', deco: [] };
+  if (!meta.skinSeen) meta.skinSeen = C.skinUnlocked(meta);
+  const SK_CAT = { color: 'skColor', turret: 'skTurret', base: 'skBase', deco: 'skDeco' };
+  function renderHangar() {
+    if (!hangR) hangR = window.KWRender.create($('hangCv'));
+    hangRun = new C.Run(meta, { noFx: true });
+    for (const cat in SK_CAT) {
+      $(SK_CAT[cat]).innerHTML = C.SKIN[cat].map(p => {
+        const st = C.skinState(meta, p), on = cat === 'deco' ? meta.skin.deco.includes(p.id) : meta.skin[cat] === p.id;
+        const sw = cat === 'color' ? `<span class="sw${p.col ? '' : ' plasma'}" style="--c:${p.col || '#fff'}"></span>` : '';
+        return `<button class="sk${st.ok ? '' : ' locked'}" data-cat="${cat}" data-id="${p.id}" aria-pressed="${on}" ${st.ok ? '' : 'aria-disabled="true"'}>${sw}${p.name}${st.ok ? '' : `<small>🔒 ${st.txt}</small>${st.k != null ? `<span class="pr"><i style="width:${Math.round(st.k * 100)}%"></i></span>` : ''}`}</button>`;
+      }).join('');
+    }
+    $$('#hangar .sk').forEach(b => b.addEventListener('click', () => {
+      if (b.classList.contains('locked')) { $('skNote').textContent = 'Noch gesperrt: ' + b.querySelector('small').textContent.replace('🔒 ', ''); return; }
+      const cat = b.dataset.cat, id = b.dataset.id;
+      if (cat === 'deco') { const d = meta.skin.deco; meta.skin.deco = d.includes(id) ? d.filter(x => x !== id) : d.concat(id); }
+      else meta.skin[cat] = id;
+      $('skNote').textContent = ''; A.play('click'); save(); renderHangar();
+    }));
+    meta.skinSeen = C.skinUnlocked(meta); syncNewBadges();
+  }
+  function syncNewBadges() {
+    const fresh = C.skinUnlocked(meta).filter(x => !(meta.skinSeen || []).includes(x));
+    $$('.hang-btn').forEach(b => b.classList.toggle('new', fresh.length > 0));
+  }
+  // Nach einem Lauf: neu freigeschaltete Hangar-Teile melden
+  function skinNews() {
+    const told = meta.skinTold || meta.skinSeen || [], fresh = C.skinUnlocked(meta).filter(x => !told.includes(x));
+    meta.skinTold = told.concat(fresh);
+    return fresh.map(k => { const [cat, id] = k.split(':'); const p = C.SKIN[cat].find(x => x.id === id); return `<div class="unl">Neu im Hangar: ${p.name}</div>`; });
+  }
+  $$('.hang-btn').forEach(b => b.addEventListener('click', () => show('hangar')));
+  $('hangClose').addEventListener('click', home);
+
+  // ---------- Bergbau ----------
+  const hm = ms => { const m = Math.round(ms / 60e3); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
+  function mineNote(t, err) { $('mineNote').textContent = t; $('mineNote').className = 'note' + (err ? ' err' : ''); }
+  function renderMine() {
+    const M = C.mineTick(meta);
+    $('mineK').textContent = fmt(meta.crystals);
+    let any = false;
+    $('planetList').innerHTML = C.PLANETS.map((P, i) => {
+      const open = C.planetOpen(meta, P), pl = M.p[P.id] || { d: 0, s: 0, stock: 0 }, ore = M.ore[P.id] || 0;
+      const style = `--pc:${P.col};--pc2:${P.col2};--ring:${i % 2 ? 1 : 0}`;
+      if (!open) return `<div class="planet locked" style="${style}"><div class="orb"></div><div class="pinfo"><div class="hd"><b>${P.name}</b></div><div class="meta">${P.ore} · ab Rekordwelle ${P.at}</div></div></div>`;
+      const cap = C.mineCap(pl), k = cap ? pl.stock / cap : 0, rate = C.mineRate(pl.d);
+      if (pl.stock >= 1) any = true;
+      const left = pl.d && k < 1 ? hm((cap - pl.stock) / rate * 3600e3) : null;
+      const dc = C.drillCost(P, pl.d), sc = C.storeCost(P, pl.s || 0);
+      return `<div class="planet" style="${style}">
+        <div class="orb"><span class="drill ${pl.d ? 'on' : ''}">✱</span></div>
+        <div class="pinfo">
+          <div class="hd"><b>${P.name}</b><span>${P.ore}: ${fmt(ore)}</span></div>
+          ${pl.d ? `<div class="meta">Bohrer St. <b>${pl.d}</b> · <b>${fmt(rate)}</b>/h · Lager <b>${fmt(Math.floor(pl.stock))}</b> / ${fmt(cap)} ${k >= 1 ? '· <b style="color:var(--hostile)">voll</b>' : `· voll in ${left}`}</div>
+          <div class="stock ${k >= 1 ? 'full' : ''}"><i style="width:${Math.round(k * 100)}%"></i></div>` : `<div class="meta">Noch keine Förderung. Baue einen Bohrer, um ${P.ore} abzubauen.</div>`}
+          <div class="pbtns">
+            <button data-up="drill" data-p="${P.id}" ${pl.d >= C.DRILL_MAX || meta.crystals < dc ? 'disabled' : ''}>${pl.d ? (pl.d >= C.DRILL_MAX ? 'Bohrer MAX' : 'Bohrer +1') : 'Bohrer bauen'}${pl.d >= C.DRILL_MAX ? '' : `<b>${fmt(dc)}</b>`}</button>
+            <button data-up="store" data-p="${P.id}" ${!pl.d || (pl.s || 0) >= C.STORE_MAX || meta.crystals < sc ? 'disabled' : ''}>Lager ${fmt(C.mineCapH(pl.s || 0))} h → ${fmt(C.mineCapH((pl.s || 0) + 1))} h${(pl.s || 0) >= C.STORE_MAX ? '' : `<b>${fmt(sc)}</b>`}</button>
+            <button data-col="${P.id}" ${pl.stock >= 1 ? '' : 'disabled'}>Einsammeln<b>+${fmt(Math.floor(pl.stock))}</b></button>
+          </div>
+        </div></div>`;
+    }).join('');
+    $('mineAll').disabled = !any;
+    // Raffinerie
+    const owned = C.PLANETS.filter(P => (M.ore[P.id] || 0) > 0);
+    $('refinery').innerHTML = owned.length ? owned.map(P => {
+      const n = M.ore[P.id], pr = C.orePrice(meta, P);
+      return `<div class="rrow" style="--pc:${P.col}"><div>${P.ore}: <b class="num">${fmt(n)}</b><small>${pr < 10 ? pr.toFixed(1).replace('.', ',') : fmt(pr)} Kristalle je Erz</small></div><button data-sell="${P.id}" data-f="0.5">Hälfte<br>+${fmt(Math.floor(Math.floor(n / 2) * pr))}</button><button data-sell="${P.id}" data-f="1">Alles<br>+${fmt(Math.floor(n * pr))}</button></div>`;
+    }).join('') : '<p class="dim" style="font-size:.8rem">Noch kein Erz im Lager. Sammle zuerst bei einem Planeten ein.</p>';
+    // Werkstatt
+    const rows = [];
+    for (const P of C.PLANETS) {
+      if (!C.planetOpen(meta, P)) continue;
+      const ore = M.ore[P.id] || 0;
+      rows.push(`<div class="rrow" style="--pc:${P.col}"><div>Neues Modul aus Sektor ${P.sector}<small>zufälliger Typ, ${C.MOD_CRAFT} ${P.ore}</small></div><span></span><button data-craft="${P.sector}" ${ore >= C.MOD_CRAFT ? '' : 'disabled'}>Herstellen</button></div>`);
+      for (const t in (meta.modules || {})) {
+        const mod = meta.modules[t]; if (C.MODULES[t].sector !== P.sector) continue;
+        const cc = C.modBoostCost(mod), rc = C.modRarCost(mod);
+        rows.push(`<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${C.RARITY[mod.rar].name} · Fund ${mod.copies}/10</small></div>
+          <button data-imp="${t}" data-w="copy" ${mod.copies >= 10 || ore < cc ? 'disabled' : ''}>${mod.copies >= 10 ? 'Fund MAX' : `+1 Fund<br>${fmt(cc)} Erz`}</button>
+          <button data-imp="${t}" data-w="rar" ${mod.rar >= 3 || ore < rc ? 'disabled' : ''}>${mod.rar >= 3 ? 'legendär' : `Seltener<br>${fmt(rc)} Erz`}</button></div>`);
+      }
+    }
+    $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
+    // Bedienung
+    $$('#planetList [data-up]').forEach(b => b.addEventListener('click', () => { if (C.mineUpgrade(meta, b.dataset.p, b.dataset.up)) { A.play('buy'); save(); renderMine(); } }));
+    $$('#planetList [data-col]').forEach(b => b.addEventListener('click', () => { const n = C.mineCollect(meta, b.dataset.col); if (n) { A.play('loot'); mineNote(`+${fmt(n)} Erz eingesammelt.`); save(); renderMine(); } }));
+    $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
+    $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); mineNote(`Hergestellt: ${C.MODULES[d.type].name} (${C.RARITY[d.rar].name}) · ${{ neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund' }[d.result]}`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { if (C.modImprove(meta, b.dataset.imp, b.dataset.w)) { A.play('loot'); mineNote(`${C.MODULES[b.dataset.imp].name} verbessert.`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    syncMineBadge();
+  }
+  $('mineAll').addEventListener('click', () => { const n = C.mineCollect(meta); if (n) { A.play('loot'); mineNote(`+${fmt(n)} Erz eingesammelt.`); save(); renderMine(); } });
+  function syncMineBadge() {
+    const M = C.mineTick(meta), full = C.PLANETS.some(P => { const pl = M.p[P.id]; return pl && pl.d && pl.stock >= C.mineCap(pl) * 0.9; });
+    const show_ = C.record(meta) >= C.MINE_AT || Object.keys(M.p).length > 0;
+    $$('.mine-btn').forEach(b => { b.hidden = !show_; b.classList.toggle('new', full); });
+    $$('.hang-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
+  }
+  $$('.mine-btn').forEach(b => b.addEventListener('click', () => show('mine')));
+  $('mineClose').addEventListener('click', home);
+
   // ---------- Feedback ----------
   let fbKind = 'bug';
   $$('[data-fb]').forEach(b => b.addEventListener('click', () => { fbKind = b.dataset.fb; $$('[data-fb]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false')); A.play('click'); }));
@@ -1015,6 +1137,8 @@
     sector: () => { if (runAlive()) { run.jumpTo((Math.floor((run.wave - 1) / 50) + 1) * 50 + 1); run.admin = true; } },
     rec100: () => { meta.bestEver = Math.max(meta.bestEver || 0, 100); meta.best = Math.max(meta.best, 100); meta.adminTainted = true; },
     rec0: () => { meta.bestEver = 0; meta.best = 0; },
+    mineore: () => { const M = C.mineState(meta); for (const P of C.PLANETS) if (C.planetOpen(meta, P)) M.ore[P.id] = (M.ore[P.id] || 0) + 1000; meta.adminTainted = true; },
+    minefill: () => { const M = C.mineState(meta); for (const id in M.p) { const pl = M.p[id]; if (pl.d) { pl.stock = C.mineCap(pl); pl.t = Date.now(); } } },
     chalall: () => { meta.chal = {}; for (const c of C.CHALLENGES) meta.chal[c.id] = { best: c.goals[c.goals.length - 1], tier: c.goals.length }; meta.adminTainted = true; if (runAlive()) run.recalc(); },
     chalreset: () => { meta.chal = {}; if (runAlive()) run.recalc(); },
     dailyreset: () => { meta.daily = null; },
@@ -1160,6 +1284,8 @@
     saveT += realDt; if (saveT > 5) { saveT = 0; if (runAlive()) save(); }
     R.draw(now, realDt, run, { strikeArmed: armed === 'strike', armed });
     if (current === 'lab' && labR && labRun && $('cannonView').open) labR.preview(labRun, now);
+    if (current === 'hangar' && hangR && hangRun) hangR.preview(hangRun, now);
+    if (current === 'mine' && now - (window.__mineT || 0) > 2000) { window.__mineT = now; renderMine(); }
     requestAnimationFrame(frame);
   }
 

@@ -251,15 +251,15 @@
     { w: 10, label: 'Erstes Mutterschiff' },
     { w: 15, label: 'Stasisfeld im Labor, Tageslauf' },
     { w: 20, label: 'Orbitklingen im Labor' },
-    { w: 25, label: 'Überladung und Sprungtor im Labor' },
+    { w: 25, label: 'Überladung, Sprungtor und Bergbau' },
     { w: 30, label: 'Boss-Module: Mutterschiffe lassen Beute fallen' },
     { w: 35, label: 'Minenwerfer im Labor' },
     { w: 40, label: 'Herausforderungen: Läufe mit Handicap für dauerhafte Boni' },
     { w: 50, label: 'Kernfusion' },
-    { w: 51, label: 'Sektor 2: Smaragdnebel' },
-    { w: 101, label: 'Sektor 3: Glutgürtel' },
-    { w: 151, label: 'Sektor 4: Roter Riese' },
-    { w: 201, label: 'Sektor 5: Die Leere' },
+    { w: 51, label: 'Sektor 2: Smaragdnebel, Eismond Kryos' },
+    { w: 101, label: 'Sektor 3: Glutgürtel, Glutwelt Ignis' },
+    { w: 151, label: 'Sektor 4: Roter Riese, Roter Zwerg Nox' },
+    { w: 201, label: 'Sektor 5: Die Leere, Rand der Leere' },
   ];
   const record = m => Math.max(m.bestEver || 0, m.best || 0);
   const gateOk = (m, id) => record(m) >= (GATES[id] || 0);
@@ -1046,11 +1046,11 @@
         res.tierBefore = before; res.tier = st.tier; res.best = st.best; res.newTier = st.tier > before;
       } else {
         const d = m.daily && m.daily.day === this.mode.day ? m.daily : (m.daily = { day: this.mode.day, best: 0, kills: 0, tries: 0, bonus: false });
-        d.tries++;
+        d.tries++; m.dailyCount = (m.dailyCount || 0) + 1;
         res.prevBest = d.best;
         if (!this.admin && (w > d.best || (w === d.best && this.kills > d.kills))) { d.best = w; d.kills = this.kills; res.newBest = true; }
         if (!this.admin && !d.bonus) { d.bonus = true; const k = dailyBonus(m); m.crystals += k; m.totalCrystals = (m.totalCrystals || 0) + k; res.crystals = k; res.bonus = true; }
-        res.best = d.best;
+        res.best = d.best; if (!this.admin) m.dailyBestEver = Math.max(m.dailyBestEver || 0, w);
       }
       return res;
     }
@@ -1097,6 +1097,132 @@
   }
   const enemyHp = (type, w) => ENEMY[type].hp * hpScale(w);
 
-  const VERSION = 'kw-20'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  // ---------- Bergbau: Erz läuft in Echtzeit, parallel zu den Läufen (auch offline) ----------
+  const PLANETS = [
+    { id: 'ast',  name: 'Asteroidengürtel', ore: 'Eisenerz',      col: '#b7bfe0', col2: '#4b5276', at: 25,  build: 300,     val: 1,  sector: 1 },
+    { id: 'ice',  name: 'Eismond Kryos',    ore: 'Kryokristall',  col: '#bff4ff', col2: '#2f7d94', at: 51,  build: 4000,    val: 2.5, sector: 2 },
+    { id: 'lava', name: 'Glutwelt Ignis',   ore: 'Plasmaerz',     col: '#ffb070', col2: '#8a2a10', at: 101, build: 40000,   val: 6,  sector: 3 },
+    { id: 'red',  name: 'Roter Zwerg Nox',  ore: 'Sternenstaub',  col: '#ff8a9e', col2: '#6b1830', at: 151, build: 300000,  val: 15, sector: 4 },
+    { id: 'void', name: 'Rand der Leere',   ore: 'Dunkelmaterie', col: '#c9d6ff', col2: '#1d2142', at: 201, build: 2000000, val: 40, sector: 5 },
+  ];
+  const MINE_AT = 25, DRILL_MAX = 30, STORE_MAX = 14;
+  function mineState(m) {
+    m.mine = m.mine || { p: {}, ore: {}, mined: 0 };
+    return m.mine;
+  }
+  const mineRate = d => d ? 30 * Math.pow(1.18, d - 1) : 0;               // Erz pro Stunde
+  const mineCapH = s => 3 + 1.5 * s;                                         // Stunden bis das Lager voll ist
+  const mineCap = pl => mineRate(pl.d) * mineCapH(pl.s || 0);
+  const drillCost = (P_, d) => Math.ceil(d ? P_.build * 0.5 * Math.pow(1.5, d) : P_.build);
+  const storeCost = (P_, s_) => Math.ceil(P_.build * 0.4 * Math.pow(1.6, s_ + 1));
+  const planetOpen = (m, P_) => record(m) >= P_.at;
+  // Lagerstand bis jetzt fortschreiben
+  function mineTick(m, now) {
+    const M = mineState(m); now = now || Date.now();
+    for (const P_ of PLANETS) {
+      const pl = M.p[P_.id]; if (!pl || !pl.d) continue;
+      const dt = Math.max(0, Math.min(48 * 3600e3, now - (pl.t || now)));
+      pl.stock = Math.min(mineCap(pl), (pl.stock || 0) + mineRate(pl.d) * dt / 3600e3); pl.t = now;
+    }
+    return M;
+  }
+  function mineCollect(m, id) {
+    const M = mineTick(m); let got = 0;
+    for (const P_ of PLANETS) {
+      if (id && P_.id !== id) continue;
+      const pl = M.p[P_.id]; if (!pl || !pl.stock) continue;
+      const n = Math.floor(pl.stock); if (!n) continue;
+      pl.stock -= n; M.ore[P_.id] = (M.ore[P_.id] || 0) + n; M.mined = (M.mined || 0) + n; got += n;
+    }
+    return got;
+  }
+  function mineUpgrade(m, id, what) {
+    const M = mineTick(m), P_ = PLANETS.find(x => x.id === id); if (!P_ || !planetOpen(m, P_)) return false;
+    const pl = M.p[id] = M.p[id] || { d: 0, s: 0, stock: 0, t: Date.now() };
+    if (what === 'drill') { if (pl.d >= DRILL_MAX) return false; const c = drillCost(P_, pl.d); if (m.crystals < c) return false; m.crystals -= c; pl.d++; if (pl.d === 1) pl.t = Date.now(); }
+    else { if (!pl.d || pl.s >= STORE_MAX) return false; const c = storeCost(P_, pl.s); if (m.crystals < c) return false; m.crystals -= c; pl.s++; }
+    return true;
+  }
+  // Raffinerie: Erz gegen Kristalle; Wert folgt dem eigenen Kristall-Tempo (Anteil des Offline-Ertrags)
+  const orePrice = (m, P_) => Math.max(0.5, P_.val * offlinePerHour(m) / 100);
+  function mineSell(m, id, n) {
+    const M = mineState(m), P_ = PLANETS.find(x => x.id === id); n = Math.min(Math.floor(n), M.ore[id] || 0); if (!P_ || n <= 0) return 0;
+    const k = Math.floor(n * orePrice(m, P_)); M.ore[id] -= n; m.crystals += k; m.totalCrystals = (m.totalCrystals || 0) + k; return k;
+  }
+  // Werkstatt: Erz des passenden Sektors für Module
+  const MOD_CRAFT = 300, modBoostCost = mod => 50 * Math.pow(2, mod.copies - 1), modRarCost = mod => 600 * Math.pow(4, mod.rar);
+  const planetForModule = type => PLANETS.find(P_ => P_.sector === MODULES[type].sector);
+  function modCraft(m, sector) {
+    const P_ = PLANETS.find(x => x.sector === sector), M = mineState(m);
+    if (!P_ || (M.ore[P_.id] || 0) < MOD_CRAFT) return null;
+    M.ore[P_.id] -= MOD_CRAFT;
+    const drop = rollModule((sector - 1) * 50 + 25); drop.result = addModule(m, drop); return drop;
+  }
+  function modImprove(m, type, what) {
+    const mod = m.modules && m.modules[type], P_ = planetForModule(type), M = mineState(m); if (!mod || !P_) return false;
+    if (what === 'copy') { if (mod.copies >= 10) return false; const c = modBoostCost(mod); if ((M.ore[P_.id] || 0) < c) return false; M.ore[P_.id] -= c; mod.copies++; return true; }
+    if (mod.rar >= 3) return false; const c = modRarCost(mod); if ((M.ore[P_.id] || 0) < c) return false; M.ore[P_.id] -= c; mod.rar++; return true;
+  }
+
+  // ---------- Hangar: Aussehen der Kanone, Teile werden über den Fortschritt freigeschaltet ----------
+  const SKIN = {
+    color: [
+      { id: 'cyan',   name: 'Neon-Cyan',  col: '#3ef0ff' },
+      { id: 'pink',   name: 'Magenta',    col: '#ff4fa0' },
+      { id: 'green',  name: 'Smaragd',    col: '#5dffb0' },
+      { id: 'gold',   name: 'Gold',       col: '#ffc04d', need: { rec: 50 } },
+      { id: 'violet', name: 'Violett',    col: '#c3a6ff', need: { fus: 1 } },
+      { id: 'ember',  name: 'Glut',       col: '#ff8a3d', need: { rec: 101 } },
+      { id: 'ice',    name: 'Eisweiß',    col: '#e8fbff', need: { chal: 3 } },
+      { id: 'plasma', name: 'Plasma',     col: null,      need: { fus: 5 } },
+    ],
+    turret: [
+      { id: 'hex',     name: 'Sechskant' },
+      { id: 'dome',    name: 'Kuppel',   need: { rec: 30 } },
+      { id: 'wedge',   name: 'Keil',     need: { rec: 75 } },
+      { id: 'orb',     name: 'Orb',      need: { chal: 8 } },
+      { id: 'crystal', name: 'Kristall', need: { rec: 150 } },
+    ],
+    base: [
+      { id: 'bunker',   name: 'Bunker' },
+      { id: 'hover',    name: 'Schwebeplattform', need: { daily: 5 } },
+      { id: 'tracks',   name: 'Kettenfahrwerk',   need: { runs: 100 } },
+      { id: 'fortress', name: 'Festung',          need: { rec: 100 } },
+    ],
+    deco: [
+      { id: 'pennant',   name: 'Wimpel',          need: { name: 1 } },
+      { id: 'antenna',   name: 'Antennenkranz',   need: { rec: 40 } },
+      { id: 'wings',     name: 'Flügel',          need: { rec: 51 } },
+      { id: 'thrusters', name: 'Triebwerke',      need: { ore: 1000 } },
+      { id: 'stars',     name: 'Sternenfunkeln',  need: { dailyBest: 30 } },
+      { id: 'halo',      name: 'Heiligenschein',  need: { legend: 1 } },
+    ],
+  };
+  const NEED_TXT = { rec: n => `Rekordwelle ${n}`, fus: n => n === 1 ? 'erste Kernfusion' : `${n} Kernfusionen`, chal: n => `${n} Herausforderungs-Stufen`,
+    daily: n => `${n} Tagesläufe gespielt`, runs: n => `${n} Läufe`, name: () => 'Profilname festlegen', ore: n => `${n} Erz abgebaut`,
+    dailyBest: n => `Tageslauf bis Welle ${n}`, legend: () => 'ein legendäres Modul' };
+  function needVal(m, k) {
+    switch (k) {
+      case 'rec': return record(m);
+      case 'fus': return m.fusions || 0;
+      case 'chal': return CHALLENGES.reduce((a, c) => a + chalTier(m, c.id), 0);
+      case 'daily': return m.dailyCount || 0;
+      case 'runs': return m.runs || 0;
+      case 'name': return m.name ? 1 : 0;
+      case 'ore': return Math.floor((m.mine && m.mine.mined) || 0);
+      case 'dailyBest': return m.dailyBestEver || 0;
+      case 'legend': return Object.values(m.modules || {}).some(x => x.rar === 3) ? 1 : 0;
+    }
+    return 0;
+  }
+  // Freigeschaltet? Gibt auch den Text der Bedingung und den Fortschritt zurück
+  function skinState(m, part) {
+    if (!part.need) return { ok: true, txt: 'von Anfang an' };
+    const k = Object.keys(part.need)[0], n = part.need[k], v = needVal(m, k);
+    return { ok: v >= n, txt: NEED_TXT[k](n), k: n > 1 ? Math.min(1, v / n) : (v >= n ? 1 : 0) };
+  }
+  function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
+
+  const VERSION = 'kw-22'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, DRILL_MAX, STORE_MAX, mineState, mineRate, mineCapH, mineCap, drillCost, storeCost, planetOpen, mineTick, mineCollect, mineUpgrade, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -6,6 +6,10 @@ Herausforderungen (ab Rekordwelle 40): Läufe mit Handicap wie „Ohne Abwehr“
 
 Tageslauf (ab Rekordwelle 15): Alle spielen am selben Tag dieselben Wellen mit derselben Standard-Ausrüstung und einer Tages-Besonderheit. Der erste Versuch am Tag bringt einen Kristallbonus, der beste Versuch kommt in die Tages-Bestenliste. Das ist die Vorstufe zum späteren Battle Mode.
 
+Bergbau (ab Rekordwelle 25): Bohrer auf bis zu fünf Planeten fördern Erz in Echtzeit, auch offline, bis das Lager voll ist. Erz wird in der Raffinerie zu Kristallen oder stärkt in der Werkstatt Module des gleichen Sektors.
+
+Hangar: Farbe, Turmform, Fundament und Anbauteile der Kanone; neue Teile werden über den Fortschritt freigeschaltet. Musik: sechs generative Stücke (Synthwave, 8-Bit, Ambient, Techno, Episch, Lo-Fi) oder Zufall.
+
 Langzeit-Ziele: Alle 50 Wellen beginnt ein neuer Sektor mit eigenem Biom, neuem Gegnertyp und neuer Boss-Fähigkeit. Mutterschiffe lassen Module fallen (je Sektor eigene Typen). Ab Bestwelle 50 setzt die Kernfusion Labor und Kristalle zurück und bringt Kernfragmente für dauerhafte Technik, darunter Raketen- und Kryowerfer.
 
 Kein Shop, keine Werbung, keine Premiumwährung. Die Kurven sind auf faires Tempo ohne Kaufdruck ausgelegt.

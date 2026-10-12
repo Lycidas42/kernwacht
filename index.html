@@ -305,6 +305,48 @@ textarea { resize: vertical; min-height: 70px; }
 .adv[open] { display: grid; gap: 8px; }
 .toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); transform: translateX(-50%); z-index: 20; max-width: min(92vw, 420px); padding: 9px 14px; border: 1px solid var(--core); border-radius: 4px; background: color-mix(in srgb, var(--deck) 94%, transparent); box-shadow: 0 0 18px color-mix(in srgb, var(--core) 30%, transparent); font-size: .84rem; line-height: 1.4; text-align: center; pointer-events: none; }
 .toast b { color: var(--core); }
+.trackbtn { font-size: .78rem; color: var(--crystal); border-color: color-mix(in srgb, var(--crystal) 45%, var(--line)); }
+#hangCv { display: block; width: 100%; height: 200px; border: 1px solid var(--line); border-radius: 4px; background: radial-gradient(ellipse at 50% 75%, color-mix(in srgb, var(--core) 10%, transparent), transparent 70%); }
+.skgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.sk { hyphens: auto; overflow-wrap: anywhere; display: grid; gap: 3px; align-content: center; justify-items: center; min-height: 52px; padding: 6px; border: 1px solid var(--line); border-radius: 4px; font-size: .74rem; font-weight: 600; text-align: center; }
+.sk[aria-pressed="true"] { border-color: var(--core); background: color-mix(in srgb, var(--core) 10%, transparent); color: var(--core); }
+.sk.locked { opacity: .5; cursor: default; font-weight: 400; }
+.sk small { font-size: .64rem; color: var(--ink-dim); font-weight: 400; line-height: 1.2; }
+.sk .sw { width: 22px; height: 22px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+.sk .sw.plasma { background: conic-gradient(#ff4fa0, #ffc04d, #5dffb0, #3ef0ff, #c3a6ff, #ff4fa0); }
+.sk .pr { width: 100%; height: 3px; background: var(--deck-2); border-radius: 2px; overflow: hidden; }
+.sk .pr i { display: block; height: 100%; background: var(--energy); }
+.hang-btn { border-color: color-mix(in srgb, var(--core) 50%, var(--line)); color: var(--core); }
+.hang-btn.new::after, .mine-btn.new::after { content: " •"; color: var(--hostile); }
+.mine-btn { border-color: color-mix(in srgb, var(--heat) 50%, var(--line)); color: var(--heat); }
+.mine-cta { background: var(--heat); box-shadow: 0 0 20px color-mix(in srgb, var(--heat) 40%, transparent); }
+.mine-cta:disabled { background: var(--deck-2); color: var(--ink-dim); box-shadow: none; }
+.planets { display: grid; gap: 10px; }
+.planet { display: grid; grid-template-columns: 64px 1fr; gap: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 10px; position: relative; overflow: hidden; }
+.planet.locked { opacity: .5; }
+.orb { width: 60px; height: 60px; border-radius: 50%; background: radial-gradient(circle at 34% 30%, #fff 0%, var(--pc) 22%, var(--pc2) 78%, #05040e 100%); box-shadow: 0 0 18px color-mix(in srgb, var(--pc) 45%, transparent), inset -6px -8px 14px rgba(0,0,0,.5); position: relative; align-self: start; }
+.orb::after { content: ""; position: absolute; left: -10px; right: -10px; top: 24px; height: 12px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--pc) 60%, transparent); transform: rotate(-16deg); opacity: var(--ring, 0); }
+.orb .drill { position: absolute; right: -4px; bottom: -2px; width: 20px; height: 20px; border-radius: 50%; background: var(--deck); border: 1px solid var(--heat); display: grid; place-items: center; font-size: 11px; color: var(--heat); }
+.orb .drill.on { animation: spin 1.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.pinfo { display: grid; gap: 4px; min-width: 0; }
+.pinfo .hd { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.pinfo .hd b { font-size: .95rem; }
+.pinfo .hd span { font-family: var(--font-num); font-size: .72rem; color: var(--ink-dim); }
+.pinfo .meta { font-size: .76rem; color: var(--ink-dim); }
+.pinfo .meta b { color: var(--ink); font-family: var(--font-num); font-weight: 600; }
+.stock { height: 8px; border-radius: 4px; background: var(--deck-2); overflow: hidden; }
+.stock i { display: block; height: 100%; background: linear-gradient(90deg, var(--pc2), var(--pc)); }
+.stock.full i { background: var(--hostile); }
+.pbtns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 2px; }
+.pbtns button { min-height: 38px; border: 1px solid var(--line); border-radius: 4px; font-size: .7rem; font-weight: 600; line-height: 1.15; padding: 3px 4px; }
+.pbtns button b { display: block; font-family: var(--font-num); color: var(--crystal); font-weight: 600; }
+.pbtns button:disabled { opacity: .4; }
+.refinery, .workshop { display: grid; gap: 6px; }
+.rrow { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; font-size: .82rem; border-left: 2px solid var(--pc, var(--line)); padding-left: 8px; }
+.rrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
+.rrow button { height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: .72rem; font-weight: 600; }
+.rrow button:disabled { opacity: .4; }
 /* Herausforderungen und Tageslauf */
 .chal-btn { border-color: color-mix(in srgb, var(--hostile) 55%, var(--line)); color: var(--hostile); }
 .daily-btn { border-color: color-mix(in srgb, var(--heal) 55%, var(--line)); color: var(--heal); }
@@ -435,6 +477,10 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec chal-btn" id="chalBtn">Herausforderungen</button>
       </div>
       <div class="actions two">
+        <button class="sec hang-btn" id="hangBtn">Hangar</button>
+        <button class="sec mine-btn" id="mineBtn">Bergbau</button>
+      </div>
+      <div class="actions two">
         <button class="sec prof-btn" id="profBtn">Profil &amp; Spielstand</button>
         <button class="sec fb-btn" id="fbBtn">Feedback</button>
       </div>
@@ -443,6 +489,7 @@ textarea { resize: vertical; min-height: 70px; }
       <button class="sec" id="sfxBtn" aria-pressed="true">Ton an</button>
       <button class="sec" id="musicBtn" aria-pressed="true">Musik an</button>
     </div>
+    <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
     <ul class="howto">
       <li><b>Gegner antippen</b> markiert ihn 6 Sekunden lang als Ziel.</li>
       <li><b>Orbitalschlag</b> lädt sich durch Abschüsse auf. Antippen, dann ins Feld tippen.</li>
@@ -470,6 +517,7 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec" id="sfxBtn2" aria-pressed="true">Ton an</button>
         <button class="sec" id="musicBtn2" aria-pressed="true">Musik an</button>
       </div>
+      <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
       <div class="actions two">
         <button class="sec prof-btn">Profil</button>
         <button class="sec fb-btn">Feedback</button>
@@ -692,6 +740,36 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<div class="ov" id="hangar" hidden>
+  <div class="card">
+    <h2>Hangar</h2>
+    <p>Gestalte deine Kanone. Neue Farben, Formen und Anbauteile schaltest du im Laufe des Spiels frei.</p>
+    <canvas id="hangCv"></canvas>
+    <h3>Farbe</h3><div class="skgrid" id="skColor"></div>
+    <h3>Turm</h3><div class="skgrid" id="skTurret"></div>
+    <h3>Fundament</h3><div class="skgrid" id="skBase"></div>
+    <h3>Anbauteile <small class="dim">(mehrere möglich)</small></h3><div class="skgrid" id="skDeco"></div>
+    <p class="note" id="skNote"></p>
+    <div class="actions"><button class="sec" id="hangClose">Zurück</button></div>
+  </div>
+</div>
+
+<div class="ov" id="mine" hidden>
+  <div class="card">
+    <div class="labhead"><h2>Bergbau</h2><span class="num k" id="mineK">0</span></div>
+    <p>Deine Bohrer fördern Erz in Echtzeit, auch während der Läufe und wenn das Spiel geschlossen ist, bis das Lager voll ist. Erz tauschst du in der Raffinerie gegen Kristalle oder stärkst damit in der Werkstatt deine Module.</p>
+    <button class="cta mine-cta" id="mineAll">Alles einsammeln</button>
+    <div id="planetList" class="planets"></div>
+    <h3>Raffinerie</h3>
+    <div id="refinery" class="refinery"></div>
+    <h3>Werkstatt</h3>
+    <p class="dim" style="font-size:.78rem">Erz eines Planeten wirkt auf die Module aus dem gleichen Sektor.</p>
+    <div id="workshop" class="workshop"></div>
+    <p class="note" id="mineNote"></p>
+    <div class="actions"><button class="sec" id="mineClose">Zurück</button></div>
+  </div>
+</div>
+
 <div class="ov" id="feedback" hidden>
   <div class="card">
     <h2>Feedback</h2>
@@ -760,12 +838,14 @@ textarea { resize: vertical; min-height: 70px; }
         <button data-adm="rec100">Rekord 100 (alles frei)</button>
         <button data-adm="rec0">Rekord 0 (Anfänger)</button>
       </div>
-      <h3>Herausforderungen und Tageslauf</h3>
+      <h3>Herausforderungen, Tageslauf, Bergbau</h3>
       <div class="adm">
         <button data-adm="chalall">Alle Stufen erreicht</button>
         <button data-adm="chalreset">Stufen zurücksetzen</button>
         <button data-adm="dailyreset">Tageslauf zurücksetzen</button>
         <button data-adm="dailytom">Morgigen Tag testen</button>
+        <button data-adm="mineore">+1.000 Erz je Planet</button>
+        <button data-adm="minefill">Lager sofort füllen</button>
       </div>
     </div>
     <div class="actions" id="admExit" hidden>

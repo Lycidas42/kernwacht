@@ -99,42 +99,146 @@
   };
   function play(name, o) { if (!ac || !sfxOn || ac.state !== 'running') return; const f = SFX[name]; if (f) f(o); }
 
-  // ---------- Musik: generativer Synthwave-Loop in a-Moll ----------
-  const BPM = 96, STEP = 60 / BPM / 4; // Sechzehntel
-  const PROG = [ // Akkorde: Am, F, C, G
-    { root: 57, notes: [57, 60, 64] }, { root: 53, notes: [53, 57, 60] },
-    { root: 48, notes: [55, 60, 64] }, { root: 55, notes: [55, 59, 62] },
-  ];
+  // ---------- Musik: generative Stücke in verschiedenen Stilen (Sechzehntel-Raster) ----------
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-  let nextT = 0, step16 = 0, intensity = 0;
+  let nextT = 0, step16 = 0, intensity = 0, track = null, delayIn = null, wantTrack = 'synth';
+  function ensureFx() {
+    if (delayIn) return;
+    // Echo für Ambient und Lo-Fi
+    delayIn = ac.createGain(); delayIn.gain.value = 1;
+    const d = ac.createDelay(1.5), fb = ac.createGain(), lp = ac.createBiquadFilter();
+    d.delayTime.value = 0.42; fb.gain.value = 0.38; lp.type = 'lowpass'; lp.frequency.value = 2400;
+    delayIn.connect(d); d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(musicBus);
+  }
+  // Ton mit Hüllkurve; send = Anteil ins Echo
+  function tone(type, f, t, dur, vol, cutoff, o) {
+    o = o || {};
+    const os = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    os.type = type; os.frequency.value = f; if (o.detune) os.detune.value = o.detune;
+    fl.type = 'lowpass'; fl.frequency.value = cutoff || 2000; if (o.q) fl.Q.value = o.q;
+    if (o.sweep) { fl.frequency.setValueAtTime(cutoff, t); fl.frequency.exponentialRampToValueAtTime(o.sweep, t + dur); }
+    const a = o.attack || 0.01;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(dur, a + 0.02));
+    os.connect(fl); fl.connect(g); g.connect(musicBus);
+    if (o.send) { ensureFx(); const sg = ac.createGain(); sg.gain.value = o.send; g.connect(sg); sg.connect(delayIn); }
+    os.start(t); os.stop(t + Math.max(dur, a + 0.02) + 0.05);
+  }
+  function kick(t, vol, f0, f1) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(f0 || 120, t); o.frequency.exponentialRampToValueAtTime(f1 || 40, t + 0.12); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16); o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.18); }
+  function hiss(t, vol, freq, dur, type) { const src = ac.createBufferSource(); src.buffer = noiseBuf; const f = ac.createBiquadFilter(); f.type = type || 'highpass'; f.frequency.value = freq; const g = ac.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); src.connect(f); f.connect(g); g.connect(musicBus); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02); }
+  const chord = (root, q) => q === 'm' ? [root, root + 3, root + 7] : [root, root + 4, root + 7];
+
+  const TRACKS = {
+    synth: {
+      name: 'Neon-Synthwave', bpm: 96,
+      prog: [[57, 'm'], [53, ''], [48, ''], [55, '']],
+      tick(i, t, S) {
+        const [r, q] = this.prog[Math.floor(i / 16) % 4], s = i % 16, n = chord(r, q);
+        if (s % 2 === 0) tone('sawtooth', mtof(r - 24), t, S * 1.8, 0.16, 380 + intensity * 500);
+        if (s === 0) n.forEach(x => tone('triangle', mtof(x), t, S * 15, 0.035, 1400));
+        const arp = [0, 1, 2, 1, 0, 2, 1, 2];
+        if (s % 2 === 1 || intensity > 0.5) tone('square', mtof(n[arp[s % 8]] + 12), t, S * 0.9, 0.025 + intensity * 0.015, 1800 + intensity * 1500);
+        if (s % 4 === 0) kick(t, 0.35);
+        if (s % 2 === 1) hiss(t, 0.05, 7000, 0.04);
+      },
+    },
+    chip: {
+      name: '8-Bit-Arcade', bpm: 140,
+      prog: [[60, ''], [57, 'm'], [53, ''], [55, '']],
+      mel: [0, 2, 4, 7, 4, 2, 0, -1, 0, 4, 7, 9, 7, 4, 2, 4],
+      tick(i, t, S) {
+        const bar = Math.floor(i / 16) % 4, [r] = this.prog[bar], s = i % 16;
+        const scale = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16];
+        if (s % 2 === 0) tone('triangle', mtof(r - 12 + (s % 4 === 2 ? 7 : 0)), t, S * 1.6, 0.18, 3000);
+        const m = this.mel[(s + bar * 4) % 16];
+        if (s % 2 === 0 || intensity > 0.5) tone('square', mtof(r + 12 + (m < 0 ? -1 : scale[m] || m)), t, S * 0.8, 0.03, 4000);
+        if (s === 0 || s === 8) tone('square', mtof(r + 24), t, S * 0.4, 0.015, 5000);
+        if (s % 8 === 0) kick(t, 0.25, 160, 50);
+        if (s % 8 === 4) hiss(t, 0.09, 2500, 0.09, 'bandpass');
+        if (s % 2 === 1) hiss(t, 0.03, 9000, 0.02);
+      },
+    },
+    ambient: {
+      name: 'Tiefraum (Ambient)', bpm: 60,
+      prog: [[50, 'm'], [46, ''], [53, ''], [48, '']],
+      tick(i, t, S) {
+        const bar = Math.floor(i / 16) % 4, [r, q] = this.prog[bar], s = i % 16, n = chord(r, q);
+        if (s === 0) {
+          n.forEach((x, k) => { tone('sine', mtof(x), t, S * 17, 0.05, 900, { attack: S * 5, detune: k * 4 - 4 }); tone('triangle', mtof(x + 12), t, S * 16, 0.012, 1200, { attack: S * 6, detune: 7 }); });
+          tone('sine', mtof(r - 24), t, S * 17, 0.08, 300, { attack: S * 4 });
+        }
+        if ((s === 6 || s === 11) && Math.random() < 0.7) { const x = n[Math.floor(Math.random() * 3)] + 24; tone('sine', mtof(x), t, S * 6, 0.03, 4000, { send: 0.7 }); }
+        if (intensity > 0.5 && s % 4 === 0) kick(t, 0.12, 70, 35);
+      },
+    },
+    techno: {
+      name: 'Hangar-Techno', bpm: 128,
+      prog: [[45, 'm'], [45, 'm'], [43, ''], [41, '']],
+      tick(i, t, S) {
+        const bar = Math.floor(i / 16) % 4, [r] = this.prog[bar], s = i % 16;
+        if (s % 4 === 0) kick(t, 0.42, 130, 38);
+        if (s % 4 === 2) hiss(t, 0.06, 8000, 0.05);
+        if (s === 4 || s === 12) hiss(t, 0.11, 1500, 0.12, 'bandpass');
+        // Acid-Bass: Filter öffnet sich über die Phrase
+        const acid = [0, 0, 12, 0, 0, 7, 0, 10, 0, 0, 12, 0, 3, 0, 7, 0];
+        const cut = 300 + ((i % 64) / 64) * 1800 + intensity * 900;
+        if (acid[s] !== undefined && (s % 2 === 0 || acid[s])) tone('sawtooth', mtof(r - 12 + acid[s]), t, S * 0.9, 0.11, cut, { q: 9, sweep: cut * 0.4 });
+        if (s === 6 || s === 14) chord(r + 12, 'm').forEach(x => tone('square', mtof(x), t, S * 0.6, 0.018, 2500, { send: 0.25 }));
+      },
+    },
+    epic: {
+      name: 'Orbital-Epos', bpm: 84,
+      prog: [[50, 'm'], [46, ''], [53, ''], [48, '']],
+      tick(i, t, S) {
+        const bar = Math.floor(i / 16) % 4, [r, q] = this.prog[bar], s = i % 16, n = chord(r, q);
+        if (s === 0) n.forEach((x, k) => { for (const d of [-8, 8]) tone('sawtooth', mtof(x), t, S * 16, 0.018, 1100 + intensity * 900, { attack: S * 3, detune: d + k }); });
+        if (s % 8 === 0) tone('sawtooth', mtof(r - 24), t, S * 7, 0.08, 500, { attack: 0.05 });
+        // Pauken
+        if (s === 0 || s === 10 || (intensity > 0.5 && s === 14)) kick(t, 0.38, 90, 45);
+        // Blechbläser-Motiv in Takt 4
+        if (bar === 3 && (s === 0 || s === 3 || s === 6)) tone('sawtooth', mtof(n[s / 3] + 12), t, S * (s === 6 ? 8 : 2.6), 0.04, 1600, { attack: 0.04, send: 0.3 });
+        if (s % 4 === 2) tone('triangle', mtof(n[(s / 2) % 3] + 24), t, S * 1.5, 0.012, 3000);
+      },
+    },
+    lofi: {
+      name: 'Lo-Fi-Station', bpm: 76,
+      prog: [[50, 'm7'], [55, '7'], [48, 'maj7'], [57, 'm7']],
+      tick(i, t, S) {
+        const bar = Math.floor(i / 16) % 4, [r, q] = this.prog[bar], s = i % 16;
+        const sw = s % 2 ? S * 0.18 : 0, tt = t + sw; // Swing
+        const n = q === 'm7' ? [r, r + 3, r + 7, r + 10] : q === '7' ? [r, r + 4, r + 7, r + 10] : [r, r + 4, r + 7, r + 11];
+        if (s === 0 || s === 7) n.forEach(x => tone('sine', mtof(x + 12), tt, S * 6, 0.03, 1600, { attack: 0.02, send: 0.25 }));
+        if (s === 0 || s === 10) tone('sine', mtof(r - 12), tt, S * 4, 0.16, 400);
+        if (s === 0 || s === 9) kick(tt, 0.28, 95, 40);
+        if (s === 4 || s === 12) hiss(tt, 0.07, 1800, 0.14, 'bandpass');
+        if (s % 2 === 0) hiss(tt, 0.02, 6000, 0.03);
+        if (s === 0) hiss(t, 0.012, 3000, S * 15, 'bandpass'); // Knistern
+        if ((s === 3 || s === 13) && Math.random() < 0.6) tone('triangle', mtof(n[Math.floor(Math.random() * 4)] + 24), tt, S * 2, 0.02, 2500, { send: 0.5 });
+      },
+    },
+  };
+  const ORDER = ['synth', 'chip', 'ambient', 'techno', 'epic', 'lofi'];
+  function pickTrack() { const id = wantTrack === 'random' ? ORDER[Math.floor(Math.random() * ORDER.length)] : wantTrack; return TRACKS[id] ? id : 'synth'; }
+  let curId = 'synth';
   function startMusic() {
     if (!ac || musicTimer) return;
+    curId = pickTrack(); track = TRACKS[curId];
     nextT = ac.currentTime + 0.1; step16 = 0;
     musicTimer = setInterval(schedule, 50);
   }
   function stopMusic() { clearInterval(musicTimer); musicTimer = null; }
   function schedule() {
-    while (nextT < ac.currentTime + 0.25) { tick(step16, nextT); nextT += STEP; step16++; }
+    const S = 60 / track.bpm / 4;
+    while (nextT < ac.currentTime + 0.25) { track.tick(step16, nextT, S); nextT += S; step16++; }
   }
-  function tone(type, f, t, dur, vol, cutoff) {
-    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
-    o.type = type; o.frequency.value = f; fl.type = 'lowpass'; fl.frequency.value = cutoff || 2000;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(fl); fl.connect(g); g.connect(musicBus); o.start(t); o.stop(t + dur + 0.05);
+  // Stück wählen: id aus TRACKS oder 'random' (bei jedem Laufstart neu)
+  function setTrack(id) {
+    wantTrack = id;
+    if (!ac || !musicTimer) return;
+    stopMusic(); startMusic();
   }
-  function tick(i, t) {
-    const bar = Math.floor(i / 16) % PROG.length, s = i % 16, ch = PROG[bar];
-    // Bass: pulsierende Achtel
-    if (s % 2 === 0) tone('sawtooth', mtof(ch.root - 24), t, STEP * 1.8, 0.16, 380 + intensity * 500);
-    // Pad zu Taktbeginn
-    if (s === 0) ch.notes.forEach(n => tone('triangle', mtof(n), t, STEP * 15, 0.035, 1400));
-    // Arpeggio
-    const arp = [0, 1, 2, 1, 0, 2, 1, 2];
-    if (s % 2 === 1 || intensity > 0.5) tone('square', mtof(ch.notes[arp[s % 8]] + 12), t, STEP * 0.9, 0.025 + intensity * 0.015, 1800 + intensity * 1500);
-    // Kick und Hi-Hat
-    if (s % 4 === 0) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14); o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.16); }
-    if (s % 2 === 1) { const src = ac.createBufferSource(); src.buffer = noiseBuf; const f = ac.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000; const g = ac.createGain(); g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04); src.connect(f); f.connect(g); g.connect(musicBus); src.start(t); src.stop(t + 0.05); }
-  }
+  function nextRandom() { if (wantTrack === 'random' && musicTimer) { stopMusic(); startMusic(); } }
+  const tracks = () => ORDER.map(id => ({ id, name: TRACKS[id].name }));
+  const current = () => curId;
 
   function setSfx(on) { sfxOn = on; if (sfxBus) sfxBus.gain.setTargetAtTime(on ? 0.55 : 0, ac.currentTime, 0.05); }
   function setMusic(on) {
@@ -148,5 +252,5 @@
   function suspend() { if (ac && ac.state === 'running') ac.suspend(); }
   function resume() { if (ac && ac.state === 'suspended') ac.resume(); }
 
-  root.KWAudio = { init, play, setSfx, setMusic, setIntensity, suspend, resume };
+  root.KWAudio = { init, play, setSfx, setMusic, setIntensity, suspend, resume, setTrack, nextRandom, tracks, current };
 })(window);
