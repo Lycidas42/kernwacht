@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, mend: 0.03, mendBoss: 0.002, mendSelf: 0.03, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, mend: 0.03, mendBoss: 0.002, mendSelf: 0.03, mendCalm: 1.5, gunPct: 0.02, gunPctBoss: 0.002, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -662,6 +662,7 @@
         dmg: d.dmg * dmgScale(w) * wm.dmg, rw: d.rw * rwScale(w) * wm.rw, r: d.r * (wm.big > 1 && type === 'brute' ? wm.big : 1) * (type !== 'boss' && wm.hp > 1.6 ? 1.1 : 1), stop: d.stop || 0,
         atkT: 0.5, shotT: 1 + Math.random(), bladeHit: 0, kbT: 0, flash: 0, seed: Math.random() * 6.28, fac: sectorOf(w).n,
       };
+      if (type === 'mender') e.stop = Math.max(110, Math.min(d.stop, this.s.range - 30)); // Heiler bleiben in Kanonenreichweite
       if (type === 'boss') {
         e.stop = Math.max(115, Math.min(210, this.s.range - 20));
         e.actT = 2.5; e.hoverT = 0; e.shieldUntil = 0; e.a0 = e.a; e.acts = 0; e.sector = sectorOf(w).n;
@@ -691,6 +692,7 @@
         if (d <= 0) return 0;
       }
       if (e.laser) e.laserDmg = (e.laserDmg || 0) + d;
+      e.hitT = this.time; // unter Beschuss keine Reparatur
       const eff = Math.min(d, e.hp);
       this.dealt[src || 'gun'] += eff;
       if (tag) this.credit(tag, eff);
@@ -908,7 +910,7 @@
         if (e.type === 'mender') {
           const p = this.pos(e);
           // Heilung stapelt nicht (je Schiff nur ein Heiler pro Moment), Mutterschiffe bekommen nur einen Bruchteil
-          for (const o of this.enemies) if (o !== e && o.hp > 0 && o.hp < o.maxHp && o.mendT !== this.time) {
+          for (const o of this.enemies) if (o !== e && o.type !== 'mender' && o.hp > 0 && o.hp < o.maxHp && o.mendT !== this.time && !(this.time - (o.hitT || -9) < P.mendCalm)) {
             const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) >= 90) continue;
             o.mendT = this.time; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * (o.type === 'boss' ? P.mendBoss : P.mend) * dt);
           }
@@ -973,7 +975,7 @@
               const crit = Math.random() < s.crit;
               const mx = Math.cos(this.aim) * BASE_R * 2.4, my = -8 + Math.sin(this.aim) * BASE_R * 2.4;
               const oc = s.mod.overcharge && i === 0 && this.shots % 12 === 0 ? s.mod.overcharge : 1;
-              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1, rc: crit });
+              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1, rc: crit, pk: (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc });
             }
           }
         } else this.fireT = 1;
@@ -985,7 +987,9 @@
         if (d <= v + t.r) {
           b.done = true;
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
-          const eff = this.hurt(t, b.dmg * brittle, b.crit, 'gun');
+          // Durchschlag: zusätzlich ein kleiner Anteil der max. Lebenspunkte des Ziels (hält die Kanone im späten Spiel relevant)
+          const pct = t.maxHp * (t.type === 'boss' ? P.gunPctBoss : P.gunPct) * (b.pk || 1);
+          const eff = this.hurt(t, (b.dmg + pct) * brittle, b.crit, 'gun');
           if (eff > 0) {
             // Zusatzschaden den Modulen zurechnen: Anteil, der ohne das Modul fehlen würde
             if (brittle > 1) this.credit('cryoammo', eff * (1 - 1 / brittle));
@@ -1418,6 +1422,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.3.5'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.3.6'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
