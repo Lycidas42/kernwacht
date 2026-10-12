@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, mend: 0.03, mendBoss: 0.002, mendSelf: 0.03, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -842,7 +842,7 @@
       } else if (act === 'nova') {
         for (let i = 0; i < 10; i++) { const an = Math.PI * (0.05 + 0.9 * i / 9); this.ebullets.push({ x: p.x + Math.cos(an) * 30, y: p.y + Math.sin(an) * 30, dmg: e.dmg * 0.25, big: true }); }
       } else if (act === 'mend') {
-        for (const o of this.enemies) if (o.hp > 0) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 160) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * (o === e ? 0.06 : 0.3)); }
+        for (const o of this.enemies) if (o.hp > 0) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 160) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * (o === e ? P.mendSelf : 0.3)); }
       }
       if (this.fxOn) this.fx.push({ k: 'bossact', act, x: p.x, y: p.y, t: 0 });
     }
@@ -907,7 +907,11 @@
         // Heiler: repariert Schiffe in der Nähe
         if (e.type === 'mender') {
           const p = this.pos(e);
-          for (const o of this.enemies) if (o !== e && o.hp > 0 && o.hp < o.maxHp) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 90) o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.05 * dt); }
+          // Heilung stapelt nicht (je Schiff nur ein Heiler pro Moment), Mutterschiffe bekommen nur einen Bruchteil
+          for (const o of this.enemies) if (o !== e && o.hp > 0 && o.hp < o.maxHp && o.mendT !== this.time) {
+            const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) >= 90) continue;
+            o.mendT = this.time; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * (o.type === 'boss' ? P.mendBoss : P.mend) * dt);
+          }
         }
         // Schildträger: Frontschild lädt nach 2 s ohne Treffer wieder auf
         if (e.type === 'bulwark') {
@@ -1414,6 +1418,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.3.4'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.3.5'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
