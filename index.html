@@ -189,6 +189,23 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .gitem b { font-size: .86rem; }
 .gitem p { margin: 2px 0 0; font-size: .8rem; color: var(--ink-dim); line-height: 1.45; }
 #guide .card { display: grid; gap: 8px; }
+.cmd-btn { border-color: color-mix(in srgb, #ffd23f 55%, var(--line)); color: #ffd23f; }
+.skxp { display: grid; gap: 4px; }
+.skxp .bar i { background: #ffd23f; box-shadow: 0 0 8px #ffd23f; }
+.skxp small { font-size: .72rem; color: var(--ink-dim); }
+.skpts { display: flex; justify-content: space-between; align-items: center; font-size: .86rem; }
+.skpts b { color: #ffd23f; font-family: var(--font-num); }
+.sklist, .skcaps { display: grid; gap: 6px; }
+.sknode { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-left: 2px solid #ffd23f; border-radius: 4px; padding: 7px 10px; }
+.sknode.off { opacity: .45; border-left-color: var(--line); }
+.sknode.full { border-left-color: var(--heal); }
+.sknode b { font-size: .88rem; } .sknode .lv { font-family: var(--font-num); font-size: .72rem; color: #ffd23f; margin-left: 6px; }
+.sknode small.nx { color: #ffd23f; opacity: .8; }
+.sknode small { display: block; font-size: .74rem; color: var(--ink-dim); line-height: 1.35; margin-top: 2px; }
+.sknode button { height: 32px; min-width: 44px; padding: 0 10px; border: 1px solid #ffd23f; border-radius: 4px; color: #ffd23f; font-weight: 700; }
+.sknode button:disabled { opacity: .35; }
+.skcaps .sknode { border-left-color: #ff8ad8; } .skcaps .sknode.chosen { border-color: #ff8ad8; box-shadow: 0 0 10px rgba(255,138,216,.35); }
+.skcaps .sknode button { border-color: #ff8ad8; color: #ff8ad8; }
 .setrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; font-size: .86rem; padding: 4px 0; }
 .setrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
@@ -585,7 +602,8 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec chal-btn" id="chalBtn">Challenge</button>
         <button class="sec ach-btn" id="achBtn">Erfolge</button>
       </div>
-      <div class="actions two">
+      <div class="actions three">
+        <button class="sec cmd-btn" id="cmdBtn">Kommandant</button>
         <button class="sec hang-btn" id="hangBtn">Hangar</button>
         <button class="sec mine-btn" id="mineBtn">Bergbau</button>
       </div>
@@ -807,8 +825,23 @@ textarea { resize: vertical; min-height: 70px; }
       <div class="gitem"><b>Tageslauf</b><p>Alle spielen dieselben Wellen mit Standard-Ausrüstung. Der erste Lauf am Tag bringt einen Kristallbonus.</p></div>
       <div class="gitem"><b>Bergbau</b><p>Ab Rekordwelle 25: Planeten fördern Ressourcen, auch offline. Daraus werden Kristalle (Raffinerie), dauerhafte Forschung oder stärkere Module (Werkstatt).</p></div>
       <div class="gitem"><b>Erfolge</b><p>Sammeln sich nebenbei und geben kleine dauerhafte Boni.</p></div>
+      <div class="gitem"><b>Kommandantenrang</b><p>Jede überstandene Welle gibt Erfahrung. Jeder Rang bringt einen Skillpunkt für den Skilltree mit vier Ästen und je einem wählbaren Schlussstein. Zurücksetzen ist außerhalb eines Laufs kostenlos.</p></div>
     </details>
     <div class="actions"><button class="sec" id="guideClose">Zurück</button></div>
+  </div>
+</div>
+<div class="ov" id="skills" hidden>
+  <div class="card">
+    <div class="labhead"><h2>Kommandant</h2><span class="num" id="skRank"></span></div>
+    <p class="dim" style="font-size:.8rem">Jede überstandene Welle bringt Erfahrung, jeder Rang einen Skillpunkt. Der Rang bleibt auch bei der Kernfusion. Skills wirken in normalen Läufen und Challenges, nicht im Tageslauf.</p>
+    <div class="skxp"><div class="bar"><i id="skXpBar"></i></div><small id="skXpTxt"></small></div>
+    <div class="skpts"><span id="skPts"></span><button class="mini" id="skReset">Punkte zurücksetzen</button></div>
+    <div class="lbtabs mtabs" id="skTabs"></div>
+    <p class="dim" id="skBrDesc" style="font-size:.78rem;margin:0"></p>
+    <div id="skList" class="sklist"></div>
+    <h3 id="skCapHead"></h3>
+    <div id="skCaps" class="skcaps"></div>
+    <div class="actions"><button class="sec" id="skClose">Zurück</button></div>
   </div>
 </div>
 <div class="ov" id="settings" hidden>

@@ -42,7 +42,7 @@
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
     const ICON_PATH = {}; for (const k in ICONS) ICON_PATH[k] = new Path2D(ICONS[k]);
-    const LIFE = { thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { exec: 0.45, reflect: 0.3, emerg: 0.9, phoenix: 1.4, stun: 0.6, drone: 0.12, barrage: 0.6, hole: 0.6, aegis: 0.7, thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -484,6 +484,24 @@
 
       // Minen
       for (const m of run.mines) drawMine(m, t, s, run);
+      // Brandfelder und Nachbeben (Skills)
+      for (const f of run.fires || []) {
+        const left = Math.max(0, f.until - run.time), a = Math.min(1, left / 0.6);
+        const col = f.k === 'quake' ? '255,120,220' : '255,140,40';
+        const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
+        gr.addColorStop(0, `rgba(${col},${0.32 * a})`); gr.addColorStop(1, `rgba(${col},0)`);
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fillStyle = gr; ctx.fill();
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.7 + 0.08 * Math.sin(t * 0.02)), 0, 7); glow(`rgb(${col})`, 1, 0.35 * a);
+      }
+      if (run.hole) {
+        // Schwarzes Loch: dunkler Kern, spiralige Ringe
+        const H = run.hole;
+        ctx.save(); ctx.translate(H.x, H.y);
+        const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, 70); g2.addColorStop(0, 'rgba(0,0,0,0.85)'); g2.addColorStop(0.4, 'rgba(60,20,110,0.45)'); g2.addColorStop(1, 'rgba(60,20,110,0)');
+        ctx.beginPath(); ctx.arc(0, 0, 70, 0, 7); ctx.fillStyle = g2; ctx.fill();
+        for (let i = 0; i < 3; i++) { ctx.rotate(t * 0.004 + i * 2.1); ctx.beginPath(); ctx.arc(0, 0, 20 + i * 14, 0, 4.2); glow('#b98aff', 1.4, 0.6); }
+        ctx.restore();
+      }
 
       // Schockwellen-Ring
       if (run.ring) {
@@ -532,6 +550,8 @@
           ctx.fillStyle = '#2a2560'; ctx.fillRect(p.x - w / 2, hy, w, 3);
           ctx.fillStyle = SHIP[e.type]; ctx.fillRect(p.x - w / 2, hy, w * Math.max(0, e.hp / e.maxHp), 3);
         }
+        if (e.pdps > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.25, 0, 7); glow('#8dff5a', 1.2, 0.35 + 0.25 * Math.sin(t * 0.01 + e.seed)); if (Math.random() < 0.08) parts.push({ x: p.x + (Math.random() - 0.5) * e.r, y: p.y, vx: 0, vy: -25, life: 0.5, t: 0, c: '#8dff5a', k: 'spark' }); }
+        if (e.stunUntil > run.time) { for (let i = 0; i < 3; i++) { const an = t * 0.008 + i * 2.1; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * e.r, p.y - e.r - 4 + Math.sin(an) * 3, 1.6, 0, 7); ctx.fillStyle = '#fff38a'; ctx.fill(); } }
         if (run.focus === e) {
           // Markiertes Ziel: Leitstrahl von der Kanone, pulsierender Ring, Eckklammern und Schriftzug
           const MK = '#ffd23f', R0 = e.r * 1.5 + 8, pul = 0.5 + 0.5 * Math.sin(t * 0.008);
@@ -549,6 +569,7 @@
       for (const b of run.bullets) {
         const tp = run.pos(b.tgt), d = Math.hypot(tp.x - b.x, tp.y - b.y) || 1;
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 14, b.y - (tp.y - b.y) / d * 14);
+        if (b.big) { ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 40, b.y - (tp.y - b.y) / d * 40); glow('#ffd23f', 6); ctx.beginPath(); ctx.arc(b.x, b.y, 5, 0, 7); ctx.fillStyle = '#fffbe0'; ctx.fill(); continue; }
         if (b.oc) { ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 26, b.y - (tp.y - b.y) / d * 26); glow('#ffe38a', 4); ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fillStyle = '#fff6cc'; ctx.fill(); continue; }
         glow(b.pierced ? '#c8b6ff' : b.crit ? PAL.energy : run.overActive ? PAL.heat : PAL.core, b.crit || b.pierced ? 2.4 : 1.7);
       }
@@ -586,6 +607,14 @@
       }
       drawWall(run, t);
       drawRig(run, t);
+      if (s.K && s.K('a_drones')) for (let k = 0; k < 2; k++) {
+        const a = run.time * 1.6 + k * Math.PI, x = Math.cos(a) * 34, y = -8 + Math.sin(a) * 20;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI / 2);
+        ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(4, 4); ctx.lineTo(0, 2); ctx.lineTo(-4, 4); ctx.closePath(); fillHull(); glow(PAL.energy, 1.3);
+        ctx.restore();
+      }
+      if (run.aegis > 0) { ctx.beginPath(); ctx.arc(0, 0, C.WALL_R - 6, Math.PI, 0); glow('#7fe3ff', 1 + 2 * Math.min(1, run.aegis / (s.maxHp * 0.25)), 0.55); }
+      if (run.time < run.invulnUntil) { ctx.beginPath(); ctx.arc(0, -4, 30, 0, 7); ctx.fillStyle = `rgba(255,240,180,${0.12 + 0.08 * Math.sin(t * 0.02)})`; ctx.fill(); glow('#ffe9a0', 2, 0.8); }
 
       // Partikel
       for (const p of parts) {
@@ -627,6 +656,24 @@
           ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(k * 2);
           ctx.beginPath(); for (let i = 0; i < 6; i++) { const an = i * Math.PI / 3; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(an) * (6 + 10 * k), Math.sin(an) * (6 + 10 * k)); }
           glow('#dff8ff', 1.4, a); ctx.restore();
+        } else if (f.k === 'exec') {
+          ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(0.785);
+          ctx.beginPath(); ctx.moveTo(-12 - 6 * k, 0); ctx.lineTo(12 + 6 * k, 0); ctx.moveTo(0, -12 - 6 * k); ctx.lineTo(0, 12 + 6 * k); glow('#ff3b5c', 2.2, a); ctx.restore();
+        } else if (f.k === 'reflect') {
+          ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(f.x, f.y); glow('#7fe3ff', 2 * a + 0.5, a);
+        } else if (f.k === 'drone') {
+          ctx.beginPath(); ctx.moveTo(f.x1, f.y1); ctx.lineTo(f.x2, f.y2); glow(PAL.energy, 1.4, a);
+        } else if (f.k === 'barrage') {
+          ctx.beginPath(); ctx.arc(f.x, f.y, 60 * Math.min(1, k * 2), 0, 7); ctx.fillStyle = `rgba(255,170,70,${0.18 * a})`; ctx.fill(); glow('#ffb347', 3 * a + 1, a);
+          if (k < 0.3) { ctx.beginPath(); ctx.moveTo(f.x, f.y - 400); ctx.lineTo(f.x, f.y); glow('#ffe0a0', 3, 1 - k / 0.3); }
+        } else if (f.k === 'hole') {
+          ctx.beginPath(); ctx.arc(f.x, f.y, 120 * (1 - k), 0, 7); glow('#b98aff', 1.5, a);
+        } else if (f.k === 'aegis' || f.k === 'emerg') {
+          ctx.beginPath(); ctx.arc(0, 0, C.WALL_R + 8 * k, Math.PI, 0); glow(f.k === 'aegis' ? '#7fe3ff' : '#ffe9a0', 4 * a + 1, a);
+        } else if (f.k === 'phoenix') {
+          ctx.beginPath(); ctx.arc(0, -8, 30 + 200 * k, 0, 7); ctx.fillStyle = `rgba(255,140,40,${0.25 * a})`; ctx.fill(); glow('#ffb347', 5 * a + 1, a);
+        } else if (f.k === 'stun') {
+          ctx.beginPath(); ctx.arc(f.x, f.y, 6 + 14 * k, 0, 7); glow('#fff38a', 1.5, a);
         } else if (f.k === 'echo') {
           // Echo: violette Ringe laufen von der Kanone aus
           for (let i = 0; i < 3; i++) { const kk = Math.max(0, k - i * 0.15); if (kk <= 0) continue; ctx.beginPath(); ctx.arc(0, -8, 20 + kk * 160, Math.PI, 0); glow('#c3a6ff', 1.6, (1 - kk) * 0.8); }

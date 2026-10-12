@@ -44,7 +44,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'settings', 'guide', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -59,6 +59,7 @@
     if (name === 'modules') renderModules();
     if (name === 'chal') renderChal();
     if (name === 'ach') renderAch();
+    if (name === 'skills') renderSkills();
     if (name === 'settings') renderSettings();
     if (name === 'daily') renderDaily();
     if (name === 'profile') renderProfile();
@@ -239,6 +240,41 @@
   $('homeBtn').addEventListener('click', () => { A.play('click'); show('menu'); });
   $('setClose').addEventListener('click', home);
   applySettings();
+
+  // ---------- Kommandant (Skilltree) ----------
+  let skTab = 'p';
+  function renderSkills() {
+    const R = C.rankOf(meta), pts = C.skPoints(meta);
+    $('skRank').textContent = 'Rang ' + R.rank;
+    $('skXpBar').style.width = Math.min(100, R.cur / R.need * 100) + '%';
+    $('skXpTxt').textContent = `${fmt(R.cur)} / ${fmt(R.need)} Erfahrung bis Rang ${R.rank + 1}`;
+    $('skPts').innerHTML = `Freie Punkte: <b>${pts}</b> von ${R.rank}`;
+    $('skReset').disabled = runAlive() || !C.skSpent(meta);
+    $('skReset').textContent = runAlive() ? 'Zurücksetzen nach dem Lauf' : 'Punkte zurücksetzen';
+    $('skTabs').innerHTML = C.SK_BRANCH.map(b => `<button data-br="${b.id}" aria-selected="${b.id === skTab}">${b.name} ${C.skBranchPts(meta, b.id)}</button>`).join('');
+    $$('#skTabs [data-br]').forEach(b => b.addEventListener('click', () => { skTab = b.dataset.br; A.play('click'); renderSkills(); }));
+    const B = C.SK_BRANCH.find(b => b.id === skTab);
+    $('skBrDesc').textContent = B.desc;
+    const node = k => {
+      const l = C.skLv(meta, k.id), can = C.skCan(meta, k.id), max = k.cap ? 1 : k.max, full = l >= max;
+      const txt = k.cap ? k.desc() : l ? `${k.desc(l)}</small>${full ? '' : `<small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>`}<small hidden>` : k.desc(1);
+      return `<div class="sknode ${full ? 'full' : ''} ${!can && !l ? 'off' : ''} ${k.cap && l ? 'chosen' : ''}"><div><b>${k.name}</b><span class="lv">${k.cap ? (l ? 'gewählt' : '') : l + '/' + max}</span><small>${txt}</small></div>
+        <button data-sk="${k.id}" ${can ? '' : 'disabled'}>${k.cap ? (l ? '✓' : 'Wählen') : full ? 'MAX' : '+1'}</button></div>`;
+    };
+    $('skList').innerHTML = C.SKILLS.filter(k => k.br === skTab && !k.cap).map(node).join('');
+    $('skCapHead').textContent = `Schlussstein (ab ${C.SK_CAP_AT} Punkten im Ast, nur einer)`;
+    $('skCaps').innerHTML = C.SKILLS.filter(k => k.br === skTab && k.cap).map(node).join('');
+    $$('#skills [data-sk]').forEach(b => b.addEventListener('click', () => { if (C.skBuy(meta, b.dataset.sk)) { A.play('buy'); if (runAlive()) run.recalc(); save(); renderSkills(); } }));
+  }
+  $('skReset').addEventListener('click', () => { if (runAlive()) return; C.skReset(meta); A.play('click'); save(); renderSkills(); });
+  $('cmdBtn').addEventListener('click', () => show('skills'));
+  $('skClose').addEventListener('click', home);
+  // Rangaufstieg melden
+  setInterval(() => {
+    const r = C.rankOf(meta).rank;
+    if (meta.rankSeen == null) { meta.rankSeen = r; return; }
+    if (r > meta.rankSeen) { const n = r - meta.rankSeen; meta.rankSeen = r; save(); A.play('loot'); toast(`<b>Kommandant: Rang ${r}</b><br>+${n} Skillpunkt${n > 1 ? 'e' : ''}. Im Menü unter „Kommandant“.`, 5000); }
+  }, 2000);
 
   // ---------- Erfolge ----------
   const big = n => n >= 1e12 ? fmt(n) : n >= 1e4 ? fmt(n) : String(n);
@@ -475,6 +511,8 @@
     { k: 'shock', name: 'Schockwelle', hit: s => s.shockDmg, rate: s => 'alle ' + dec(s.shockCd, 1) + ' s', on: s => s.shockCd > 0 },
     { k: 'blade', name: 'Orbitklingen', hit: s => s.bladeDmg, rate: s => s.blades + ' Klingen', on: s => s.blades > 0 },
     { k: 'strike', name: 'Orbitalschlag', hit: s => s.strikeDmg, rate: () => 'manuell', on: () => true },
+    { k: 'dot', name: 'Gift & Feuer', hit: () => 0, rate: () => 'Dauer', on: s => !!(s.K && (s.K('p_poison') || s.K('a_toxin') || s.K('a_burn') || s.K('t_quake'))) },
+    { k: 'skill', name: 'Kommandant', hit: () => 0, rate: () => 'Skills', on: s => !!(s.K && (s.K('a_drones') || s.K('a_barrage') || s.K('t_hole') || s.K('b_reflect'))) },
     { k: 'mod', name: 'Module (direkt)', hit: () => 0, rate: () => 'passiv', on: s => Object.keys(s.mod || {}).length > 0 },
   ];
   let statEls = null;

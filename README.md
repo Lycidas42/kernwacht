@@ -110,3 +110,5 @@ Das ist ein Schutz gegen versehentliches Öffnen, keine echte Sicherheit: Wer de
 Lokal spielen: `python3 -m http.server` im Repo-Ordner, dann `http://localhost:8000` öffnen. (Direkt per `file://` läuft der Service Worker nicht.)
 
 Sprachen: Deutsch und Englisch (Optionen → Sprache). Der Code enthält die deutschen Texte; `i18n.js` übersetzt beim Anzeigen anhand des Wörterbuchs `i18n-en.js` (Schlüssel = deutscher Text, `{0}`, `{1}` … als Platzhalter). Neue Texte dort ergänzen.
+
+Kommandant (Skilltree): Jede überstandene Welle gibt Erfahrung, jeder Rang einen Skillpunkt (Rang übersteht die Fusion, rückwirkend aus dem Rekord). Vier Äste – Präzision, Arsenal, Bollwerk, Taktik – mit eigenen Mechaniken (Gift, Vampir, Hinrichtung, Brandfelder, Drohnen, Reflexion, Betäubung, Phönix, Aegis, Schwarzes Loch …) und je einem wählbaren Schlussstein. Zurücksetzen außerhalb eines Laufs kostenlos.
