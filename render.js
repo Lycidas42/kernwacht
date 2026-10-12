@@ -619,9 +619,16 @@
           // Echo: violette Ringe laufen von der Kanone aus
           for (let i = 0; i < 3; i++) { const kk = Math.max(0, k - i * 0.15); if (kk <= 0) continue; ctx.beginPath(); ctx.arc(0, -8, 20 + kk * 160, Math.PI, 0); glow('#c3a6ff', 1.6, (1 - kk) * 0.8); }
         } else if (f.k === 'nova') {
-          ctx.beginPath(); ctx.arc(0, -8, (f.r || 200) * Math.min(1, k * 1.5), Math.PI, 0);
-          ctx.fillStyle = `rgba(255,240,200,${0.08 * a})`; ctx.fill();
-          ctx.beginPath(); ctx.arc(0, -8, (f.r || 200) * Math.min(1, k * 1.5), Math.PI, 0); glow('#ffffff', 4 * a + 1, a);
+          // Nova-Impuls: goldorange Sonnenstoß mit Strahlen (Schockwelle bleibt türkis)
+          const NR = (f.r || 200) * Math.min(1, k * 1.5);
+          const gr = ctx.createRadialGradient(0, -8, 0, 0, -8, Math.max(1, NR));
+          gr.addColorStop(0, `rgba(255,200,90,${0.32 * a})`); gr.addColorStop(0.7, `rgba(255,120,40,${0.14 * a})`); gr.addColorStop(1, 'rgba(255,90,30,0)');
+          ctx.beginPath(); ctx.moveTo(0, -8); ctx.arc(0, -8, NR, Math.PI, 0); ctx.closePath(); ctx.fillStyle = gr; ctx.fill();
+          ctx.beginPath();
+          for (let i = 0; i <= 16; i++) { const an = Math.PI + (i + 0.5) * Math.PI / 17; ctx.moveTo(Math.cos(an) * NR * 0.35, -8 + Math.sin(an) * NR * 0.35); ctx.lineTo(Math.cos(an) * NR * 0.92, -8 + Math.sin(an) * NR * 0.92); }
+          glow('#ffc04d', 1.5, a * 0.6);
+          ctx.beginPath(); ctx.arc(0, -8, NR, Math.PI, 0); glow('#ff9a2e', 4 * a + 1.5, a);
+          ctx.beginPath(); ctx.arc(0, -8, Math.max(0, NR - 6), Math.PI, 0); glow('#fff1c2', 1, a * 0.7);
         } else if (f.k === 'laserhit') {
           const bx = Math.cos(f.a) * f.d, by = Math.sin(f.a) * f.d;
           ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(0, -8); glow('#ff4040', 10 * a + 2, a);
