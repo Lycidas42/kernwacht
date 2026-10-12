@@ -955,7 +955,8 @@
   }
 
   // Zahlenformat (de)
-  const SUF = ['', 'K', 'M', 'Mrd', 'Bio', 'Brd', 'Trd'];
+  // Kurzschreibweise wie in Idle-Spielen üblich: Tausend, Million, Billion (B), Trillion (T), Quadrillion (Qa), Quintillion (Qu) …
+  const SUF = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qu', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td'];
   function fmt(n) {
     if (!isFinite(n)) return '∞';
     if (n < 0) return '-' + fmt(-n);
