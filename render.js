@@ -539,6 +539,10 @@
       for (const b of run.ebullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.big ? 5 : 3, 0, 7); glow(b.big ? SHIP.boss : '#c9ff4f', 1.5); }
       // Orbitklingen
       if (s.blades) {
+        // Bahn der Klingen dezent andeuten
+        const T = run.bladeTrack();
+        ctx.beginPath(); ctx.arc(0, 0, T.Ro, T.a0, T.a1); ctx.lineTo(Math.cos(T.a1) * T.Ri, Math.sin(T.a1) * T.Ri); ctx.arc(0, 0, T.Ri, T.a1, T.a0, true); ctx.closePath();
+        ctx.setLineDash([2, 7]); ctx.strokeStyle = PAL.heal; ctx.globalAlpha = 0.18; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]);
         for (const b of run.bladePos()) {
           ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(t * 0.012);
           const z = s.bladeSize;

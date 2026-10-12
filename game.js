@@ -1266,6 +1266,25 @@
   $('admBtn').addEventListener('click', () => show('admin'));
   if (adminOk) { $('adminPill').hidden = false; $('admBtn').hidden = false; }
 
+  // ---------- Zurück-Taste (Android/Browser): Dialoge schließen statt die App zu verlassen ----------
+  // Ein zusätzlicher Verlaufseintrag fängt „Zurück“ ab. Beenden erst bei zweimaligem Zurück im Startmenü bzw. im Lauf.
+  let backArmT = 0;
+  const guardBack = () => { try { history.pushState({ kw: 1 }, ''); } catch (e) {} };
+  function armExit() {
+    if (Date.now() - backArmT < 2500) { save(); history.back(); return; }
+    backArmT = Date.now(); guardBack(); toast('Nochmal „Zurück“ zum Beenden', 2500);
+  }
+  window.addEventListener('popstate', () => {
+    if (current === 'menu' || (!current && !runAlive())) { armExit(); return; }
+    if (!current && runAlive()) { show('pause'); armExit(); return; }
+    if (current === 'pause') { if (Date.now() - backArmT < 2500) { armExit(); return; } show(null); setPaused(false); guardBack(); return; }
+    if (current === 'back') { $('resumeBtn').disabled || $('resumeBtn').click(); guardBack(); return; }
+    if (current === 'over') { show('menu'); guardBack(); return; }
+    if (current === 'profile') pDraft = null;
+    home(); guardBack();
+  });
+  guardBack();
+
   // ---------- Version und Update ----------
   $('verTxt').textContent = 'Version ' + C.VERSION;
   $('updBtn').addEventListener('click', async () => {

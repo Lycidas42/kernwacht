@@ -8,7 +8,7 @@
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
     labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.35, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
-    gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1,
+    gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
   }, root.KW_P || {});
 
   // ---------- Upgrades im Lauf (Energie) ----------
@@ -27,7 +27,7 @@
     { id: 'armor',    tab: 'def', name: 'Panzerung',        desc: 'Weniger Schaden durch Treffer',    base: 14,  g: 1.17, max: 40 },
     { id: 'knock',    tab: 'def', name: 'Rückstoß',         desc: 'Treffer stoßen Gegner zurück',     base: 20,  g: 1.2,  max: 20 },
     { id: 'shock',    tab: 'def', name: 'Schockwelle',      desc: 'Druckring bis weit ins Feld',      base: 50,  g: 1.2,  max: 30, req: 'u_shock' },
-    { id: 'blade',    tab: 'def', name: 'Orbitklingen',     desc: 'Pendelnde Klingen über der Kanone', base: 70,  g: 1.2,  max: 30, req: 'u_blade' },
+    { id: 'blade',    tab: 'def', name: 'Orbitklingen',     desc: 'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall', base: 70,  g: 1.2,  max: 30, req: 'u_blade' },
     { id: 'loot',     tab: 'eco', name: 'Energieausbeute',  desc: '+5 % Energie pro Abschuss',        base: 8,   g: 1.16, max: 30 },
     { id: 'interest', tab: 'eco', name: 'Wellenprämie',     desc: 'Energiebonus am Ende jeder Welle', base: 25,  g: 1.22, max: 15 },
     { id: 'crys',     tab: 'eco', name: 'Kristallfilter',   desc: '+6 % Kristalle in diesem Lauf',    base: 40,  g: 1.25, max: 20 },
@@ -469,7 +469,7 @@
       const bl = L('blade');
       s.blades = bl ? Math.min(6, 1 + Math.floor(bl / 5)) : 0;
       s.bladeR = Math.max(WALL_R + 28, s.range * 0.55);
-      s.bladeDmg = s.dmg * 0.5 * (1 + 0.1 * bl);
+      s.bladeDmg = s.dmg * 0.5 * (1 + 0.1 * bl) * P.bladeK;
       s.bladeSize = 9 + Math.min(7, bl * 0.25);
       s.bladeHz = 1 / 0.35;
       // Minen
@@ -979,7 +979,7 @@
       }
       // Orbitklingen: pendeln im oberen Halbkreis
       if (s.blades) {
-        this.bladeA += dt * 1.6;
+        this.bladeA += dt;
         for (const b of this.bladePos()) {
           for (const e of this.enemies) {
             if (e.hp <= 0 || e.bladeHit > this.time) continue;
@@ -1015,13 +1015,22 @@
       this.enemies = this.enemies.filter(e => e.hp > 0);
     }
 
+    // Orbitklingen auf einer geschlossenen Schleife (liegendes „D“): außen im Bogen von links nach rechts,
+    // dann dicht vor dem Schutzwall von rechts nach links zurück. Gleichmäßig verteilt, ohne Umkehr.
+    bladeTrack() {
+      const s = this.s, a0 = Math.PI + 0.14, a1 = 2 * Math.PI - 0.14, Ro = s.bladeR, Ri = WALL_R + 16, span = a1 - a0;
+      return { a0, a1, Ro, Ri, span, L: Ro * span + Ri * span + 2 * (Ro - Ri) };
+    }
     bladePos() {
-      const s = this.s, n = s.blades, out = [];
-      const swing = Math.sin(this.bladeA) * 0.75;
+      const s = this.s, n = s.blades, out = []; if (!n) return out;
+      const T = this.bladeTrack(), seg = [T.Ro * T.span, T.Ro - T.Ri, T.Ri * T.span, T.Ro - T.Ri];
       for (let i = 0; i < n; i++) {
-        const off = n > 1 ? (i / (n - 1) - 0.5) * 1.2 : 0;
-        const a = -Math.PI / 2 + off + swing;
-        out.push({ x: Math.cos(a) * s.bladeR, y: Math.sin(a) * s.bladeR, a });
+        let u = ((this.bladeA * P.bladeV + i * T.L / n) % T.L + T.L) % T.L, x, y;
+        if (u < seg[0]) { const a = T.a0 + u / T.Ro; x = Math.cos(a) * T.Ro; y = Math.sin(a) * T.Ro; }
+        else if ((u -= seg[0]) < seg[1]) { const r = T.Ro - u; x = Math.cos(T.a1) * r; y = Math.sin(T.a1) * r; }
+        else if ((u -= seg[1]) < seg[2]) { const a = T.a1 - u / T.Ri; x = Math.cos(a) * T.Ri; y = Math.sin(a) * T.Ri; }
+        else { u -= seg[2]; const r = T.Ri + u; x = Math.cos(T.a0) * r; y = Math.sin(T.a0) * r; }
+        out.push({ x, y, a: Math.atan2(y, x) });
       }
       return out;
     }
@@ -1283,6 +1292,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-34'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-36'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

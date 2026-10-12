@@ -2,7 +2,7 @@
 // Strategie: eigene Dateien "network first" (online immer die neueste Version),
 // offline aus dem Cache. Schriften "cache first".
 // Bei jeder Veröffentlichung VERSION erhöhen, damit alte Caches verschwinden.
-const VERSION = 'kw-34';
+const VERSION = 'kw-36';
 const APP = [
   './',
   './index.html',
