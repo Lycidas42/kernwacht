@@ -222,7 +222,9 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .buy.f-btn.ok { background: color-mix(in srgb, var(--heat) 15%, transparent); }
 .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .slot { border: 1px dashed var(--line); border-radius: 4px; padding: 8px; min-height: 58px; font-size: .78rem; display: grid; align-content: center; text-align: center; color: var(--ink-dim); min-width: 0; }
-.slot.on { border-style: solid; color: var(--ink); }
+.slot.on { border-style: solid; color: var(--ink); position: relative; cursor: pointer; }
+.slot .unequip { position: absolute; top: 2px; right: 5px; font-style: normal; font-size: .9rem; line-height: 1; color: var(--ink-dim); }
+.slot.on:hover .unequip, .slot.on:active .unequip { color: var(--hostile); }
 .slot b { display: block; font-size: .76rem; overflow-wrap: anywhere; }
 .r0 { --rc: #a39ed0; } .r1 { --rc: #3ef0ff; } .r2 { --rc: #c3a6ff; } .r3 { --rc: #ffc04d; }
 .slot.on, .modrow { border-color: var(--rc, var(--line)); }

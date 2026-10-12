@@ -726,7 +726,8 @@
       const t = eq[i], m = t && mods[t];
       const d = document.createElement('div');
       d.className = 'slot' + (m ? ' on r' + m.rar : '');
-      d.innerHTML = m ? `${R_.iconSvg(t, m.rar, 26)}<b>${C.MODULES[t].name}</b>${C.RARITY[m.rar].name}` : 'freier Platz';
+      d.innerHTML = m ? `${R_.iconSvg(t, m.rar, 26)}<b>${C.MODULES[t].name}</b>${C.RARITY[m.rar].name}<i class="unequip" aria-hidden="true">×</i>` : 'freier Platz';
+      if (m) { d.title = 'Tippen zum Ablegen'; d.setAttribute('role', 'button'); d.addEventListener('click', () => { meta.equip = meta.equip.filter(x => x !== t); A.play('click'); if (runAlive()) run.recalc(); save(); renderModules(); }); }
       slots.appendChild(d);
     }
     const bw = Math.max(30, Math.floor(Math.max(meta.best, 30) / 10) * 10);
