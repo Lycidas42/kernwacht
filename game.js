@@ -1025,7 +1025,7 @@
     d: (P, l) => l ? fmt(C.mineRate(l, P)) + ' Erz/h' : '–',
     s: (P, l) => fmt(C.mineCapH(l, P)) + ' h',
     dr: (P, l) => l ? Math.round(C.droneRate(l) * 100) + ' % direkt' : '–',
-    sm: (P, l) => '+' + Math.round(15 * l * ((P.tr && P.tr.smelt) || 1)) + ' % Wert',
+    sm: (P, l) => '+' + Math.round(6 * l * ((P.tr && P.tr.smelt) || 1)) + ' % Wert',
     lz: (P, l) => l ? 'Tippen: ' + fmt(C.tapYield({ mine: { p: { [P.id]: { d: (C.mineState(meta).p[P.id] || {}).d || 0, lz: l } } } }, P)) + ' Erz' : '–',
   };
   function renderMine() {

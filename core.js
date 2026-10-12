@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.35, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
   }, root.KW_P || {});
 
@@ -1148,13 +1148,13 @@
     { id: 'd',  name: 'Bohrturm',     max: 30, desc: 'Fördert Erz in Echtzeit', cost: (P_, l) => l ? P_.build * 0.5 * Math.pow(1.5, l) : P_.build },
     { id: 's',  name: 'Erzsilo',      max: 14, desc: 'Lager für mehr Stunden Förderung', need: 'd', cost: (P_, l) => P_.build * 0.4 * Math.pow(1.6, l + 1) },
     { id: 'dr', name: 'Sammeldrohnen', max: 5, desc: 'Je Stufe gehen 20 % der Förderung direkt ins Lager', need: 'd', cost: (P_, l) => P_.build * 2 * Math.pow(2.2, l) },
-    { id: 'sm', name: 'Schmelze',     max: 15, desc: 'Erz dieses Planeten ist in der Raffinerie mehr wert', need: 'd', cost: (P_, l) => P_.build * 0.6 * Math.pow(1.7, l) },
+    { id: 'sm', name: 'Schmelze',     max: 10, desc: 'Erz dieses Planeten ist in der Raffinerie mehr wert', need: 'd', cost: (P_, l) => P_.build * 0.6 * Math.pow(1.7, l) },
     { id: 'lz', name: 'Lasermeißel',  max: 20, desc: 'Abbau per Tippen auf den Planeten', cost: (P_, l) => P_.build * 0.25 * Math.pow(1.55, l) },
   ];
   function mineState(m) { m.mine = m.mine || { p: {}, ore: {}, mined: 0 }; return m.mine; }
   const trv = (P_, k) => (P_ && P_.tr && P_.tr[k]) || 1;
   const PDEF = id => PLANETS.find(x => x.id === id);
-  const mineRate = (d, P_) => d ? 45 * Math.pow(1.18, d - 1) * trv(P_, 'rate') : 0;              // Erz pro Stunde
+  const mineRate = (d, P_) => d ? 45 * (1 + 0.2 * (d - 1)) * trv(P_, 'rate') : 0;                 // Erz pro Stunde (wächst linear, sonst wird der Bergbau zur Hauptquelle)
   const mineCapH = (s_, P_) => (3 + 1.5 * (s_ || 0)) * trv(P_, 'store');                          // Stunden bis voll
   const mineCap = (pl, P_) => mineRate(pl.d, P_) * mineCapH(pl.s, P_);
   const droneRate = dr => Math.min(1, 0.2 * (dr || 0));                                              // Anteil der Förderung, der direkt ins Lager geht
@@ -1213,7 +1213,8 @@
     return { n, vein };
   }
   // Raffinerie: Erz gegen Kristalle; Wert folgt dem eigenen Kristall-Tempo, die Schmelze erhöht ihn
-  const orePrice = (m, P_) => Math.max(0.5, P_.val * offlinePerHour(m) / 100 * (1 + 0.15 * ((mineState(m).p[P_.id] || {}).sm || 0) * trv(P_, 'smelt')));
+  // 1 Erz ≈ 1/600 Stunde Offline-Ertrag; spätere Planeten etwas wertvoller (je Sektor +20 %)
+  const orePrice = (m, P_) => Math.max(0.5, offlinePerHour(m) / 600 * (1 + 0.2 * (P_.sector - 1)) * (1 + 0.06 * ((mineState(m).p[P_.id] || {}).sm || 0) * trv(P_, 'smelt')));
   function mineSell(m, id, n) {
     const M = mineState(m), P_ = PDEF(id); n = Math.min(Math.floor(n), M.ore[id] || 0); if (!P_ || n <= 0) return 0;
     const k = Math.floor(n * orePrice(m, P_)); M.ore[id] -= n; m.crystals += k; m.totalCrystals = (m.totalCrystals || 0) + k; return k;
@@ -1292,6 +1293,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-36'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-37'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
