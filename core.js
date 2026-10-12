@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.02, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.35,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.35,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -381,21 +381,21 @@
   function permBonus(m) {
     const c = chalBonus(m), a = achBonus(m), r = researchBonus(m);
     return { hp: c.hp * a.hp * a.all * r.hp, rate: c.rate * a.rate * a.all * r.rate, dmg: c.dmg * a.dmg * a.all * r.dmg, loot: c.loot * a.loot * a.all * r.loot, crys: c.crys * a.crys * a.all,
-      boss: a.boss * r.boss, mod: a.mod, strike: a.strike, frag: a.frag, mine: a.mine };
+      boss: a.boss * r.boss, rateAll: r.rateAll, mod: a.mod, strike: a.strike, frag: a.frag, mine: a.mine };
   }
   // ---------- Planetenforschung: dauerhafte Boni, bezahlt mit der Ressource des Planeten ----------
   const RESEARCH = {
     // spätere Planeten öffnen später und haben weniger Vorrat angesammelt: günstigerer Einstieg
     ast:  { b: 'dmg',  step: 0.03, name: 'Schaden', c0: 500 },
     ice:  { b: 'hp',   step: 0.04, name: 'Strukturpunkte', c0: 400 },
-    lava: { b: 'rate', step: 0.04, name: 'Feuerrate', c0: 300 },
+    lava: { b: 'rateAll', step: 0.03, name: 'Feuerrate aller Waffen', c0: 300 },
     red:  { b: 'loot', step: 0.02, name: 'Energie im Lauf', c0: 200 },
     void: { b: 'boss', step: 0.05, name: 'Schaden gegen Mutterschiffe', c0: 150 },
   };
   const researchCost = (l, id) => Math.ceil(((RESEARCH[id] && RESEARCH[id].c0) || 500) * Math.pow(1.25, l));
   const researchLv = (m, id) => (m.mine && m.mine.res && m.mine.res[id]) || 0;
   function researchBonus(m) {
-    const b = { dmg: 1, hp: 1, rate: 1, loot: 1, boss: 1 };
+    const b = { dmg: 1, hp: 1, rate: 1, rateAll: 1, loot: 1, boss: 1 };
     for (const id in RESEARCH) b[RESEARCH[id].b] += RESEARCH[id].step * researchLv(m, id);
     return b;
   }
@@ -582,6 +582,9 @@
       if (mod.leech) s.loot *= 1 + mod.leech;
       if (this.rule === 'glass') s.regen = 0;
       s.noGun = this.rule === 'mines';
+      // Feuerrate aller Waffen (Planetenforschung): Kanone schneller, Nebenwaffen laden schneller, Klingen kreisen schneller
+      const ra = cb.rateAll || 1; s.rateAll = ra;
+      if (ra !== 1) { s.rate *= ra; for (const k of ['rocketCd', 'cryoCd', 'mineCd', 'shockCd']) if (s[k]) s[k] /= ra; }
       if (s.noGun) { s.rocketCd = 0; s.cryoCd = 0; s.shockCd = 0; s.blades = 0; }
       s.dps = s.gunDmg * s.rate * (1 + s.crit * (s.critx - 1)) * (1 + s.multi * s.multiDmg);
       this.s = s;
@@ -769,7 +772,7 @@
 
     // Nova-Impuls: Schaden auf alle Schiffe in Reichweite, kleine Schiffe werden zurückgeworfen
     fireNova() {
-      this.novaT = this.time + 12;
+      this.novaT = this.time + 12 / (this.s.rateAll || 1);
       const d = this.s.gunDmg * this.s.mod.nova;
       for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, d, false, 'mod', 'nova'); if (e.hp > 0 && e.type !== 'boss') e.dist += 30; }
       if (this.fxOn) this.fx.push({ k: 'nova', t: 0, r: this.s.range });
@@ -1006,7 +1009,7 @@
               const crit = Math.random() < s.crit;
               const mx = Math.cos(this.aim) * BASE_R * 2.4, my = -8 + Math.sin(this.aim) * BASE_R * 2.4;
               const oc = s.mod.overcharge && i === 0 && this.shots % 12 === 0 ? s.mod.overcharge : 1;
-              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1, rc: crit, pk: (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, pierce: s.pierce });
+              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1, rc: crit, pk: (i ? s.multiDmg : 1) * oc, pierce: s.pierce }); // Präzisionsschaden ohne Krit-Faktor
             }
           }
         } else this.fireT = 1;
@@ -1018,7 +1021,7 @@
         if (d <= v + t.r) {
           b.done = true;
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
-          // Präzision: markierte Ziele (außer Mutterschiffen) verlieren zusätzlich 2 % ihrer max. Lebenspunkte je Treffer
+          // Präzision: markierte Ziele (außer Mutterschiffen) verlieren zusätzlich 1,2 % ihrer max. Lebenspunkte je Treffer
           const pct = t.type === 'boss' || t !== this.focus ? 0 : t.maxHp * P.gunFocusPct * (b.pk || 1); // nur markierte Ziele (keine Mutterschiffe)
           const eff = this.hurt(t, (b.dmg + pct) * brittle, b.crit, 'gun');
           if (eff > 0) {
@@ -1138,7 +1141,7 @@
       }
       // Orbitklingen: pendeln im oberen Halbkreis
       if (s.blades) {
-        this.bladeA += dt;
+        this.bladeA += dt * (s.rateAll || 1);
         for (const b of this.bladePos()) {
           for (const e of this.enemies) {
             if (e.hp <= 0 || e.bladeHit > this.time) continue;
@@ -1474,6 +1477,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.5.4'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.5.5'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

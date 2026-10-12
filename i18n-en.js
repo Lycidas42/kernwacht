@@ -324,7 +324,7 @@ window.KW_EN = {
   'Noch kein Erz im Lager.': 'No ore in storage yet.', '+{0} Kristalle aus der Raffinerie.': '+{0} crystals from the refinery.',
   'Forschung': 'Research', 'Dauerhafte Boni, die jede Kernfusion überdauern. Jeder Planet erforscht mit seiner eigenen Ressource.': 'Permanent bonuses that survive every core fusion. Each planet researches with its own resource.',
   'Forschen': 'Research', 'Forschen {0} {1}': 'Research {0} {1}', '{0} · St. {1} → +{2} %': '{0} · Lv. {1} → +{2} %', 'Forschung: {0} jetzt +{1} %.': 'Research: {0} now +{1} %.',
-  'Energie im Lauf': 'Energy per run',
+  'Energie im Lauf': 'Energy per run', 'Feuerrate aller Waffen': 'Fire rate of all weapons',
   'Werkstatt': 'Workshop', 'Erz eines Planeten wirkt auf die Module aus dem gleichen Sektor. Legendäre Module mit {0}/{1} Funden lassen sich weiter meistern ({2} % Wirkung je Stufe).': 'A planet’s ore works on modules from the same sector. Legendary modules with {0}/{1} finds can be mastered further ({2} % effect per level).',
   'Neues Modul aus Sektor {0}': 'New module from sector {0}', 'zufälliger Typ, {0} {1}': 'random type, {0} {1}', 'Herstellen': 'Craft',
   '+1 Fund': '+1 find', 'Fund MAX': 'Find MAX', 'Seltener': 'Rarer', 'Meistern {0} %': 'Master {0} %', 'Meister {0}': 'Master {0}', 'Meister {0} (+{1} %)': 'Master {0} (+{1} %)', 'Fund {0}/{1} · Meister {2} (+{3} %)': 'Find {0}/{1} · Master {2} (+{3} %)', '{0} ★{1}': '{0} ★{1}',
