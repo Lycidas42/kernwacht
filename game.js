@@ -451,8 +451,8 @@
     if (armed && !canArm(armed)) armed = null;
     sb.classList.toggle('ready', ch >= 1); sb.classList.toggle('armed', armed === 'strike');
     sb.querySelector('.st').textContent = armed === 'strike' ? 'Ziel' : ch >= 1 ? 'bereit' : Math.floor(ch * 100) + ' %';
-    const sm = sb.querySelector('.smode'), aim = meta.strikeMode === 'aim';
-    if (sm.textContent !== (aim ? 'Ziel' : 'Auto')) { sm.textContent = aim ? 'Ziel' : 'Auto'; sb.classList.toggle('aim', aim); }
+    const sm = sb.querySelector('.smode'), tap = meta.strikeMode !== 'btn';
+    if (sm.textContent !== (tap ? 'Feld' : 'Knopf')) { sm.textContent = tap ? 'Feld' : 'Knopf'; sb.classList.toggle('aim', tap); }
     $('hint').hidden = !armed;
     if (armed) $('hint').textContent = HINT[armed];
     for (const id of ['freeze', 'over']) {
@@ -466,7 +466,7 @@
       b.querySelector('.st').textContent = active ? dec(left, 1) + ' s' : cd > 0 ? Math.ceil(cd) + ' s' : 'bereit';
     }
   }
-  const HINT = { strike: 'Klick ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen' };
+  const HINT = { strike: 'Tipp ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen' };
   function canArm(id) { return runAlive() && (id === 'strike' ? run.charge >= 1 : run.abilityReady(id)); }
   function fire(id, w) {
     if (!runAlive()) return false;
@@ -474,19 +474,18 @@
     if (run.useAbility(id)) { A.play(id); return true; }
     return false;
   }
-  // Orbitalschlag: „Auto“ schlägt sofort auf das Mutterschiff bzw. die dichteste Ballung, „Ziel“ wartet auf einen Klick ins Feld.
-  // Lange drücken (oder Rechtsklick) wechselt den Modus.
+  // Orbitalschlag: Ist er geladen, schlägt ein Tipp ins Feld genau dort ein. Der Knopf löst sofort automatisch aus
+  // (Mutterschiff bzw. dichteste Gruppe). Lange drücken schaltet „Feld“ ab, dann markiert ein Tipp ins Feld nur Ziele.
   function strikeNow() {
     if (!canArm('strike')) { A.play('hurt'); return; }
-    if (meta.strikeMode === 'aim') { armed = armed === 'strike' ? null : 'strike'; A.play('click'); return; }
     armed = null;
     const p = run.strikeTarget();
     if (!p) { toast('Kein Ziel in Sicht.', 1500); return; }
     fire('strike', p);
   }
   function toggleStrikeMode() {
-    meta.strikeMode = meta.strikeMode === 'aim' ? 'auto' : 'aim'; armed = null; save(); A.play('click');
-    toast(meta.strikeMode === 'aim' ? '<b>Orbitalschlag: Ziel wählen</b><br>Knopf, dann Klick ins Feld. Lange drücken wechselt zurück.' : '<b>Orbitalschlag: automatisch</b><br>Trifft sofort das Mutterschiff oder die dichteste Gruppe. Lange drücken wechselt.', 3000);
+    meta.strikeMode = meta.strikeMode === 'btn' ? 'tap' : 'btn'; armed = null; save(); A.play('click');
+    toast(meta.strikeMode === 'btn' ? '<b>Orbitalschlag: nur Knopf</b><br>Der Knopf trifft automatisch, Tippen ins Feld markiert nur Ziele. Lange drücken wechselt.' : '<b>Orbitalschlag: Feld</b><br>Geladen schlägt ein Tipp ins Feld dort ein, der Knopf trifft automatisch. Lange drücken wechselt.', 3500);
     updateAbilities();
   }
   {
@@ -1389,6 +1388,8 @@
     if (!runAlive() || paused || current) return;
     const w = R.toWorld(ev.clientX, ev.clientY);
     if (armed) { if (fire(armed, w)) armed = null; }
+    // Orbitalschlag geladen: Tippen ins Feld schlägt genau dort ein (außer im Modus „nur Knopf“)
+    else if (meta.strikeMode !== 'btn' && canArm('strike')) fire('strike', w);
     else if (run.markAt(w.x, w.y)) A.play('mark');
   });
 
