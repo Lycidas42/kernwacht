@@ -89,7 +89,7 @@ Der Publishable Key ist für den Browser gedacht und darf öffentlich sein; gesc
 
 ## Admin-Modus
 
-Fünfmal schnell auf den Titel im Startmenü oder auf „Pause“ im Pausenmenü tippen, dann Passwort eingeben. Nach der Anmeldung gibt es im Pausenmenü zusätzlich einen Admin-Knopf.
+Fünfmal schnell auf den Titel im Startmenü oder auf „Pause“ im Pausenmenü tippen, dann Passwort eingeben. Nach der Anmeldung gibt es im Pausenmenü zusätzlich einen Admin-Knopf. Unten im Admin-Fenster: „Admin-Modus verlassen“ meldet ab, „Admin-Markierung entfernen“ lässt einen Spielstand mit Admin-Eingriffen wieder in die Highscores.
 
 Passwort ändern: Hash erzeugen und in `game.js` bei `ADMIN_HASH` eintragen.
 

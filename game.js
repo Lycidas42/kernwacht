@@ -863,6 +863,9 @@
   }
   function renderAdmin() {
     $('admLogin').hidden = adminOk; $('admPanel').hidden = !adminOk; $('admErr').hidden = true;
+    $('admExit').hidden = !adminOk;
+    $('admUntaint').hidden = !meta.adminTainted;
+    $('admTaint').textContent = meta.adminTainted ? 'Dieser Spielstand ist als „mit Admin-Eingriffen“ markiert und erscheint deshalb nicht in den Highscores.' : 'Der Spielstand ist sauber und zählt für die Highscores.';
     $('adminPill').hidden = !adminOk;
     $('admBtn').hidden = !adminOk;
     const g = document.querySelector('[data-adm="god"]'); if (g) g.setAttribute('aria-pressed', run && run.god ? 'true' : 'false');
@@ -908,6 +911,20 @@
     b.animate && b.animate([{ opacity: .4 }, { opacity: 1 }], { duration: 250 });
   }));
   $('admClose').addEventListener('click', home);
+  // Admin-Modus verlassen: Anmeldung vergessen, Admin-Knöpfe ausblenden. Unverwundbarkeit im laufenden Lauf endet.
+  $('admLogout').addEventListener('click', () => {
+    adminOk = false; try { sessionStorage.removeItem('kw.admin'); } catch (e) {}
+    if (run) run.god = false;
+    if (speed > 4) { speed = 1; $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', x.dataset.speed === '1' ? 'true' : 'false')); }
+    A.play('click'); renderAdmin(); home();
+  });
+  // Markierung entfernen: der Spielstand zählt wieder für die Highscores (für eigene Testspielstände des Betreibers)
+  $('admUntaint').addEventListener('click', () => {
+    if (!adminOk) return;
+    const b = $('admUntaint');
+    if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Sicher? Admin-Werte zählen dann mit'; setTimeout(() => { b.dataset.sure = ''; b.textContent = 'Admin-Markierung vom Spielstand entfernen'; }, 4000); return; }
+    meta.adminTainted = false; if (run) run.admin = false; save(); submitScore(); A.play('buy'); renderAdmin();
+  });
   $('admBtn').addEventListener('click', () => show('admin'));
   if (adminOk) { $('adminPill').hidden = false; $('admBtn').hidden = false; }
 
