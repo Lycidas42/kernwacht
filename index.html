@@ -177,6 +177,11 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .actions.two { grid-template-columns: 1fr 1fr; }
 .actions.three { grid-template-columns: 1fr 1fr 1fr; }
 .set-btn { color: var(--ink); }
+.lbtabs.mtabs { margin: 8px 0 6px; flex-wrap: nowrap; gap: 4px; }
+.lbtabs.mtabs button { flex: 1 1 0; min-width: 0; padding: 0 4px; font-size: .68rem; }
+.mtabs button { position: relative; }
+.mtabs button.can::after { content: ''; position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--energy); box-shadow: 0 0 6px var(--energy); }
+.msec { display: grid; gap: 6px; }
 .setrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; font-size: .86rem; padding: 4px 0; }
 .setrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
@@ -774,7 +779,7 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="setrow"><div>Zahlenformat<small id="numEx"></small></div><div class="seg" data-set="numFmt"><button data-v="short">K · M · B · T</button><button data-v="sci">1,2e15</button></div></div>
     <div class="setrow"><div>Schadenszahlen<small>Zahlen über getroffenen Schiffen</small></div><div class="seg" data-set="dmgNums"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <h3>Sprache</h3>
-    <div class="setrow"><div>Sprache des Spiels<small>English folgt in einem späteren Update.</small></div><div class="seg" data-set="lang"><button data-v="de">Deutsch</button><button data-v="en" disabled>English</button></div></div>
+    <div class="setrow"><div>Sprache des Spiels<small>Englisch und Deutsch, jederzeit umschaltbar.</small></div><div class="seg" data-set="lang"><button data-v="de">Deutsch</button><button data-v="en">English</button></div></div>
     <div class="actions"><button class="sec" id="setClose">Zurück</button></div>
   </div>
 </div>
@@ -896,16 +901,21 @@ textarea { resize: vertical; min-height: 70px; }
     <div class="mhead"><b id="mpName"></b><span class="num" id="mpOre"></span></div>
     <p class="mtrait" id="mpTrait"></p>
     <div id="mpStats" class="mstats"></div>
-    <div id="mpFacs" class="facs"></div>
     <p class="note" id="mineNote"></p>
-    <h3>Raffinerie: Erz gegen Kristalle</h3>
-    <div id="refinery" class="refinery"></div>
-    <h3>Forschung</h3>
-    <p class="dim" style="font-size:.78rem">Dauerhafte Boni, die jede Kernfusion überdauern. Jeder Planet erforscht mit seiner eigenen Ressource.</p>
-    <div id="research" class="workshop"></div>
-    <h3>Werkstatt</h3>
-    <p class="dim" style="font-size:.78rem">Erz eines Planeten wirkt auf die Module aus dem gleichen Sektor. Legendäre Module mit 10/10 Funden lassen sich weiter meistern (+5 % Wirkung je Stufe).</p>
-    <div id="workshop" class="workshop"></div>
+    <div class="lbtabs mtabs" id="mTabs"><button data-mt="fac">Ausbau</button><button data-mt="ref">Raffinerie</button><button data-mt="res">Forschung</button><button data-mt="ws">Werkstatt</button></div>
+    <div class="msec" data-sec="fac"><div id="mpFacs" class="facs"></div></div>
+    <div class="msec" data-sec="ref" hidden>
+      <p class="dim" style="font-size:.78rem">Erz gegen Kristalle. Kristalle verfallen bei der Kernfusion.</p>
+      <div id="refinery" class="refinery"></div>
+    </div>
+    <div class="msec" data-sec="res" hidden>
+      <p class="dim" style="font-size:.78rem">Dauerhafte Boni, die jede Kernfusion überdauern. Jeder Planet erforscht mit seiner eigenen Ressource.</p>
+      <div id="research" class="workshop"></div>
+    </div>
+    <div class="msec" data-sec="ws" hidden>
+      <p class="dim" style="font-size:.78rem">Die Ressource eines Planeten wirkt auf die Module aus dem gleichen Sektor. Legendäre Module mit 10/10 Funden lassen sich weiter meistern (+5 % Wirkung je Stufe).</p>
+      <div id="workshop" class="workshop"></div>
+    </div>
     <div class="actions"><button class="sec" id="mineClose">Zurück</button></div>
   </div>
 </div>
@@ -997,6 +1007,8 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<script src="i18n-en.js"></script>
+<script src="i18n.js"></script>
 <script src="config.js"></script>
 <script src="core.js"></script>
 <script src="audio.js"></script>

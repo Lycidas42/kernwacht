@@ -60,6 +60,7 @@
 
   function create(cv) {
     const ctx = cv.getContext('2d');
+    { const ft = ctx.fillText.bind(ctx); if (window.KWI18n) ctx.fillText = (s, x, y, w) => w == null ? ft(KWI18n.T(String(s)), x, y) : ft(KWI18n.T(String(s)), x, y, w); } // Canvas-Texte übersetzen
     const surf = {}, parts = [], texts = [];
     let W = 0, H = 0, DPR = 1, cx = 0, cy = 0, R = 0, beam = null, shake = 0, lastT = 0;
 

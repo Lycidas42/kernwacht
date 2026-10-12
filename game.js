@@ -193,16 +193,19 @@
   $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
 
   // ---------- Einstellungen ----------
-  const SET_DEF = { numFmt: 'short', dmgNums: 'on', lang: 'de' };
-  const setting = k => (meta.settings && meta.settings[k]) || SET_DEF[k];
+  const SET_DEF = { numFmt: 'short', dmgNums: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
+  const setting = k => k === 'lang' ? ((window.KWI18n && KWI18n.lang) || 'de') : (meta.settings && meta.settings[k]) || SET_DEF[k];
   function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); }
   function renderSettings() {
     $$('#settings .seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === setting(seg.dataset.set))));
     $('numEx').textContent = 'Beispiel: ' + fmt(27.9e12) + ' · ' + fmt(4.2e18);
   }
   $$('#settings .seg button').forEach(b => b.addEventListener('click', () => {
-    meta.settings = meta.settings || {}; meta.settings[b.parentElement.dataset.set] = b.dataset.v;
+    const k = b.parentElement.dataset.set;
+    meta.settings = meta.settings || {}; meta.settings[k] = b.dataset.v;
     A.play('click'); applySettings(); save(); renderSettings(); refresh && refresh();
+    // Sprache: Seite neu laden, damit alle Texte in der neuen Sprache aufgebaut werden
+    if (k === 'lang' && window.KWI18n && KWI18n.lang !== b.dataset.v) { KWI18n.setLang(b.dataset.v); save(); setTimeout(() => location.reload(), 150); }
   }));
   $$('.set-btn').forEach(b => b.addEventListener('click', () => show('settings')));
   $('homeBtn').addEventListener('click', () => { A.play('click'); show('menu'); });
@@ -588,7 +591,7 @@
     labRun = runAlive() ? run : new C.Run(meta, { noFx: true });
     const V = labR.cannonLook(labRun), M = id => C.mlv(meta, id), F = id => C.flv(meta, id);
     const rows = [
-      ['Läufe', 'Schaden', M('m_dmg')], ['Rumpf', 'Strukturpunkte', M('m_hp')], ['Kühlrippen', 'Feuerrate', M('m_rate')],
+      ['Rohre', 'Schaden', M('m_dmg')], ['Rumpf', 'Strukturpunkte', M('m_hp')], ['Kühlrippen', 'Feuerrate', M('m_rate')],
       ['Dioden', 'Reparatur', M('m_regen')], ['Panzerkuppel', 'Panzerung', M('m_armor')], ['Sammlerschüssel', 'Energie', M('m_loot')],
       ['Kristallantenne', 'Kristalle', M('m_crys')], ['Fusionsringe', 'Fusionskern', F('f_core')],
       ['Raketenwerfer', 'Fusion', F('f_rocket') ? 'aktiv' : 0], ['Kryowerfer', 'Fusion', F('f_cryo') ? 'aktiv' : 0],
@@ -1115,6 +1118,8 @@
     sm: (P, l) => '+' + Math.round(6 * l * ((P.tr && P.tr.smelt) || 1)) + ' % Wert',
     lz: (P, l) => l ? 'Tippen: ' + fmt(C.tapYield({ mine: { p: { [P.id]: { d: (C.mineState(meta).p[P.id] || {}).d || 0, lz: l } } } }, P)) + ' Erz' : '–',
   };
+  let mineTab = 'fac';
+  $$('#mTabs [data-mt]').forEach(b => b.addEventListener('click', () => { mineTab = b.dataset.mt; A.play('click'); renderMine(); }));
   function renderMine() {
     const M = C.mineTick(meta);
     if (!mineView) mineView = window.KWMineView.create($('mineCv'));
@@ -1144,14 +1149,14 @@
     }).join('') : '';
     $$('#mpFacs [data-fac]').forEach(b => b.addEventListener('click', () => { if (C.mineUpgrade(meta, P.id, b.dataset.fac)) { A.play('buy'); save(); renderMine(); } }));
     // Raffinerie
-    const owned = C.PLANETS.filter(Q => (M.ore[Q.id] || 0) > 0);
+    const owned = open ? [P] : [];
     $('refinery').innerHTML = owned.length ? owned.map(Q => {
       const n = M.ore[Q.id], pr = C.orePrice(meta, Q);
       return `<div class="rrow" style="--pc:${Q.col}"><div>${Q.ore}: <b class="num">${fmt(n)}</b><small>${pr < 10 ? pr.toFixed(1).replace('.', ',') : fmt(pr)} Kristalle je Erz</small></div><button data-sell="${Q.id}" data-f="0.5">Hälfte<br>+${fmt(Math.floor(Math.floor(n / 2) * pr))}</button><button data-sell="${Q.id}" data-f="1">Alles<br>+${fmt(Math.floor(n * pr))}</button></div>`;
-    }).join('') : '<p class="dim" style="font-size:.8rem">Noch kein Erz im Lager.</p>';
+    }).join('') : '<p class="dim" style="font-size:.8rem">Planet noch nicht erreichbar.</p>';
     // Werkstatt
     const rows = [];
-    for (const Q of C.PLANETS) {
+    for (const Q of [P]) {
       if (!C.planetOpen(meta, Q)) continue;
       const ore = M.ore[Q.id] || 0;
       rows.push(`<div class="rrow" style="--pc:${Q.col}"><div>Neues Modul aus Sektor ${Q.sector}<small>zufälliger Typ, ${C.MOD_CRAFT} ${Q.ore}</small></div><span></span><button data-craft="${Q.sector}" ${ore >= C.MOD_CRAFT ? '' : 'disabled'}>Herstellen</button></div>`);
@@ -1167,11 +1172,20 @@
           <button data-imp="${t}" data-w="rar" ${mod.rar >= 3 || ore < rc ? 'disabled' : ''}>${mod.rar >= 3 ? 'legendär' : `Seltener<br>${fmt(rc)} ${Q.ore}`}</button></div>`);
       }
     }
-    $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
+    $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Planet noch nicht erreichbar.</p>';
+    // Reiter: aktiver Bereich, Punkt bei etwas Kaufbarem
+    const oreP = M.ore[P.id] || 0, can = {
+      fac: open && C.FACIL.some(f => { const l = pl[f.id] || 0; return !(f.need && !pl[f.need]) && l < f.max && meta.crystals >= C.facCost(P, f, l); }),
+      ref: false,
+      res: open && !!C.RESEARCH[P.id] && oreP >= C.researchCost(C.researchLv(meta, P.id), P.id),
+      ws: open && (oreP >= C.MOD_CRAFT || Object.keys(meta.modules || {}).some(t => { const m = meta.modules[t]; if (C.MODULES[t].sector !== P.sector) return false; return m.copies >= 10 && m.rar >= 3 ? oreP >= C.modMastCost(m) : (m.copies < 10 && oreP >= C.modBoostCost(m)) || (m.rar < 3 && oreP >= C.modRarCost(m)); })),
+    };
+    $$('#mTabs [data-mt]').forEach(b => { b.setAttribute('aria-selected', b.dataset.mt === mineTab ? 'true' : 'false'); b.classList.toggle('can', !!can[b.dataset.mt]); });
+    $$('#mine .msec').forEach(s => (s.hidden = s.dataset.sec !== mineTab));
     // Forschung
-    $('research').innerHTML = C.PLANETS.filter(Q => C.planetOpen(meta, Q) && C.RESEARCH[Q.id]).map(Q => {
-      const R = C.RESEARCH[Q.id], l = C.researchLv(meta, Q.id), c = C.researchCost(l), ore = M.ore[Q.id] || 0;
-      return `<div class="rrow" style="--pc:${Q.col}"><div>${R.name} <b class="num">+${Math.round(R.step * 100 * l)} %</b><small>${Q.ore} · St. ${l} → +${Math.round(R.step * 100 * (l + 1))} %</small></div><span></span>
+    $('research').innerHTML = [P].filter(Q => C.planetOpen(meta, Q) && C.RESEARCH[Q.id]).map(Q => {
+      const R = C.RESEARCH[Q.id], l = C.researchLv(meta, Q.id), c = C.researchCost(l, Q.id), ore = M.ore[Q.id] || 0;
+      return `<div class="rrow" style="--pc:${Q.col}"><div>${R.name} <b class="num">+${Math.round(R.step * 100 * l)} %</b><small>St. ${l} → +${Math.round(R.step * 100 * (l + 1))} % · Vorrat ${fmt(ore)} ${Q.ore}</small></div><span></span>
         <button data-res="${Q.id}" ${ore < c ? 'disabled' : ''}>Forschen<br>${fmt(c)} ${Q.ore}</button></div>`;
     }).join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
     $$('#research [data-res]').forEach(b => b.addEventListener('click', () => { if (C.research(meta, b.dataset.res)) { A.play('buy'); const R = C.RESEARCH[b.dataset.res]; mineNote(`Forschung: ${R.name} jetzt +${Math.round(R.step * 100 * C.researchLv(meta, b.dataset.res))} %.`); if (runAlive()) run.recalc(); save(); renderMine(); } }));

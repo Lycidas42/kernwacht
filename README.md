@@ -108,3 +108,5 @@ node -e "console.log(require('crypto').createHash('sha256').update('kernwacht:' 
 Das ist ein Schutz gegen versehentliches Öffnen, keine echte Sicherheit: Wer den Code liest, kann den Admin-Modus umgehen.
 
 Lokal spielen: `python3 -m http.server` im Repo-Ordner, dann `http://localhost:8000` öffnen. (Direkt per `file://` läuft der Service Worker nicht.)
+
+Sprachen: Deutsch und Englisch (Optionen → Sprache). Der Code enthält die deutschen Texte; `i18n.js` übersetzt beim Anzeigen anhand des Wörterbuchs `i18n-en.js` (Schlüssel = deutscher Text, `{0}`, `{1}` … als Platzhalter). Neue Texte dort ergänzen.
