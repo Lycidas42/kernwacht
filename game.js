@@ -77,11 +77,23 @@
     if (mode && mode.kind === 'daily') mode = { kind: 'daily', day: today() };
     lastMode = mode;
     run = new C.Run(meta, { startWave: C.startWaveFor(meta), mode });
-    A.nextRandom();
+    A.nextRandom(); syncModeFrame(true);
     R.clear(); armed = null; dpsHist.length = 0;
     setPaused(false); show(null); buildList(); save();
   }
+  // Sonderlauf deutlich kennzeichnen: farbiger Rahmen ums Feld und Hinweis mit der Regel
+  function syncModeFrame(intro) {
+    const m = run && !run.dead && run.mode, el = $('modeFrame');
+    if (!m) { el.hidden = true; return; }
+    let name, rule;
+    if (m.kind === 'chal') { const c = chalOf(m.id), t = c.goals.filter(g => run.wave >= g).length, nx = c.goals[t]; name = 'Herausforderung: ' + c.name; rule = c.rule + (nx ? ` Nächste Stufe: Welle ${nx}.` : ' Alle Stufen geschafft.'); }
+    else { const tw = twistOf(m.day); name = 'Tageslauf: ' + tw.name; rule = tw.desc + ' Standard-Ausrüstung, gleiche Wellen für alle.'; }
+    el.hidden = false; el.classList.toggle('daily', m.kind === 'daily');
+    $('mfName').textContent = name; $('mfRule').textContent = rule;
+    if (intro) toast(`<b>${name}</b><br>${rule}`);
+  }
   function endRun(early) {
+    $('modeFrame').hidden = true;
     if (!run || run.finished) return;
     run.finished = true;
     const recBefore = C.record(meta);
@@ -1279,6 +1291,7 @@
       uiT = 0;
       $('waveNo').textContent = run.wave;
       if (run.mode) {
+        if (run.wave !== window.__mfW) { window.__mfW = run.wave; syncModeFrame(false); }
         let txt, hit;
         if (run.mode.kind === 'chal') { const c = chalOf(run.mode.id), t = c.goals.filter(g => run.wave >= g).length, nx = c.goals[t]; txt = c.name + (nx ? ' · Ziel ' + nx : ' · alle Stufen'); hit = t > C.chalTier(meta, c.id); }
         else { const d = dailyToday(), b = d ? d.best : 0; txt = 'Tageslauf' + (b ? ' · heute ' + b : ''); hit = b > 0 && run.wave > b; }
@@ -1311,7 +1324,7 @@
   R.resize();
   const snap = load(RKEY);
   if (snap) {
-    try { run = C.Run.restore(meta, snap); lastShots = run.shots; buildList(); welcomeBack(true); }
+    try { run = C.Run.restore(meta, snap); lastShots = run.shots; buildList(); syncModeFrame(false); welcomeBack(true); }
     catch (e) { run = null; put(RKEY, null); show('menu'); welcomeBack(false); }
   } else { show('menu'); welcomeBack(false); }
   requestAnimationFrame(frame);
