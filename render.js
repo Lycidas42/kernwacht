@@ -539,7 +539,7 @@
         const tp = run.pos(b.tgt), d = Math.hypot(tp.x - b.x, tp.y - b.y) || 1;
         ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 14, b.y - (tp.y - b.y) / d * 14);
         if (b.oc) { ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 26, b.y - (tp.y - b.y) / d * 26); glow('#ffe38a', 4); ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fillStyle = '#fff6cc'; ctx.fill(); continue; }
-        glow(b.crit ? PAL.energy : run.overActive ? PAL.heat : PAL.core, b.crit ? 2.4 : 1.7);
+        glow(b.pierced ? '#c8b6ff' : b.crit ? PAL.energy : run.overActive ? PAL.heat : PAL.core, b.crit || b.pierced ? 2.4 : 1.7);
       }
       for (const b of run.ebullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.big ? 5 : 3, 0, 7); glow(b.big ? SHIP.boss : '#c9ff4f', 1.5); }
       // Orbitklingen

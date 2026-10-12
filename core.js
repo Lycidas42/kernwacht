@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, mend: 0.03, mendBoss: 0.002, mendSelf: 0.03, mendCalm: 1.5, gunPct: 0.02, gunPctBoss: 0.002, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, mend: 0.03, mendBoss: 0.002, mendSelf: 0.03, mendCalm: 1.5, gunPct: 0.015, gunFocus: 3, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -21,6 +21,7 @@
     { id: 'crit',     tab: 'atk', name: 'Krit-Chance',      desc: '+2,5 % Chance auf Krit',           base: 12,  g: 1.18, max: 16 },
     { id: 'critx',    tab: 'atk', name: 'Krit-Schaden',     desc: '+0,1× Schaden bei Krit',           base: 16,  g: 1.16, max: 15 },
     { id: 'multi',    tab: 'atk', name: 'Mehrfachschuss',   desc: '+1 Nebenrohr mit 35 % Schaden',    base: 150, g: 3.2,  max: 2 },
+    { id: 'pierce',   tab: 'atk', name: 'Durchschlag',      desc: 'Geschosse fliegen durch 1 weiteres Schiff (60 % Schaden)', base: 300, g: 3.5, max: 3 },
     { id: 'rocket',   tab: 'atk', name: 'Raketenwerfer',    desc: 'Langsame Rakete mit Flächenschaden', base: 80, g: 1.2,  max: 30, freq: 'f_rocket' },
     { id: 'cryo',     tab: 'atk', name: 'Kryowerfer',       desc: 'Verlangsamt getroffene Schiffe',   base: 80,  g: 1.2,  max: 30, freq: 'f_cryo' },
     { id: 'mine',     tab: 'atk', name: 'Minenwerfer',      desc: 'Mehr und stärkere Minen',          base: 60,  g: 1.2,  max: 30, req: 'u_mine' },
@@ -510,6 +511,7 @@
       s.gunDmg = s.dmg * P.gunK; // Treffer der Hauptkanone
       s.multi = L('multi');
       s.multiDmg = P.multiDmg; // Nebenrohre treffen schwächer als das Hauptrohr
+      s.pierce = L('pierce');
       s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp')) * s.fusion * cb.hp * (this.rule === 'glass' ? 0.25 : 1);
       const rg = L('regen');
       s.regen = s.maxHp * P.rgMax * (rg / (rg + P.rgK)) * (1 + 0.1 * M('m_regen'));
@@ -975,7 +977,7 @@
               const crit = Math.random() < s.crit;
               const mx = Math.cos(this.aim) * BASE_R * 2.4, my = -8 + Math.sin(this.aim) * BASE_R * 2.4;
               const oc = s.mod.overcharge && i === 0 && this.shots % 12 === 0 ? s.mod.overcharge : 1;
-              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1, rc: crit, pk: (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc });
+              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1, rc: crit, pk: (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, pierce: s.pierce });
             }
           }
         } else this.fireT = 1;
@@ -987,8 +989,8 @@
         if (d <= v + t.r) {
           b.done = true;
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
-          // Durchschlag: zusätzlich ein kleiner Anteil der max. Lebenspunkte des Ziels (hält die Kanone im späten Spiel relevant)
-          const pct = t.maxHp * (t.type === 'boss' ? P.gunPctBoss : P.gunPct) * (b.pk || 1);
+          // Präzision: zusätzlich ein Anteil der max. Lebenspunkte des Ziels (nicht bei Mutterschiffen), markierte Ziele dreifach
+          const pct = t.type === 'boss' ? 0 : t.maxHp * P.gunPct * (b.pk || 1) * (t === this.focus ? P.gunFocus : 1);
           const eff = this.hurt(t, (b.dmg + pct) * brittle, b.crit, 'gun');
           if (eff > 0) {
             // Zusatzschaden den Modulen zurechnen: Anteil, der ohne das Modul fehlen würde
@@ -1003,6 +1005,19 @@
             for (const x of others) { this.hurt(x.o, b.dmg * 0.5, false, 'gun', 'chain'); if (this.fxOn) { const q = this.pos(x.o); this.fx.push({ k: 'chain', x1: p.x, y1: p.y, x2: q.x, y2: q.y, t: 0 }); } }
           }
           if (s.knock && t.hp > 0 && t.kbT <= this.time && t.type !== 'boss') { t.kbT = this.time + 0.8; t.dist += s.knock * (t.type === 'brute' ? 0.4 : 1); }
+          // Durchschlag: Geschoss fliegt in derselben Richtung weiter zum nächsten Schiff auf der Linie
+          if (b.pierce > 0 && d > 0.01) {
+            const ux = dx / d, uy = dy / d; let nx = null, best = 1e9;
+            (b.hit = b.hit || []).push(t.id);
+            for (const o of this.enemies) {
+              if (o.hp <= 0 || b.hit.includes(o.id)) continue;
+              const q = this.pos(o), rx = q.x - p.x, ry = q.y - p.y, along = rx * ux + ry * uy;
+              if (along <= 0 || along > 220) continue;
+              if (Math.abs(rx * uy - ry * ux) > o.r + 8) continue;
+              if (along < best) { best = along; nx = o; }
+            }
+            if (nx) { b.done = false; b.tgt = nx; b.x = p.x; b.y = p.y; b.pierce--; b.dmg *= P.pierceK; b.pk = (b.pk || 1) * P.pierceK; b.crit = false; b.rc = false; b.oc = false; b.pierced = true; }
+          }
         } else { b.x += dx / d * v; b.y += dy / d * v; }
       }
       this.bullets = this.bullets.filter(b => !b.done);
@@ -1422,6 +1437,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.3.6'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.3.7'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

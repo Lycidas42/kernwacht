@@ -350,7 +350,7 @@
   // ---------- Upgrade-Liste ----------
   const VAL = {
     dmg: s => fmt(s.gunDmg), rate: s => dec(s.rate, 2) + '/s', range: s => Math.round(s.range),
-    crit: s => pct(s.crit), critx: s => dec(s.critx, 1) + '×', multi: s => s.multi ? '+' + s.multi + ' × ' + Math.round(s.multiDmg * 100) + ' %' : '–',
+    crit: s => pct(s.crit), critx: s => dec(s.critx, 1) + '×', multi: s => s.multi ? '+' + s.multi + ' × ' + Math.round(s.multiDmg * 100) + ' %' : '–', pierce: s => s.pierce ? s.pierce + ' Schiff' + (s.pierce > 1 ? 'e' : '') : '–',
     mine: s => s.mineCd ? fmt(s.mineDmg) : '–', hp: s => fmt(s.maxHp), regen: s => fmt(s.regen) + '/s', armor: s => pct(s.armor),
     knock: s => s.knock ? dec(s.knock, 1) : '–', shock: s => s.shockCd ? fmt(s.shockDmg) : '–',
     blade: s => s.blades ? s.blades + '× ' + fmt(s.bladeDmg) : '–', loot: s => '×' + dec(s.loot, 2),
