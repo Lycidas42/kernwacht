@@ -1271,7 +1271,7 @@
   $('updBtn').addEventListener('click', async () => {
     const b = $('updBtn'); b.disabled = true; b.textContent = 'Suche …';
     const r = window.KWUpdate ? await window.KWUpdate.check(true) : { error: true };
-    if (r.update) { b.textContent = 'Update laden (' + r.v + ')'; b.disabled = false; b.onclick = () => window.KWUpdate.apply(); return; }
+    if (r.update) { b.textContent = 'Update laden (' + r.v + ')'; b.disabled = false; b.onclick = () => window.KWUpdate.apply(r.v); return; }
     b.textContent = r.error ? 'Keine Verbindung' : 'Aktuell ✓'; setTimeout(() => { b.textContent = 'Nach Update suchen'; b.disabled = false; }, 2500);
   });
 

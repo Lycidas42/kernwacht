@@ -937,10 +937,13 @@ textarea { resize: vertical; min-height: 70px; }
     const b = document.createElement('button');
     b.textContent = 'Neue Version' + (ver ? ' (' + ver + ')' : '') + ' – tippen zum Laden';
     b.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:50;padding:10px 16px;border-radius:4px;background:#3ef0ff;color:#12102c;font:600 14px system-ui;border:0;box-shadow:0 0 18px rgba(62,240,255,.5)';
-    b.onclick = applyUpdate;
+    b.onclick = () => applyUpdate(ver);
     document.body.appendChild(b);
   }
-  async function applyUpdate() {
+  // GitHub verteilt neue Dateien nicht überall gleichzeitig. Kommt nach dem Neuladen noch die alte Version,
+  // lädt die App kurz darauf selbst erneut (bis zu 4×), statt den Hinweis immer wieder zu zeigen.
+  async function applyUpdate(ver) {
+    try { if (ver) { sessionStorage.setItem('kw.expect', ver); sessionStorage.setItem('kw.tries', '0'); } } catch (e) {}
     try { window.__kwSave && window.__kwSave(); } catch (e) {}
     try { if (reg) { await reg.update(); if (reg.waiting) reg.waiting.postMessage('skip'); } } catch (e) {}
     location.reload();
@@ -951,9 +954,26 @@ textarea { resize: vertical; min-height: 70px; }
     const m = (await r.text()).match(/VERSION = '([^']+)'/);
     return m ? m[1] : null;
   }
+  function pendingRetry() {
+    let exp = null, tries = 0;
+    try { exp = sessionStorage.getItem('kw.expect'); tries = +sessionStorage.getItem('kw.tries') || 0; } catch (e) {}
+    const cur = window.Core && Core.VERSION;
+    if (!exp) return false;
+    if (exp === cur || tries >= 4) { try { sessionStorage.removeItem('kw.expect'); sessionStorage.removeItem('kw.tries'); } catch (e) {} return false; }
+    try { sessionStorage.setItem('kw.tries', String(tries + 1)); } catch (e) {}
+    const n = document.createElement('div');
+    n.textContent = 'Update ' + exp + ' wird gerade verteilt, die App lädt gleich automatisch neu …';
+    n.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);z-index:50;padding:8px 14px;border-radius:4px;background:#17143a;color:#eeebff;border:1px solid #3ef0ff;font:500 13px system-ui';
+    document.body.appendChild(n);
+    setTimeout(() => { try { window.__kwSave && window.__kwSave(); } catch (e) {} location.reload(); }, 15000 + tries * 10000);
+    return true;
+  }
+  let retrying = false;
+  window.addEventListener('load', () => { retrying = pendingRetry(); });
   async function check(manual) {
     try {
       const v = await remoteVersion(), cur = window.Core && Core.VERSION;
+      if (retrying) return { update: true, v, pending: true };
       if (v && cur && v !== cur) { banner(v); return { update: true, v }; }
       return { update: false, v: cur };
     } catch (e) { return { error: true }; }
