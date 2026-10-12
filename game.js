@@ -116,7 +116,7 @@
       const M = C.MODULES[d.type], R = C.RARITY, now = d.nowRar != null ? d.nowRar : d.rar;
       const txt = d.result === 'neu' ? `neues Modul (${R[d.rar].name})`
         : d.result === 'besser' ? `Seltenheit steigt auf ${R[now].name} · Fund ${d.copies}/10`
-        : d.result === 'voll' ? `dein Modul (${R[now].name}) hat schon alle 10 Funde`
+        : d.result === 'erz' ? `Modul ist voll, umgewandelt in ${fmt(d.ore)} ${d.oreName}`
         : `zählt als weiterer Fund für dein Modul (${R[now].name}) · jetzt ${d.copies}/10`;
       ex.push(`<div class="loot r${now}">Beute: <b>${M.name}</b> <span class="dim">(Fund ${R[d.rar].name})</span> → ${txt}</div>`);
     }
@@ -243,7 +243,7 @@
     if (run.abilityReady('over') && (run.bossAlive() || run.enemies.length > 12)) run.useAbility('over');
   }
   let toastT = 0;
-  function toast(html) { const t = $('toast'); t.innerHTML = html; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 5000); }
+  function toast(html, ms) { const t = $('toast'); t.innerHTML = html; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms || 5000); }
   function catchUp(ms, extra) {
     const k = Math.max(1, Math.min(4, meta.speed || speed || 1)), total = ms / 1000 * k;
     const start = { wave: run.wave, crystals: run.crystals, buys: Object.values(run.lv).reduce((a, b) => a + b, 0), kills: run.kills };
@@ -1067,9 +1067,18 @@
     }
     $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
     $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
-    $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); mineNote(`Hergestellt: ${C.MODULES[d.type].name} (${C.RARITY[d.rar].name}) · ${{ neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund', voll: 'schon alle 10 Funde' }[d.result]}`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
-    $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { if (C.modImprove(meta, b.dataset.imp, b.dataset.w)) { A.play('loot'); mineNote(`${C.MODULES[b.dataset.imp].name} verbessert.`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); modReveal(d.type, d.rar, d.result, d); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.imp, w = b.dataset.w; if (C.modImprove(meta, t, w)) { A.play('loot'); modReveal(t, null, w === 'rar' ? 'besser' : 'kopie'); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     syncMineBadge();
+  }
+  // Ergebnis aus der Werkstatt groß anzeigen: was ist es, welche Seltenheit, was bewirkt es jetzt
+  function modReveal(type, fundRar, result, d) {
+    const M = C.MODULES[type], m = meta.modules[type], R = C.RARITY, eq = (meta.equip || []).includes(type);
+    const head = result === 'neu' ? 'Neues Modul!' : result === 'besser' ? 'Seltenheit verbessert!' : result === 'erz' ? 'Modul schon voll: in Erz umgewandelt' : 'Modul verstärkt!';
+    const fund = (fundRar != null ? `<br><span style="color:var(--ink-dim)">Fund: ${R[fundRar].name}</span>` : '') + (d && d.ore ? `<br><span style="color:var(--heat)">+${fmt(d.ore)} ${d.oreName}</span>` : '');
+    const html = `<div class="reveal r${m.rar}">${R_.iconSvg(type, m.rar, 40)}<div><b>${head}</b><br><span class="rn">${M.name}</span> · <span class="rr">${R[m.rar].name}</span> · Fund ${m.copies}/10${fund}<br><span class="rd">${M.desc(C.moduleValue(m))}</span>${eq ? '' : '<br><span style="color:var(--energy)">Noch nicht ausgerüstet: unter „Module“ auswählen.</span>'}</div></div>`;
+    toast(html, 6000);
+    mineNote(`${head} ${M.name} (${R[m.rar].name}, Fund ${m.copies}/10): ${M.desc(C.moduleValue(m))}`);
   }
   function minePlanetStep(d) { const i = C.PLANETS.findIndex(x => x.id === minePid) + d; if (i >= 0 && i < C.PLANETS.length) { minePid = C.PLANETS[i].id; mineNote(''); A.play('click'); renderMine(); } }
   $('mPrev').addEventListener('click', () => minePlanetStep(-1));

@@ -153,7 +153,13 @@
     const full = cur.copies >= 10;
     cur.copies = Math.min(10, cur.copies + 1);
     if (drop.rar > cur.rar) { cur.rar = drop.rar; return 'besser'; }
-    return full ? 'voll' : 'kopie';
+    if (full) {
+      // Modul schon voll: Fund wird zu Erz des passenden Planeten (mehr bei höherer Seltenheit)
+      const P_ = PLANETS.find(x => x.sector === MODULES[drop.type].sector), M = mineState(meta), n = 150 * Math.pow(drop.rar + 1, 2);
+      M.ore[P_.id] = (M.ore[P_.id] || 0) + n; drop.ore = n; drop.oreName = P_.ore;
+      return 'erz';
+    }
+    return 'kopie';
   }
   const MODULE_SLOTS = 3;
   // Beutechance steigt mit der Welle des Mutterschiffs: 20 % bei Welle 30 bis max. 85 %
@@ -1042,7 +1048,7 @@
         const k = Math.round(milestoneReward(w) * (1 + P.fCrys * flv(m, 'f_crys')));
         m.milestones[w] = 1; m.crystals += k; ms.push({ w, k });
       }
-      const loot = this.loot.map(d => { const result = addModule(m, d), cur = m.modules[d.type]; return { type: d.type, rar: d.rar, result, nowRar: cur.rar, copies: cur.copies }; });
+      const loot = this.loot.map(d => { const result = addModule(m, d), cur = m.modules[d.type]; return { type: d.type, rar: d.rar, result, nowRar: cur.rar, copies: cur.copies, ore: d.ore, oreName: d.oreName }; });
       // Kristalle pro Stunde (Spielzeit) als gleitender Mittelwert: Grundlage für den Offline-Ertrag
       if (!this.admin && this.time > 90) { const cur = c / this.time * 3600; m.cph = m.cph ? m.cph * 0.6 + cur * 0.4 : cur; }
       return { crystals: c, wave: this.wave, kills: this.kills, time: this.time, newBest, milestones: ms, loot, bossKills: this.bossKills || 0, noLoot: this.noLoot || null };
@@ -1277,6 +1283,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-30'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-32'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
