@@ -1113,31 +1113,53 @@
   const enemyHp = (type, w) => ENEMY[type].hp * hpScale(w);
 
   // ---------- Bergbau: Erz läuft in Echtzeit, parallel zu den Läufen (auch offline) ----------
+  // Jeder Planet hat eine Eigenschaft (trait), die eine Einrichtung verstärkt
   const PLANETS = [
-    { id: 'ast',  name: 'Asteroidengürtel', ore: 'Eisenerz',      col: '#b7bfe0', col2: '#4b5276', at: 25,  build: 300,     val: 1,  sector: 1 },
-    { id: 'ice',  name: 'Eismond Kryos',    ore: 'Kryokristall',  col: '#bff4ff', col2: '#2f7d94', at: 51,  build: 4000,    val: 2.5, sector: 2 },
-    { id: 'lava', name: 'Glutwelt Ignis',   ore: 'Plasmaerz',     col: '#ffb070', col2: '#8a2a10', at: 101, build: 40000,   val: 6,  sector: 3 },
-    { id: 'red',  name: 'Roter Zwerg Nox',  ore: 'Sternenstaub',  col: '#ff8a9e', col2: '#6b1830', at: 151, build: 300000,  val: 15, sector: 4 },
-    { id: 'void', name: 'Rand der Leere',   ore: 'Dunkelmaterie', col: '#c9d6ff', col2: '#1d2142', at: 201, build: 2000000, val: 40, sector: 5 },
+    { id: 'ast',  name: 'Asteroidengürtel', ore: 'Eisenerz',      col: '#b7bfe0', col2: '#4b5276', at: 25,  build: 300,     val: 1,   sector: 1, look: 'rock', ring: 0,
+      trait: 'Reiche Adern: Lasermeißel-Treffer bringen doppelt so oft eine Erzader.', tr: { vein: 2 } },
+    { id: 'ice',  name: 'Eismond Kryos',    ore: 'Kryokristall',  col: '#bff4ff', col2: '#2f7d94', at: 51,  build: 4000,    val: 2.5, sector: 2, look: 'ice', ring: 1,
+      trait: 'Kältelager: Lager fasst 50 % länger.', tr: { store: 1.5 } },
+    { id: 'lava', name: 'Glutwelt Ignis',   ore: 'Plasmaerz',     col: '#ffb070', col2: '#8a2a10', at: 101, build: 40000,   val: 6,   sector: 3, look: 'lava', ring: 0,
+      trait: 'Heißer Kern: Bohrer fördern 30 % mehr, das Lager fasst 25 % weniger.', tr: { rate: 1.3, store: 0.75 } },
+    { id: 'red',  name: 'Roter Zwerg Nox',  ore: 'Sternenstaub',  col: '#ff8a9e', col2: '#6b1830', at: 151, build: 300000,  val: 15,  sector: 4, look: 'bands', ring: 2,
+      trait: 'Dünne Kruste: Lasermeißel bringt doppelt so viel.', tr: { tap: 2 } },
+    { id: 'void', name: 'Rand der Leere',   ore: 'Dunkelmaterie', col: '#c9d6ff', col2: '#1d2142', at: 201, build: 2000000, val: 40,  sector: 5, look: 'void', ring: 1,
+      trait: 'Resonanz: die Schmelze wirkt doppelt.', tr: { smelt: 2 } },
   ];
-  const MINE_AT = 25, DRILL_MAX = 30, STORE_MAX = 14;
-  function mineState(m) {
-    m.mine = m.mine || { p: {}, ore: {}, mined: 0 };
-    return m.mine;
-  }
-  const mineRate = d => d ? 30 * Math.pow(1.18, d - 1) : 0;               // Erz pro Stunde
-  const mineCapH = s => 3 + 1.5 * s;                                         // Stunden bis das Lager voll ist
-  const mineCap = pl => mineRate(pl.d) * mineCapH(pl.s || 0);
-  const drillCost = (P_, d) => Math.ceil(d ? P_.build * 0.5 * Math.pow(1.5, d) : P_.build);
-  const storeCost = (P_, s_) => Math.ceil(P_.build * 0.4 * Math.pow(1.6, s_ + 1));
+  const MINE_AT = 25;
+  // Einrichtungen je Planet: Stufe 0 = nicht gebaut
+  const FACIL = [
+    { id: 'd',  name: 'Bohrturm',     max: 30, desc: 'Fördert Erz in Echtzeit', cost: (P_, l) => l ? P_.build * 0.5 * Math.pow(1.5, l) : P_.build },
+    { id: 's',  name: 'Erzsilo',      max: 14, desc: 'Lager für mehr Stunden Förderung', need: 'd', cost: (P_, l) => P_.build * 0.4 * Math.pow(1.6, l + 1) },
+    { id: 'dr', name: 'Sammeldrohnen', max: 5, desc: 'Je Stufe gehen 20 % der Förderung direkt ins Lager', need: 'd', cost: (P_, l) => P_.build * 2 * Math.pow(2.2, l) },
+    { id: 'sm', name: 'Schmelze',     max: 15, desc: 'Erz dieses Planeten ist in der Raffinerie mehr wert', need: 'd', cost: (P_, l) => P_.build * 0.6 * Math.pow(1.7, l) },
+    { id: 'lz', name: 'Lasermeißel',  max: 20, desc: 'Abbau per Tippen auf den Planeten', cost: (P_, l) => P_.build * 0.25 * Math.pow(1.55, l) },
+  ];
+  function mineState(m) { m.mine = m.mine || { p: {}, ore: {}, mined: 0 }; return m.mine; }
+  const trv = (P_, k) => (P_ && P_.tr && P_.tr[k]) || 1;
+  const PDEF = id => PLANETS.find(x => x.id === id);
+  const mineRate = (d, P_) => d ? 45 * Math.pow(1.18, d - 1) * trv(P_, 'rate') : 0;              // Erz pro Stunde
+  const mineCapH = (s_, P_) => (3 + 1.5 * (s_ || 0)) * trv(P_, 'store');                          // Stunden bis voll
+  const mineCap = (pl, P_) => mineRate(pl.d, P_) * mineCapH(pl.s, P_);
+  const droneRate = dr => Math.min(1, 0.2 * (dr || 0));                                              // Anteil der Förderung, der direkt ins Lager geht
+  const facCost = (P_, f, l) => Math.ceil(f.cost(P_, l));
   const planetOpen = (m, P_) => record(m) >= P_.at;
-  // Lagerstand bis jetzt fortschreiben
+  const plOf = (m, id) => { const M = mineState(m); return M.p[id] = M.p[id] || { d: 0, s: 0, dr: 0, sm: 0, lz: 0, stock: 0, t: Date.now() }; };
+  // Lagerstand fortschreiben; Drohnen leeren das Silo laufend ins Erzlager
   function mineTick(m, now) {
     const M = mineState(m); now = now || Date.now();
     for (const P_ of PLANETS) {
       const pl = M.p[P_.id]; if (!pl || !pl.d) continue;
-      const dt = Math.max(0, Math.min(48 * 3600e3, now - (pl.t || now)));
-      pl.stock = Math.min(mineCap(pl), (pl.stock || 0) + mineRate(pl.d) * dt / 3600e3); pl.t = now;
+      const dt = Math.max(0, Math.min(48 * 3600e3, now - (pl.t || now))), h = dt / 3600e3;
+      const cap = mineCap(pl, P_), rate = mineRate(pl.d, P_);
+      if (pl.dr) {
+        // Mit Drohnen läuft die Förderung (bis zur Drohnenleistung) direkt ins Lager
+        const fl = rate * h * droneRate(pl.dr), take = Math.floor(fl + (pl.carry || 0));
+        pl.carry = fl + (pl.carry || 0) - take;
+        M.ore[P_.id] = (M.ore[P_.id] || 0) + take; M.mined = (M.mined || 0) + take;
+        pl.stock = Math.min(cap, (pl.stock || 0) + Math.max(0, rate * h - fl));
+      } else pl.stock = Math.min(cap, (pl.stock || 0) + rate * h);
+      pl.t = now;
     }
     return M;
   }
@@ -1151,17 +1173,33 @@
     }
     return got;
   }
-  function mineUpgrade(m, id, what) {
-    const M = mineTick(m), P_ = PLANETS.find(x => x.id === id); if (!P_ || !planetOpen(m, P_)) return false;
-    const pl = M.p[id] = M.p[id] || { d: 0, s: 0, stock: 0, t: Date.now() };
-    if (what === 'drill') { if (pl.d >= DRILL_MAX) return false; const c = drillCost(P_, pl.d); if (m.crystals < c) return false; m.crystals -= c; pl.d++; if (pl.d === 1) pl.t = Date.now(); }
-    else { if (!pl.d || pl.s >= STORE_MAX) return false; const c = storeCost(P_, pl.s); if (m.crystals < c) return false; m.crystals -= c; pl.s++; }
+  function mineUpgrade(m, id, fid) {
+    mineTick(m);
+    const P_ = PDEF(id), f = FACIL.find(x => x.id === fid); if (!P_ || !f || !planetOpen(m, P_)) return false;
+    const pl = plOf(m, id), l = pl[fid] || 0;
+    if (l >= f.max || (f.need && !pl[f.need])) return false;
+    const c = facCost(P_, f, l); if (m.crystals < c) return false;
+    m.crystals -= c; pl[fid] = l + 1; if (fid === 'd' && l === 0) pl.t = Date.now();
     return true;
   }
-  // Raffinerie: Erz gegen Kristalle; Wert folgt dem eigenen Kristall-Tempo (Anteil des Offline-Ertrags)
-  const orePrice = (m, P_) => Math.max(0.5, P_.val * offlinePerHour(m) / 100);
+  // Lasermeißel: Bohrkraft lädt sich auf, jeder Treffer bringt Erz (etwa 20 s Förderung bzw. ein Grundwert)
+  const tapMax = lz => 20 + 2 * lz;
+  const tapRegen = 0.25; // pro Sekunde
+  function tapYield(m, P_) { const pl = plOf(m, P_.id); return Math.max(1, (Math.max(mineRate(pl.d, P_), 45) / 30) * (1 + 0.5 * (pl.lz - 1)) * trv(P_, 'tap')); }
+  function tapEnergy(m, now) { const M = mineState(m); now = now || Date.now(); const T = M.tap = M.tap || { e: 20, t: now }; const mx = Math.max(...PLANETS.map(P_ => tapMax((M.p[P_.id] || {}).lz || 0))); T.e = Math.min(mx, T.e + (now - T.t) / 1000 * tapRegen); T.t = now; return T; }
+  function mineTap(m, id, rnd) {
+    const P_ = PDEF(id), pl = plOf(m, id); if (!P_ || !planetOpen(m, P_) || !pl.lz) return null;
+    const T = tapEnergy(m); if (T.e < 1) return null;
+    T.e -= 1;
+    const vein = (rnd || Math.random)() < 0.06 * trv(P_, 'vein');
+    const n = Math.max(1, Math.round(tapYield(m, P_) * (vein ? 8 : 1)));
+    const M = mineState(m); M.ore[id] = (M.ore[id] || 0) + n; M.mined = (M.mined || 0) + n;
+    return { n, vein };
+  }
+  // Raffinerie: Erz gegen Kristalle; Wert folgt dem eigenen Kristall-Tempo, die Schmelze erhöht ihn
+  const orePrice = (m, P_) => Math.max(0.5, P_.val * offlinePerHour(m) / 100 * (1 + 0.15 * ((mineState(m).p[P_.id] || {}).sm || 0) * trv(P_, 'smelt')));
   function mineSell(m, id, n) {
-    const M = mineState(m), P_ = PLANETS.find(x => x.id === id); n = Math.min(Math.floor(n), M.ore[id] || 0); if (!P_ || n <= 0) return 0;
+    const M = mineState(m), P_ = PDEF(id); n = Math.min(Math.floor(n), M.ore[id] || 0); if (!P_ || n <= 0) return 0;
     const k = Math.floor(n * orePrice(m, P_)); M.ore[id] -= n; m.crystals += k; m.totalCrystals = (m.totalCrystals || 0) + k; return k;
   }
   // Werkstatt: Erz des passenden Sektors für Module
@@ -1238,6 +1276,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-28'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, DRILL_MAX, STORE_MAX, mineState, mineRate, mineCapH, mineCap, drillCost, storeCost, planetOpen, mineTick, mineCollect, mineUpgrade, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  const VERSION = 'kw-29'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

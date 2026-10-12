@@ -6,7 +6,7 @@ Herausforderungen (ab Rekordwelle 40): Läufe mit Handicap wie „Ohne Abwehr“
 
 Tageslauf (ab Rekordwelle 15): Alle spielen am selben Tag dieselben Wellen mit derselben Standard-Ausrüstung und einer Tages-Besonderheit. Der erste Versuch am Tag bringt einen Kristallbonus, der beste Versuch kommt in die Tages-Bestenliste. Das ist die Vorstufe zum späteren Battle Mode.
 
-Bergbau (ab Rekordwelle 25): Bohrer auf bis zu fünf Planeten fördern Erz in Echtzeit, auch offline, bis das Lager voll ist. Erz wird in der Raffinerie zu Kristallen oder stärkt in der Werkstatt Module des gleichen Sektors.
+Bergbau (ab Rekordwelle 25): Fünf Planeten mit eigener Optik und Eigenschaft. Je Planet Bohrturm, Erzsilo, Sammeldrohnen, Schmelze und Lasermeißel (Abbau per Tippen). Förderung in Echtzeit, auch offline. Erz wird in der Raffinerie zu Kristallen oder stärkt in der Werkstatt Module des gleichen Sektors. Grafik in `mine-view.js`.
 
 Hangar: Farbe, Turmform, Fundament und Anbauteile der Kanone; neue Teile werden über den Fortschritt freigeschaltet. Musik: sechs generative Stücke (Synthwave, 8-Bit, Ambient, Techno, Episch, Lo-Fi) oder Zufall.
 
@@ -31,6 +31,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `core.js` | Spielkern ohne DOM: Wellen, Gegner, Mutterschiff, Upgrades, Labor, Fähigkeiten, Balancing-Parameter (`P`) |
 | `game.js` | Steuerung: Zustand, Bedienung, Speichern, Werte-Tab, Admin-Modus, Spielschleife |
 | `render.js` | Grafik (Canvas 2D): Schiffe, Kanone, Minen, Effekte |
+| `mine-view.js` | Bergbau-Ansicht: Planeten, Einrichtungen, Abbau per Tippen |
 | `audio.js` | Soundeffekte und Musik, komplett per WebAudio erzeugt |
 | `online.js`, `config.js` | Online: Anzeige, Profil, Highscores, Cloud-Spielstand, Feedback, Umfragen (optional, siehe unten) |
 | `admin.html` | Verwaltungsseite: Feedback, Umfragen, Spieler |

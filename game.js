@@ -1004,46 +1004,56 @@
   // ---------- Bergbau ----------
   const hm = ms => { const m = Math.round(ms / 60e3); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; };
   function mineNote(t, err) { $('mineNote').textContent = t; $('mineNote').className = 'note' + (err ? ' err' : ''); }
+  let mineView = null, minePid = null;
+  const FAC_FX = {
+    d: (P, l) => l ? fmt(C.mineRate(l, P)) + ' Erz/h' : '–',
+    s: (P, l) => fmt(C.mineCapH(l, P)) + ' h',
+    dr: (P, l) => l ? Math.round(C.droneRate(l) * 100) + ' % direkt' : '–',
+    sm: (P, l) => '+' + Math.round(15 * l * ((P.tr && P.tr.smelt) || 1)) + ' % Wert',
+    lz: (P, l) => l ? 'Tippen: ' + fmt(C.tapYield({ mine: { p: { [P.id]: { d: (C.mineState(meta).p[P.id] || {}).d || 0, lz: l } } } }, P)) + ' Erz' : '–',
+  };
   function renderMine() {
     const M = C.mineTick(meta);
+    if (!mineView) mineView = window.KWMineView.create($('mineCv'));
+    if (!minePid) minePid = (C.PLANETS.slice().reverse().find(P => C.planetOpen(meta, P)) || C.PLANETS[0]).id;
+    const P = C.PLANETS.find(x => x.id === minePid), open = C.planetOpen(meta, P), pl = M.p[P.id] || { d: 0, s: 0, stock: 0 }, idx = C.PLANETS.indexOf(P);
     $('mineK').textContent = fmt(meta.crystals);
-    let any = false;
-    $('planetList').innerHTML = C.PLANETS.map((P, i) => {
-      const open = C.planetOpen(meta, P), pl = M.p[P.id] || { d: 0, s: 0, stock: 0 }, ore = M.ore[P.id] || 0;
-      const style = `--pc:${P.col};--pc2:${P.col2};--ring:${i % 2 ? 1 : 0}`;
-      if (!open) return `<div class="planet locked" style="${style}"><div class="orb"></div><div class="pinfo"><div class="hd"><b>${P.name}</b></div><div class="meta">${P.ore} · ab Rekordwelle ${P.at}</div></div></div>`;
-      const cap = C.mineCap(pl), k = cap ? pl.stock / cap : 0, rate = C.mineRate(pl.d);
-      if (pl.stock >= 1) any = true;
-      const left = pl.d && k < 1 ? hm((cap - pl.stock) / rate * 3600e3) : null;
-      const dc = C.drillCost(P, pl.d), sc = C.storeCost(P, pl.s || 0);
-      return `<div class="planet" style="${style}">
-        <div class="orb"><span class="drill ${pl.d ? 'on' : ''}">✱</span></div>
-        <div class="pinfo">
-          <div class="hd"><b>${P.name}</b><span>${P.ore}: ${fmt(ore)}</span></div>
-          ${pl.d ? `<div class="meta">Bohrer St. <b>${pl.d}</b> · <b>${fmt(rate)}</b>/h · Lager <b>${fmt(Math.floor(pl.stock))}</b> / ${fmt(cap)} ${k >= 1 ? '· <b style="color:var(--hostile)">voll</b>' : `· voll in ${left}`}</div>
-          <div class="stock ${k >= 1 ? 'full' : ''}"><i style="width:${Math.round(k * 100)}%"></i></div>` : `<div class="meta">Noch keine Förderung. Baue einen Bohrer, um ${P.ore} abzubauen.</div>`}
-          <div class="pbtns">
-            <button data-up="drill" data-p="${P.id}" ${pl.d >= C.DRILL_MAX || meta.crystals < dc ? 'disabled' : ''}>${pl.d ? (pl.d >= C.DRILL_MAX ? 'Bohrer MAX' : 'Bohrer +1') : 'Bohrer bauen'}${pl.d >= C.DRILL_MAX ? '' : `<b>${fmt(dc)}</b>`}</button>
-            <button data-up="store" data-p="${P.id}" ${!pl.d || (pl.s || 0) >= C.STORE_MAX || meta.crystals < sc ? 'disabled' : ''}>Lager ${fmt(C.mineCapH(pl.s || 0))} h → ${fmt(C.mineCapH((pl.s || 0) + 1))} h${(pl.s || 0) >= C.STORE_MAX ? '' : `<b>${fmt(sc)}</b>`}</button>
-            <button data-col="${P.id}" ${pl.stock >= 1 ? '' : 'disabled'}>Einsammeln<b>+${fmt(Math.floor(pl.stock))}</b></button>
-          </div>
-        </div></div>`;
-    }).join('');
-    $('mineAll').disabled = !any;
+    $('mPrev').disabled = idx === 0; $('mNext').disabled = idx === C.PLANETS.length - 1;
+    $('mDots').innerHTML = C.PLANETS.map(Q => `<i class="${Q === P ? 'on' : ''} ${C.planetOpen(meta, Q) ? '' : 'lock'}"></i>`).join('');
+    $('mpName').textContent = P.name; $('mpOre').textContent = `${P.ore}: ${fmt(M.ore[P.id] || 0)}`;
+    $('mpTrait').textContent = open ? P.trait : `Erreichbar ab Rekordwelle ${P.at}. ${P.trait}`;
+    // Förderung und Silo
+    if (!open) $('mpStats').innerHTML = '';
+    else if (!pl.d) $('mpStats').innerHTML = `<div class="meta">Noch keine Förderung. Baue einen Bohrturm, um ${P.ore} abzubauen.${pl.lz ? '' : ' Mit dem Lasermeißel kannst du auch selbst abbauen, indem du auf den Planeten tippst.'}</div>`;
+    else {
+      const cap = C.mineCap(pl, P), rate = C.mineRate(pl.d, P), k = cap ? pl.stock / cap : 0, left = k < 1 ? hm((cap - pl.stock) / (rate * (1 - C.droneRate(pl.dr))) * 3600e3) : null;
+      $('mpStats').innerHTML = `<div class="meta">Förderung <b>${fmt(rate)}</b>/h${pl.dr ? ` · davon <b>${Math.round(C.droneRate(pl.dr) * 100)} %</b> per Drohne direkt ins Lager` : ''} · Silo <b>${fmt(Math.floor(pl.stock))}</b> / ${fmt(cap)} ${k >= 1 ? '· <b style="color:var(--hostile)">voll</b>' : C.droneRate(pl.dr) >= 1 ? '' : `· voll in ${left}`}</div>
+        <div class="stock ${k >= 1 ? 'full' : ''}" style="--pc:${P.col};--pc2:${P.col2}"><i style="width:${Math.round(k * 100)}%"></i></div>
+        <button class="cta mine-cta" id="mineCol" ${pl.stock >= 1 ? '' : 'disabled'}>Silo leeren: +${fmt(Math.floor(pl.stock))} ${P.ore}</button>`;
+      $('mineCol').onclick = () => { const n = C.mineCollect(meta, P.id); if (n) { A.play('loot'); mineNote(`+${fmt(n)} ${P.ore} ins Lager gebracht.`); save(); renderMine(); } };
+    }
+    // Einrichtungen
+    $('mpFacs').innerHTML = open ? C.FACIL.map(f => {
+      const l = pl[f.id] || 0, need = f.need && !pl[f.need], mx = l >= f.max, c = C.facCost(P, f, l), ok = !need && !mx && meta.crystals >= c;
+      return `<div class="fac ${need ? 'off' : ''}"><div class="fh"><b>${f.name}</b><span>${l ? 'St. ' + l : 'nicht gebaut'}</span></div>
+        <small>${f.desc}${l ? ` · <em>${FAC_FX[f.id](P, l)}</em>` : ''}${!mx && !need ? ` → <em>${FAC_FX[f.id](P, l + 1)}</em>` : ''}</small>
+        <button data-fac="${f.id}" ${ok ? '' : 'disabled'}>${need ? 'braucht Bohrturm' : mx ? 'MAX' : (l ? 'Ausbau ' : 'Bauen ') + fmt(c)}</button></div>`;
+    }).join('') : '';
+    $$('#mpFacs [data-fac]').forEach(b => b.addEventListener('click', () => { if (C.mineUpgrade(meta, P.id, b.dataset.fac)) { A.play('buy'); save(); renderMine(); } }));
     // Raffinerie
-    const owned = C.PLANETS.filter(P => (M.ore[P.id] || 0) > 0);
-    $('refinery').innerHTML = owned.length ? owned.map(P => {
-      const n = M.ore[P.id], pr = C.orePrice(meta, P);
-      return `<div class="rrow" style="--pc:${P.col}"><div>${P.ore}: <b class="num">${fmt(n)}</b><small>${pr < 10 ? pr.toFixed(1).replace('.', ',') : fmt(pr)} Kristalle je Erz</small></div><button data-sell="${P.id}" data-f="0.5">Hälfte<br>+${fmt(Math.floor(Math.floor(n / 2) * pr))}</button><button data-sell="${P.id}" data-f="1">Alles<br>+${fmt(Math.floor(n * pr))}</button></div>`;
-    }).join('') : '<p class="dim" style="font-size:.8rem">Noch kein Erz im Lager. Sammle zuerst bei einem Planeten ein.</p>';
+    const owned = C.PLANETS.filter(Q => (M.ore[Q.id] || 0) > 0);
+    $('refinery').innerHTML = owned.length ? owned.map(Q => {
+      const n = M.ore[Q.id], pr = C.orePrice(meta, Q);
+      return `<div class="rrow" style="--pc:${Q.col}"><div>${Q.ore}: <b class="num">${fmt(n)}</b><small>${pr < 10 ? pr.toFixed(1).replace('.', ',') : fmt(pr)} Kristalle je Erz</small></div><button data-sell="${Q.id}" data-f="0.5">Hälfte<br>+${fmt(Math.floor(Math.floor(n / 2) * pr))}</button><button data-sell="${Q.id}" data-f="1">Alles<br>+${fmt(Math.floor(n * pr))}</button></div>`;
+    }).join('') : '<p class="dim" style="font-size:.8rem">Noch kein Erz im Lager.</p>';
     // Werkstatt
     const rows = [];
-    for (const P of C.PLANETS) {
-      if (!C.planetOpen(meta, P)) continue;
-      const ore = M.ore[P.id] || 0;
-      rows.push(`<div class="rrow" style="--pc:${P.col}"><div>Neues Modul aus Sektor ${P.sector}<small>zufälliger Typ, ${C.MOD_CRAFT} ${P.ore}</small></div><span></span><button data-craft="${P.sector}" ${ore >= C.MOD_CRAFT ? '' : 'disabled'}>Herstellen</button></div>`);
+    for (const Q of C.PLANETS) {
+      if (!C.planetOpen(meta, Q)) continue;
+      const ore = M.ore[Q.id] || 0;
+      rows.push(`<div class="rrow" style="--pc:${Q.col}"><div>Neues Modul aus Sektor ${Q.sector}<small>zufälliger Typ, ${C.MOD_CRAFT} ${Q.ore}</small></div><span></span><button data-craft="${Q.sector}" ${ore >= C.MOD_CRAFT ? '' : 'disabled'}>Herstellen</button></div>`);
       for (const t in (meta.modules || {})) {
-        const mod = meta.modules[t]; if (C.MODULES[t].sector !== P.sector) continue;
+        const mod = meta.modules[t]; if (C.MODULES[t].sector !== Q.sector) continue;
         const cc = C.modBoostCost(mod), rc = C.modRarCost(mod);
         rows.push(`<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${C.RARITY[mod.rar].name} · Fund ${mod.copies}/10</small></div>
           <button data-imp="${t}" data-w="copy" ${mod.copies >= 10 || ore < cc ? 'disabled' : ''}>${mod.copies >= 10 ? 'Fund MAX' : `+1 Fund<br>${fmt(cc)} Erz`}</button>
@@ -1051,17 +1061,43 @@
       }
     }
     $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
-    // Bedienung
-    $$('#planetList [data-up]').forEach(b => b.addEventListener('click', () => { if (C.mineUpgrade(meta, b.dataset.p, b.dataset.up)) { A.play('buy'); save(); renderMine(); } }));
-    $$('#planetList [data-col]').forEach(b => b.addEventListener('click', () => { const n = C.mineCollect(meta, b.dataset.col); if (n) { A.play('loot'); mineNote(`+${fmt(n)} Erz eingesammelt.`); save(); renderMine(); } }));
     $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
     $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); mineNote(`Hergestellt: ${C.MODULES[d.type].name} (${C.RARITY[d.rar].name}) · ${{ neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund' }[d.result]}`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { if (C.modImprove(meta, b.dataset.imp, b.dataset.w)) { A.play('loot'); mineNote(`${C.MODULES[b.dataset.imp].name} verbessert.`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     syncMineBadge();
   }
-  $('mineAll').addEventListener('click', () => { const n = C.mineCollect(meta); if (n) { A.play('loot'); mineNote(`+${fmt(n)} Erz eingesammelt.`); save(); renderMine(); } });
+  function minePlanetStep(d) { const i = C.PLANETS.findIndex(x => x.id === minePid) + d; if (i >= 0 && i < C.PLANETS.length) { minePid = C.PLANETS[i].id; mineNote(''); A.play('click'); renderMine(); } }
+  $('mPrev').addEventListener('click', () => minePlanetStep(-1));
+  $('mNext').addEventListener('click', () => minePlanetStep(1));
+  // Wischen zwischen Planeten
+  let swX = null;
+  $('mineCv').addEventListener('touchstart', e => { swX = e.touches[0].clientX; }, { passive: true });
+  $('mineCv').addEventListener('touchend', e => { if (swX == null) return; const dx = e.changedTouches[0].clientX - swX; swX = null; if (Math.abs(dx) > 60) minePlanetStep(dx < 0 ? 1 : -1); });
+  // Abbau per Tippen
+  $('mineCv').addEventListener('pointerdown', ev => {
+    if (!mineView) return;
+    const pt = mineView.hit(ev.clientX, ev.clientY); if (!pt) return;
+    const P = C.PLANETS.find(x => x.id === minePid);
+    if (!C.planetOpen(meta, P)) return;
+    const pl = C.plOf(meta, P.id);
+    if (!pl.lz) { mineNote('Baue einen Lasermeißel, dann kannst du hier per Tippen selbst abbauen.'); return; }
+    const r = C.mineTap(meta, P.id);
+    if (!r) { mineNote('Die Bohrkraft lädt sich gerade auf.'); A.play('hurt'); return; }
+    mineView.burst(pt, P, fmt(r.n), r.vein); A.play(r.vein ? 'loot' : 'buy'); if ($('mineNote').textContent) mineNote('');
+    $('mpOre').textContent = `${P.ore}: ${fmt(C.mineState(meta).ore[P.id] || 0)}`;
+    clearTimeout(window.__mineSaveT); window.__mineSaveT = setTimeout(save, 800);
+  });
+  function drawMine(now) {
+    if (!mineView) return;
+    const P = C.PLANETS.find(x => x.id === minePid), M = C.mineState(meta), pl = Object.assign({ d: 0, s: 0 }, M.p[P.id] || {});
+    pl.fill = pl.d ? (pl.stock || 0) / C.mineCap(pl, P) : 0;
+    mineView.draw(P, pl, now, { open: C.planetOpen(meta, P), lockTxt: 'ab Rekordwelle ' + P.at });
+    const T = C.tapEnergy(meta), mx = C.tapMax(pl.lz || 0);
+    $('mTap').hidden = !pl.lz;
+    $('mTap').querySelector('i').style.width = Math.min(100, T.e / mx * 100) + '%';
+  }
   function syncMineBadge() {
-    const M = C.mineTick(meta), full = C.PLANETS.some(P => { const pl = M.p[P.id]; return pl && pl.d && pl.stock >= C.mineCap(pl) * 0.9; });
+    const M = C.mineTick(meta), full = C.PLANETS.some(P => { const pl = M.p[P.id]; return pl && pl.d && pl.stock >= C.mineCap(pl, P) * 0.9; });
     const show_ = C.record(meta) >= C.MINE_AT || Object.keys(M.p).length > 0;
     $$('.mine-btn').forEach(b => { b.hidden = !show_; b.classList.toggle('new', full); });
     $$('.hang-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
@@ -1165,7 +1201,7 @@
     rec100: () => { meta.bestEver = Math.max(meta.bestEver || 0, 100); meta.best = Math.max(meta.best, 100); meta.adminTainted = true; },
     rec0: () => { meta.bestEver = 0; meta.best = 0; },
     mineore: () => { const M = C.mineState(meta); for (const P of C.PLANETS) if (C.planetOpen(meta, P)) M.ore[P.id] = (M.ore[P.id] || 0) + 1000; meta.adminTainted = true; },
-    minefill: () => { const M = C.mineState(meta); for (const id in M.p) { const pl = M.p[id]; if (pl.d) { pl.stock = C.mineCap(pl); pl.t = Date.now(); } } },
+    minefill: () => { const M = C.mineState(meta); for (const id in M.p) { const pl = M.p[id], P = C.PLANETS.find(x => x.id === id); if (pl.d) { pl.stock = C.mineCap(pl, P); pl.t = Date.now(); } } },
     chalall: () => { meta.chal = {}; for (const c of C.CHALLENGES) meta.chal[c.id] = { best: c.goals[c.goals.length - 1], tier: c.goals.length }; meta.adminTainted = true; if (runAlive()) run.recalc(); },
     chalreset: () => { meta.chal = {}; if (runAlive()) run.recalc(); },
     dailyreset: () => { meta.daily = null; },
@@ -1330,7 +1366,7 @@
     R.draw(now, realDt, run, { strikeArmed: armed === 'strike', armed });
     if (current === 'lab' && labR && labRun && $('cannonView').open) labR.preview(labRun, now);
     if (current === 'hangar' && hangR && hangRun) hangR.preview(hangRun, now);
-    if (current === 'mine' && now - (window.__mineT || 0) > 2000) { window.__mineT = now; renderMine(); }
+    if (current === 'mine') { drawMine(now); if (now - (window.__mineT || 0) > 3000) { window.__mineT = now; renderMine(); } }
     requestAnimationFrame(frame);
   }
 
