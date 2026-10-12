@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
   let ac = null, master, sfxBus, musicBus, noiseBuf;
-  let sfxOn = true, musicOn = true, musicTimer = null;
+  let sfxOn = true, musicOn = true, musicTimer = null, sfxVol = 1, musicVol = 1;
   const last = {};
 
   function init() {
@@ -14,8 +14,8 @@
     const comp = ac.createDynamicsCompressor();
     comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ac.destination);
-    sfxBus = ac.createGain(); sfxBus.gain.value = sfxOn ? 0.55 : 0; sfxBus.connect(master);
-    musicBus = ac.createGain(); musicBus.gain.value = musicOn ? 0.32 : 0; musicBus.connect(master);
+    sfxBus = ac.createGain(); sfxBus.gain.value = sfxOn ? 0.55 * sfxVol : 0; sfxBus.connect(master);
+    musicBus = ac.createGain(); musicBus.gain.value = musicOn ? 0.32 * musicVol : 0; musicBus.connect(master);
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -240,11 +240,17 @@
   const tracks = () => ORDER.map(id => ({ id, name: TRACKS[id].name }));
   const current = () => curId;
 
-  function setSfx(on) { sfxOn = on; if (sfxBus) sfxBus.gain.setTargetAtTime(on ? 0.55 : 0, ac.currentTime, 0.05); }
+  function setSfx(on) { sfxOn = on; if (sfxBus) sfxBus.gain.setTargetAtTime(on ? 0.55 * sfxVol : 0, ac.currentTime, 0.05); }
+  // Lautstärke 0..1, getrennt für Ton und Musik
+  function setVolume(kind, v) {
+    v = Math.max(0, Math.min(1, v));
+    if (kind === 'sfx') { sfxVol = v; if (sfxBus) sfxBus.gain.setTargetAtTime(sfxOn ? 0.55 * v : 0, ac.currentTime, 0.05); }
+    else { musicVol = v; if (musicBus) musicBus.gain.setTargetAtTime(musicOn ? 0.32 * v : 0, ac.currentTime, 0.1); }
+  }
   function setMusic(on) {
     musicOn = on;
     if (!ac) return;
-    musicBus.gain.setTargetAtTime(on ? 0.32 : 0, ac.currentTime, 0.2);
+    musicBus.gain.setTargetAtTime(on ? 0.32 * musicVol : 0, ac.currentTime, 0.2);
     if (on) startMusic(); else setTimeout(() => { if (!musicOn) stopMusic(); }, 400);
   }
   // Bosswelle: Musik wird dichter und heller
@@ -252,5 +258,5 @@
   function suspend() { if (ac && ac.state === 'running') ac.suspend(); }
   function resume() { if (ac && ac.state === 'suspended') ac.resume(); }
 
-  root.KWAudio = { init, play, setSfx, setMusic, setIntensity, suspend, resume, setTrack, nextRandom, tracks, current };
+  root.KWAudio = { init, play, setSfx, setMusic, setVolume, setIntensity, suspend, resume, setTrack, nextRandom, tracks, current };
 })(window);

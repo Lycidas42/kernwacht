@@ -347,6 +347,9 @@ textarea { resize: vertical; min-height: 70px; }
 .rrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
 .rrow button { height: 32px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; font-size: .72rem; font-weight: 600; }
 .rrow button:disabled { opacity: .4; }
+.vols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vols label { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
+.vol { height: 28px; padding: 0; background: transparent; border: 0; accent-color: var(--core); width: 100%; }
 /* Herausforderungen und Tageslauf */
 .chal-btn { border-color: color-mix(in srgb, var(--hostile) 55%, var(--line)); color: var(--hostile); }
 .daily-btn { border-color: color-mix(in srgb, var(--heal) 55%, var(--line)); color: var(--heal); }
@@ -489,6 +492,7 @@ textarea { resize: vertical; min-height: 70px; }
       <button class="sec" id="sfxBtn" aria-pressed="true">Ton an</button>
       <button class="sec" id="musicBtn" aria-pressed="true">Musik an</button>
     </div>
+    <div class="vols"><label>Ton <input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></label><label>Musik <input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></label></div>
     <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
     <ul class="howto">
       <li><b>Gegner antippen</b> markiert ihn 6 Sekunden lang als Ziel.</li>
@@ -517,6 +521,7 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec" id="sfxBtn2" aria-pressed="true">Ton an</button>
         <button class="sec" id="musicBtn2" aria-pressed="true">Musik an</button>
       </div>
+    <div class="vols"><label>Ton <input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></label><label>Musik <input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></label></div>
       <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
       <div class="actions two">
         <button class="sec prof-btn">Profil</button>

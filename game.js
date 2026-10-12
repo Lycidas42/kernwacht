@@ -716,6 +716,20 @@
     syncTrackBtns(); save();
   }));
   A.setTrack(meta.track || 'synth'); syncTrackBtns();
+  // Lautstärke-Regler (getrennt für Ton und Musik)
+  if (meta.sfxVol == null) meta.sfxVol = 1;
+  if (meta.musicVol == null) meta.musicVol = 1;
+  function syncVols() { $$('.vol').forEach(r => { r.value = Math.round((r.dataset.vol === 'sfx' ? meta.sfxVol : meta.musicVol) * 100); }); }
+  let volT = 0;
+  $$('.vol').forEach(r => r.addEventListener('input', () => {
+    const v = +r.value / 100, k = r.dataset.vol;
+    if (k === 'sfx') { meta.sfxVol = v; if (v > 0 && !meta.sfx) { meta.sfx = true; A.setSfx(true); syncSoundBtns(); } }
+    else { meta.musicVol = v; if (v > 0 && !meta.music) { meta.music = true; A.setMusic(true); syncSoundBtns(); } }
+    A.init(); A.setVolume(k, v); syncVols();
+    if (k === 'sfx' && Date.now() - volT > 150) { volT = Date.now(); A.play('click'); }
+  }));
+  $$('.vol').forEach(r => r.addEventListener('change', () => save()));
+  A.setVolume('sfx', meta.sfxVol); A.setVolume('music', meta.musicVol); syncVols();
   A.setSfx(meta.sfx); A.setMusic(meta.music);
   // Audio darf erst nach einer Berührung starten
   window.addEventListener('pointerdown', () => { A.init(); A.setSfx(meta.sfx); A.setMusic(meta.music); }, { once: true, capture: true });
