@@ -204,7 +204,8 @@
     meta.settings = meta.settings || {}; meta.settings[b.parentElement.dataset.set] = b.dataset.v;
     A.play('click'); applySettings(); save(); renderSettings(); refresh && refresh();
   }));
-  $('setBtn').addEventListener('click', () => show('settings'));
+  $$('.set-btn').forEach(b => b.addEventListener('click', () => show('settings')));
+  $('homeBtn').addEventListener('click', () => { A.play('click'); show('menu'); });
   $('setClose').addEventListener('click', home);
   applySettings();
 
