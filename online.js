@@ -97,6 +97,18 @@
     return data;
   }
   function adopt(c) { setStored(CODE_KEY, normCode(c)); setStored(ID_KEY, null); }
+  // ---------- Geräte koppeln mit Kurzcode ----------
+  const pairCreate = () => rpc('kw_pair_create');
+  // Gerät B: Kurzcode einlösen; B bekommt einen neuen Geräteschlüssel, der alte (leere) Spieler wird entfernt
+  async function pairRedeem(short) {
+    if (!(await start())) throw new Error('offline');
+    const fresh = newCode();
+    const { data, error } = await client.rpc('kw_pair_redeem', { new_code: fresh, old_code: code(), p_pair: short });
+    if (error) throw new Error(error.message);
+    if (!data || data.error) throw new Error((data && data.error) || 'Code ungültig oder abgelaufen.');
+    adopt(fresh);
+    return data;
+  }
 
   // ---------- Feedback und Umfragen ----------
   const feedback = (kind, body, ctx) => rpc('kw_feedback', { p_kind: kind, p_body: body, p_ctx: ctx || {} });
@@ -110,7 +122,7 @@
 
   root.KWOnline = {
     configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
-    profile, stats, daily, board, dailyBoard, save, load, feedback, polls, vote, pollResults,
+    profile, stats, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, polls, vote, pollResults,
     onCount: f => listeners.push(f), get count() { return count; },
   };
 })(window);

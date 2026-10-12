@@ -295,6 +295,16 @@ textarea { resize: vertical; min-height: 70px; }
 .cvlegend b { font-family: var(--font-num); font-weight: 600; white-space: nowrap; }
 .cvlegend span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cvlegend .off b { color: var(--ink-dim); opacity: .6; }
+.pairbtn { border-color: var(--core); color: var(--core); }
+.pairout { display: grid; justify-items: center; gap: 8px; padding: 10px; border: 1px dashed var(--core); border-radius: 4px; }
+.paircode { font-size: 2rem; letter-spacing: .14em; color: var(--core); text-shadow: 0 0 14px color-mix(in srgb, var(--core) 50%, transparent); user-select: text; -webkit-user-select: text; }
+.qr { background: #fff; padding: 6px; border-radius: 4px; line-height: 0; }
+.qr svg { width: 150px; height: 150px; }
+#cPairIn { font-family: var(--font-num); text-transform: uppercase; letter-spacing: .1em; font-size: 1rem; }
+.adv summary { cursor: pointer; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.adv[open] { display: grid; gap: 8px; }
+.toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); transform: translateX(-50%); z-index: 20; max-width: min(92vw, 420px); padding: 9px 14px; border: 1px solid var(--core); border-radius: 4px; background: color-mix(in srgb, var(--deck) 94%, transparent); box-shadow: 0 0 18px color-mix(in srgb, var(--core) 30%, transparent); font-size: .84rem; line-height: 1.4; text-align: center; pointer-events: none; }
+.toast b { color: var(--core); }
 /* Herausforderungen und Tageslauf */
 .chal-btn { border-color: color-mix(in srgb, var(--hostile) 55%, var(--line)); color: var(--hostile); }
 .daily-btn { border-color: color-mix(in srgb, var(--heal) 55%, var(--line)); color: var(--heal); }
@@ -629,6 +639,8 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<div id="toast" class="toast" hidden></div>
+
 <div class="ov" id="profile" hidden>
   <div class="card">
     <h2>Profil</h2>
@@ -642,14 +654,29 @@ textarea { resize: vertical; min-height: 70px; }
 
     <div id="cloudBox" class="box" hidden>
       <h3>Cloud-Spielstand</h3>
-      <p>Dein Spielstand wird online gesichert. Mit deinem Spielercode holst du ihn auf ein anderes Gerät. Behandle den Code wie ein Passwort.</p>
-      <div class="codebox"><code id="cCode"></code><button class="mini" id="cShow">Anzeigen</button><button class="mini" id="cCopy">Kopieren</button></div>
       <small class="dim" id="cLast"></small>
       <div class="actions two"><button class="sec" id="cSave">Jetzt sichern</button><button class="sec" id="cLoad">Aus Cloud laden</button></div>
       <button class="sec" id="cAuto" aria-pressed="true">Automatisch sichern: an</button>
-      <h3>Anderes Gerät übernehmen</h3>
-      <div class="inrow"><input id="cOther" placeholder="Spielercode eingeben" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="sec" id="cUse">Laden</button></div>
+
+      <h3>Auf anderem Gerät weiterspielen</h3>
+      <p>Erzeuge hier einen Code und gib ihn auf dem anderen Gerät unter „Profil &amp; Spielstand“ ein. Er gilt 10 Minuten. Danach sind beide Geräte derselbe Spieler.</p>
+      <button class="sec pairbtn" id="cPair">Code für anderes Gerät erzeugen</button>
+      <div class="pairout" id="pairOut" hidden>
+        <div class="paircode num" id="pairCode"></div>
+        <div class="qr" id="pairQr"></div>
+        <small class="dim" id="pairLeft"></small>
+      </div>
+
+      <h3>Code vom anderen Gerät eingeben</h3>
+      <div class="inrow"><input id="cPairIn" placeholder="z. B. K7M-4QX" maxlength="8" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="sec" id="cPairUse">Verbinden</button></div>
       <p class="note" id="cNote"></p>
+
+      <details class="adv">
+        <summary>Spielercode (Notfall-Zugang)</summary>
+        <p>Der lange Spielercode ist der dauerhafte Schlüssel zu deinem Spielstand. Notiere ihn, falls du ohne zweites Gerät umziehen willst.</p>
+        <div class="codebox"><code id="cCode"></code><button class="mini" id="cShow">Anzeigen</button><button class="mini" id="cCopy">Kopieren</button></div>
+        <div class="inrow"><input id="cOther" placeholder="Spielercode eingeben" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="sec" id="cUse">Laden</button></div>
+      </details>
     </div>
 
     <div class="box">

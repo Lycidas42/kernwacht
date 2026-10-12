@@ -26,7 +26,9 @@
   }
   normMeta();
   let run = null;
+  let frozenSave = false; // beim Ersetzen des Spielstands: nichts mehr zurückschreiben
   function save() {
+    if (frozenSave) return;
     meta.lastSeen = Date.now();
     if (!catching) meta.idleOk = !!(runAlive() && !paused && !current); // lief der Lauf gerade sichtbar weiter?
     put(KEY, meta);
@@ -206,7 +208,7 @@
     return { k, txt: dur(ms) };
   }
   // ---------- Nachrechnen: der Lauf läuft während der Abwesenheit weiter (Autopilot, max. 30 min) ----------
-  const CATCH_MAX = 30 * 60e3, CATCH_MIN = 20e3;
+  const CATCH_MAX = 30 * 60e3, CATCH_MIN = 5e3, CATCH_QUICK = 120e3;
   let catchNote = null;
   function autopilot() {
     autoBuy();
@@ -218,10 +220,22 @@
     if (run.abilityReady('freeze') && run.hp < run.s.maxHp * 0.35 && run.enemies.length > 3) run.useAbility('freeze');
     if (run.abilityReady('over') && (run.bossAlive() || run.enemies.length > 12)) run.useAbility('over');
   }
+  let toastT = 0;
+  function toast(html) { const t = $('toast'); t.innerHTML = html; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 5000); }
   function catchUp(ms, extra) {
     const k = Math.max(1, Math.min(4, meta.speed || speed || 1)), total = ms / 1000 * k;
     const start = { wave: run.wave, crystals: run.crystals, buys: Object.values(run.lv).reduce((a, b) => a + b, 0), kills: run.kills };
     let done = 0, autoT = 0;
+    // Kurze Abwesenheit: sofort nachrechnen, nur kurze Einblendung, Lauf läuft einfach weiter
+    if (ms <= CATCH_QUICK) {
+      catching = true;
+      while (done < total && !run.dead) { run.update(0.1); done += 0.1; autoT += 0.1; if (autoT >= 0.5) { autoT = 0; autopilot(); } run.fx.length = 0; }
+      catching = false; lastShots = run.shots; R.clear(); buildList();
+      const sum = `Welle ${start.wave}${run.wave !== start.wave ? ' → ' + run.wave : ''} · ${fmt(run.kills - start.kills)} Abschüsse · +${fmt(Math.floor(run.crystals - start.crystals))} Kristalle`;
+      if (run.dead) { catchNote = `Während deiner Abwesenheit (${Math.round(ms / 1000)} s) lief der Lauf weiter: ${sum}. Dann ist die Kanone gefallen.`; endRun(false); return; }
+      toast(`<b>Nachgerechnet: ${Math.round(ms / 1000)} s</b>${k > 1 ? ` bei ${k}×` : ''}<br>${sum}`);
+      save(); return;
+    }
     catching = true; setPaused(true);
     $('backTxt').textContent = `Du warst ${dur(ms)} weg. Dein Lauf wird nachgerechnet …`;
     $('backK').hidden = true; $('resumeBtn').disabled = true; $('backBar').hidden = false;
@@ -768,6 +782,8 @@
   const exportData = () => ({ v: 1, app: 'kernwacht', at: new Date().toISOString(), meta: JSON.parse(JSON.stringify(meta)) });
   function applyImport(o, how) {
     if (!o || o.v !== 1 || !o.meta || o.meta.v !== 1) throw new Error('Das ist kein gültiger Kernwacht-Spielstand.');
+    frozenSave = true; run = null;
+    o.meta.lastSeen = Date.now();
     put(KEY, o.meta); put(RKEY, null);
     try { sessionStorage.setItem('kw.imported', how); } catch (e) {}
     location.reload();
@@ -816,6 +832,54 @@
       applyImport(r.data, 'cloud');
     } catch (e) { cloudNote('Laden fehlgeschlagen: ' + e.message, true); }
   }
+  // Geräte koppeln: Kurzcode erzeugen (Gerät A) bzw. eingeben (Gerät B)
+  let pairTimer = 0;
+  function loadQr() { return new Promise((res, rej) => { if (window.qrcode) return res(); const sc = document.createElement('script'); sc.src = 'vendor/qrcode-generator-1.4.4.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); }); }
+  const fmtPair = c => c.slice(0, 3) + '-' + c.slice(3);
+  $('cPair').addEventListener('click', async () => {
+    $('cPair').disabled = true; cloudNote('Spielstand wird gesichert und Code erzeugt …');
+    try {
+      await cloudSave(true);
+      const r = await O.pairCreate();
+      $('pairOut').hidden = false; $('pairCode').textContent = fmtPair(r.code);
+      try {
+        await loadQr();
+        const q = window.qrcode(0, 'M'); q.addData(location.origin + location.pathname + '?koppeln=' + r.code); q.make();
+        $('pairQr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); $('pairQr').hidden = false;
+      } catch (e) { $('pairQr').hidden = true; }
+      cloudNote('Gib den Code auf dem anderen Gerät ein oder scanne den QR-Code mit dessen Kamera.');
+      const end = new Date(r.expires_at).getTime();
+      clearInterval(pairTimer);
+      const tick = () => {
+        const left = Math.max(0, end - Date.now());
+        $('pairLeft').textContent = left ? `noch ${Math.floor(left / 60e3)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')} min gültig` : 'abgelaufen';
+        if (!left) { clearInterval(pairTimer); $('pairOut').hidden = true; cloudNote('Der Code ist abgelaufen. Erzeuge bei Bedarf einen neuen.'); }
+      };
+      tick(); pairTimer = setInterval(tick, 1000);
+    } catch (e) { cloudNote('Code konnte nicht erzeugt werden: ' + e.message, true); }
+    finally { $('cPair').disabled = false; }
+  });
+  let pairArmed = '';
+  async function pairUse() {
+    const v = $('cPairIn').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (v.length !== 6) { cloudNote('Der Code hat 6 Zeichen, z. B. K7M-4QX.', true); return; }
+    if (runAlive()) { cloudNote('Beende zuerst den laufenden Lauf.', true); return; }
+    if (pairArmed !== v) { pairArmed = v; cloudNote('Achtung: Der Spielstand auf diesem Gerät wird durch den des anderen Geräts ersetzt. Zum Verbinden nochmal tippen.'); $('cPairUse').textContent = 'Wirklich verbinden'; return; }
+    $('cPairUse').disabled = true;
+    try {
+      const r = await O.pairRedeem(v);
+      if (r && r.data && r.data.meta) applyImport(r.data, 'pair');
+      else { cloudNote(`Verbunden mit ${r && r.name ? r.name : 'deinem Spieler'}. Es gab noch keinen Cloud-Spielstand, dein lokaler Stand bleibt.`); }
+    } catch (e) { cloudNote(e.message, true); pairArmed = ''; $('cPairUse').textContent = 'Verbinden'; }
+    finally { $('cPairUse').disabled = false; }
+  }
+  $('cPairUse').addEventListener('click', pairUse);
+  $('cPairIn').addEventListener('input', () => { pairArmed = ''; $('cPairUse').textContent = 'Verbinden'; });
+  // Link aus dem QR-Code: ?koppeln=CODE öffnet das Profil mit eingetragenem Code
+  try {
+    const pq = new URLSearchParams(location.search).get('koppeln');
+    if (pq) { history.replaceState(null, '', location.pathname); setTimeout(() => { if (runAlive()) return; pDraft = null; show('profile'); $('cPairIn').value = fmtPair(pq.toUpperCase().slice(0, 6)); cloudNote('Code vom anderen Gerät übernommen. Tippe auf „Verbinden“.'); $('cPairIn').scrollIntoView({ block: 'center' }); }, 300); }
+  } catch (e) {}
   $('cSave').addEventListener('click', () => cloudSave(false));
   $('cLoad').addEventListener('click', () => cloudLoad(null));
   $('cShow').addEventListener('click', () => { const el = $('cCode'); el.dataset.show = el.dataset.show === '1' ? '0' : '1'; $('cShow').textContent = el.dataset.show === '1' ? 'Verbergen' : 'Anzeigen'; renderCloud(); });
@@ -915,7 +979,7 @@
     O.onCount(n => { $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online'; });
     setInterval(fetchPolls, 5 * 60e3);
   }
-  try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
+  try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'pair' ? 'Gerät verbunden: Spielstand vom anderen Gerät übernommen.' : how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
 
   // ---------- Admin ----------
   async function sha(text) {
@@ -998,6 +1062,14 @@
   $('labBtn2').addEventListener('click', () => show('lab'));
   $('labBtn3').addEventListener('click', () => show('lab'));
   $('labClose').addEventListener('click', home);
+  // Spielstand auf diesem Gerät löschen (Cloud-Spielstand bleibt erhalten)
+  let resetArmed = 0;
+  $('resetBtn').addEventListener('click', () => {
+    const b = $('resetBtn');
+    if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = 0; b.textContent = 'Spielstand löschen'; }, 4000); b.textContent = 'Wirklich alles auf diesem Gerät löschen? Nochmal tippen'; return; }
+    clearTimeout(resetArmed); frozenSave = true; run = null;
+    put(KEY, null); put(RKEY, null); location.reload();
+  });
   $('lbBtn').addEventListener('click', () => show('board'));
   $('lbBtn2').addEventListener('click', () => show('board'));
   $('lbClose').addEventListener('click', home);
