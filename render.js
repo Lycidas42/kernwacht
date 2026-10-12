@@ -391,8 +391,10 @@
     }
 
     // ---------- Effekte ----------
+    let dmgNums = true;
     function pushFx(f) {
       // Schadenszahlen begrenzen, damit große Gefechte lesbar bleiben (Krits und Mutterschiff bevorzugt)
+      if (f.k === 'dmg' && !dmgNums) return;
       if (f.k === 'dmg') { let n = 0; for (const x of fx) if (x.k === 'dmg') n++; if (n >= (f.crit ? 10 : 5)) return; }
       f.life = LIFE[f.k] || 0.5;
       if (f.k === 'dmg') f.dx = (Math.random() - 0.5) * 16;
@@ -951,18 +953,20 @@
       run.aim = aim0; parts.length = 0;
     }
 
-    return { resize, toWorld, pushFx, step, draw, clear, view, preview, cannonLook };
+    return { resize, toWorld, pushFx, step, draw, clear, view, preview, cannonLook, setDmgNums: v => { dmgNums = v; } };
   }
 
   // Zahlenformat (de)
   // Kurzschreibweise wie in Idle-Spielen üblich: Tausend, Million, Billion (B), Trillion (T), Quadrillion (Qa), Quintillion (Qu) …
   const SUF = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qu', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td'];
+  let NUMFMT = 'short';
   function fmt(n) {
     if (!isFinite(n)) return '∞';
     if (n < 0) return '-' + fmt(-n);
     if (n < 1000) return n < 10 && n % 1 ? n.toFixed(1).replace('.', ',') : String(Math.floor(n));
+    if (NUMFMT === 'sci' && n >= 1e6) return n.toExponential(2).replace('.', ',').replace('e+', 'e');
     let i = 0; while (n >= 1000 && i < SUF.length - 1) { n /= 1000; i++; }
-    if (n >= 1000) return n.toExponential(2).replace('.', ',');
+    if (n >= 1000) return n.toExponential(2).replace('.', ',').replace('e+', 'e');
     return (n < 100 ? n.toFixed(1) : Math.floor(n).toString()).replace('.', ',') + ' ' + SUF[i];
   }
 
@@ -985,5 +989,5 @@
     return `<svg class="mi" width="${size || 22}" height="${size || 22}" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="${ICONS[type]}"/></svg>`;
   }
 
-  root.KWRender = { create, fmt, ICONS, iconSvg, RAR_COL };
+  root.KWRender = { create, fmt, ICONS, iconSvg, RAR_COL, setNumFmt: v => { NUMFMT = v; } };
 })(window);

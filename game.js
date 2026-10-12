@@ -44,7 +44,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'settings', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -59,6 +59,7 @@
     if (name === 'modules') renderModules();
     if (name === 'chal') renderChal();
     if (name === 'ach') renderAch();
+    if (name === 'settings') renderSettings();
     if (name === 'daily') renderDaily();
     if (name === 'profile') renderProfile();
     if (name === 'feedback') renderFeedback();
@@ -190,6 +191,22 @@
     }
   }
   $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
+
+  // ---------- Einstellungen ----------
+  const SET_DEF = { numFmt: 'short', dmgNums: 'on', lang: 'de' };
+  const setting = k => (meta.settings && meta.settings[k]) || SET_DEF[k];
+  function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); }
+  function renderSettings() {
+    $$('#settings .seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === setting(seg.dataset.set))));
+    $('numEx').textContent = 'Beispiel: ' + fmt(27.9e12) + ' · ' + fmt(4.2e18);
+  }
+  $$('#settings .seg button').forEach(b => b.addEventListener('click', () => {
+    meta.settings = meta.settings || {}; meta.settings[b.parentElement.dataset.set] = b.dataset.v;
+    A.play('click'); applySettings(); save(); renderSettings(); refresh && refresh();
+  }));
+  $('setBtn').addEventListener('click', () => show('settings'));
+  $('setClose').addEventListener('click', home);
+  applySettings();
 
   // ---------- Erfolge ----------
   const big = n => n >= 1e12 ? fmt(n) : n >= 1e4 ? fmt(n) : String(n);

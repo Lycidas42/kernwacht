@@ -176,6 +176,14 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .actions { display: grid; gap: 8px; }
 .actions.two { grid-template-columns: 1fr 1fr; }
 .actions.three { grid-template-columns: 1fr 1fr 1fr; }
+.set-btn { color: var(--ink); }
+.setrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; font-size: .86rem; padding: 4px 0; }
+.setrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { padding: 7px 10px; font-size: .74rem; font-weight: 600; color: var(--ink-dim); }
+.seg button.on { background: var(--core); color: var(--void); }
+.seg button:disabled { opacity: .35; }
+#settings .card > .actions.two, #settings .vols, #settings .trackbtn { margin-bottom: 8px; }
 .ach-btn { border-color: color-mix(in srgb, var(--energy) 55%, var(--line)); color: var(--energy); }
 #achList { display: grid; gap: 8px; }
 .ach { border: 1px solid var(--line); border-left: 2px solid var(--energy); border-radius: 4px; padding: 9px 12px; display: grid; gap: 5px; }
@@ -569,20 +577,15 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec hang-btn" id="hangBtn">Hangar</button>
         <button class="sec mine-btn" id="mineBtn">Bergbau</button>
       </div>
-      <div class="actions two">
-        <button class="sec prof-btn" id="profBtn">Profil &amp; Spielstand</button>
+      <div class="actions three">
+        <button class="sec prof-btn" id="profBtn">Profil</button>
         <button class="sec fb-btn" id="fbBtn">Feedback</button>
+        <button class="sec set-btn" id="setBtn">Optionen</button>
       </div>
     </div>
-    <div class="actions two">
-      <button class="sec" id="sfxBtn" aria-pressed="true">Ton an</button>
-      <button class="sec" id="musicBtn" aria-pressed="true">Musik an</button>
-    </div>
-    <div class="vols"><label>Ton <input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></label><label>Musik <input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></label></div>
-    <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
     <ul class="howto">
-      <li><b>Gegner antippen</b> markiert ihn 6 Sekunden lang als Ziel.</li>
-      <li><b>Orbitalschlag</b> lädt sich durch Abschüsse auf. Antippen, dann ins Feld tippen.</li>
+      <li><b>Gegner antippen</b> markiert ihn als Ziel, bis er zerstört ist. Nochmal antippen hebt die Markierung auf.</li>
+      <li><b>Orbitalschlag</b> lädt sich durch Abschüsse auf. Geladen trifft ein Tipp ins Feld genau dort, der Knopf trifft automatisch.</li>
       <li><b>Stasis und Überladung</b> schaltest du im Labor frei.</li>
       <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. N ruft die nächste Welle.</li>
       <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, auch mehrfach hintereinander (nicht während eines Mutterschiffs). Die gesparte Zeit bringt Bonus-Energie. Im Pausenmenü lässt sich das automatische Rufen einschalten.</li>
@@ -753,6 +756,24 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<div class="ov" id="settings" hidden>
+  <div class="card">
+    <h2>Einstellungen</h2>
+    <h3>Ton</h3>
+    <div class="actions two">
+      <button class="sec" id="sfxBtn" aria-pressed="true">Ton an</button>
+      <button class="sec" id="musicBtn" aria-pressed="true">Musik an</button>
+    </div>
+    <div class="vols"><label>Ton <input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></label><label>Musik <input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></label></div>
+    <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
+    <h3>Anzeige</h3>
+    <div class="setrow"><div>Zahlenformat<small id="numEx"></small></div><div class="seg" data-set="numFmt"><button data-v="short">K · M · B · T</button><button data-v="sci">1,2e15</button></div></div>
+    <div class="setrow"><div>Schadenszahlen<small>Zahlen über getroffenen Schiffen</small></div><div class="seg" data-set="dmgNums"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
+    <h3>Sprache</h3>
+    <div class="setrow"><div>Sprache des Spiels<small>English folgt in einem späteren Update.</small></div><div class="seg" data-set="lang"><button data-v="de">Deutsch</button><button data-v="en" disabled>English</button></div></div>
+    <div class="actions"><button class="sec" id="setClose">Zurück</button></div>
+  </div>
+</div>
 <div class="ov" id="ach" hidden>
   <div class="card">
     <h2>Erfolge</h2>
