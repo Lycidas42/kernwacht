@@ -9,6 +9,7 @@
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
     labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
+    chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
   }, root.KW_P || {});
 
@@ -314,11 +315,11 @@
   const CHAL_AT = 40, DAILY_AT = 15;
   const CHALLENGES = [
     // 8 Stufen je Challenge; jede Stufe multipliziert den Bonus (×(1+step))
-    { id: 'nodef', name: 'Ohne Abwehr',  rule: 'Keine Abwehr-Upgrades im Lauf: Hülle, Reparatur, Panzerung, Rückstoß, Schockwelle und Klingen bleiben gesperrt.', goals: [15, 25, 40, 55, 70, 90, 110, 135], bonus: 'hp',   step: 0.06, bname: 'Strukturpunkte' },
-    { id: 'fast',  name: 'Hetzjagd',     rule: 'Alle Gegner fliegen doppelt so schnell.', goals: [30, 50, 70, 90, 110, 130, 150, 175], bonus: 'rate', step: 0.05, bname: 'Feuerrate' },
-    { id: 'mines', name: 'Nur Minen',    rule: 'Kanone, Nebenkanonen, Raketen, Kryowerfer, Schockwelle, Klingen und Orbitalschlag schweigen. Nur der Minenwerfer arbeitet, er ist von Beginn an aktiv. Schaden und Reichweite (Größe des Minenfelds) lassen sich ausbauen.', goals: [30, 50, 70, 90, 110, 130, 150, 175], bonus: 'crys', step: 0.08, bname: 'Kristalle' },
-    { id: 'glass', name: 'Glaskanone',   rule: 'Nur ein Viertel der Strukturpunkte und keine Reparatur.', goals: [20, 40, 55, 70, 90, 110, 130, 155], bonus: 'dmg',  step: 0.06, bname: 'Schaden' },
-    { id: 'poor',  name: 'Sparflamme',   rule: 'Abschüsse bringen nur halb so viel Energie, keine Wellenprämie.', goals: [20, 40, 60, 80, 100, 120, 145, 170], bonus: 'loot', step: 0.07, bname: 'Energie' },
+    { id: 'nodef', name: 'Ohne Abwehr',  rule: 'Keine Abwehr-Upgrades im Lauf: Hülle, Reparatur, Panzerung, Rückstoß, Schockwelle und Klingen bleiben gesperrt.', goals: [25, 50, 75, 100, 125, 150, 180, 220], bonus: 'hp',   step: 0.06, bname: 'Strukturpunkte' },
+    { id: 'fast',  name: 'Hetzjagd',     rule: 'Alle Gegner fliegen doppelt so schnell, die Wellen folgen schneller aufeinander.', goals: [40, 70, 100, 130, 160, 190, 220, 250], bonus: 'rate', step: 0.05, bname: 'Feuerrate' },
+    { id: 'mines', name: 'Nur Minen',    rule: 'Kanone, Nebenkanonen, Raketen, Kryowerfer, Schockwelle, Klingen und Orbitalschlag schweigen. Nur der Minenwerfer arbeitet, er ist von Beginn an aktiv. Schaden und Reichweite (Größe des Minenfelds) lassen sich ausbauen.', goals: [30, 60, 90, 120, 150, 180, 215, 250], bonus: 'crys', step: 0.08, bname: 'Kristalle' },
+    { id: 'glass', name: 'Glaskanone',   rule: 'Nur ein Viertel der Strukturpunkte und keine Reparatur.', goals: [30, 60, 90, 120, 150, 180, 215, 250], bonus: 'dmg',  step: 0.06, bname: 'Schaden' },
+    { id: 'poor',  name: 'Sparflamme',   rule: 'Abschüsse bringen nur ein Drittel der Energie, keine Wellenprämie.', goals: [30, 60, 90, 120, 150, 180, 215, 250], bonus: 'loot', step: 0.07, bname: 'Energie' },
   ];
   const CHAL_BY_ID = {}; CHALLENGES.forEach(c => (CHAL_BY_ID[c.id] = c));
   // Stufe aus der Bestwelle (so wachsen alte Spielstände automatisch in neue Stufen hinein)
@@ -431,6 +432,7 @@
       this.rng = Math.random;
       const tw = this.twist(), cid = this.mode && this.mode.kind === 'chal' ? this.mode.id : tw && tw.block;
       this.block = (cid && BLOCK[cid]) || null; this.rule = cid || null;
+      this.isChal = !!(this.mode && this.mode.kind === 'chal');
       this.fxOn = !opts.noFx;
       this.lv = {};
       RUN_UPG.forEach(u => (this.lv[u.id] = 0));
@@ -453,7 +455,7 @@
       if (S > 1) {
         const jb = jumpBonus(meta, S);
         // Challenge-Einstieg: Startenergie wie beim Wellensprung, aber keine Kristalle
-        if (this.mode) this.energy += jb.energy * (this.rule === 'poor' ? 0.5 : 1);
+        if (this.mode) this.energy += jb.energy * (this.rule === 'poor' ? P.chalPoor : 1);
         else { this.energy += jb.energy; this.crystals += jb.crystals; }
         this.wave = S - 1; this.startWave = S; this.skipCrystalsOnce = true;
       }
@@ -515,7 +517,7 @@
       s.armor = Math.min(P.arCap, P.arMax * ar / (ar + P.arK) + 0.01 * M('m_armor'));
       s.knock = L('knock') ? 1.5 + 0.35 * L('knock') : 0;
       const tw = this.twist();
-      s.loot = (1 + P.lootK * L('loot')) * (1 + 0.08 * M('m_loot')) * cb.loot * (this.rule === 'poor' ? 0.5 : 1) * ((tw && tw.loot) || 1);
+      s.loot = (1 + P.lootK * L('loot')) * (1 + 0.08 * M('m_loot')) * cb.loot * (this.rule === 'poor' ? (this.isChal ? P.chalPoor : 0.5) : 1) * ((tw && tw.loot) || 1);
       // Wellenprämie: Anteil der Abschuss-Energie einer typischen Welle, als fester Bonus pro überstandener Welle
       s.waveBonus = P.bonusK * L('interest');
       s.crysMult = (1 + 0.06 * L('crys')) * (1 + 0.1 * M('m_crys')) * (1 + P.fCrys * F('f_crys')) * cb.crys;
@@ -534,7 +536,7 @@
       // Minen
       const mi = L('mine');
       s.mineCd = mi ? Math.max(1, 4 - 0.1 * mi) : 0;
-      s.mineDmg = s.dmg * P.mineK * (2 + P.mineLv * mi);
+      s.mineDmg = s.dmg * P.mineK * (2 + P.mineLv * mi) * (this.isChal && this.rule === 'mines' ? P.chalMine : 1);
       s.mineMax = mi ? 4 + Math.floor(mi / 5) : 0;
       s.mineTrig = 16;
       s.mineBlast = 45 + mi;
@@ -552,7 +554,7 @@
       s.cryoR = 40 + cr;
       s.cryoRange = s.range; // gleiche Reichweite wie die Hauptkanone
       // Ausgerüstete Module
-      const mod = {}; const eq = this.meta.equip || [];
+      const mod = {}; const eq = this.isChal ? [] : (this.meta.equip || []); // Challenges ohne Module
       for (const t of eq) { const m = this.meta.modules && this.meta.modules[t]; if (m) mod[t] = moduleValue(m) * cb.mod; }
       s.mod = mod;
       if (mod.scanner) s.crit += mod.scanner;
@@ -652,7 +654,7 @@
       // Frühe Mutterschiffe schwächer, volle Stärke ab etwa Welle 60
       const wm = type === 'boss' || type === 'bomb' || !this.waveMod ? { hp: 1, rw: 1, dmg: 1, spd: 1, big: 1 } : this.waveMod;
       const tw = this.twist();
-      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1);
+      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1) * (this.isChal ? P.chalHp : 1);
       const spdK = (this.rule === 'fast' ? 2 : 1) * ((tw && tw.spd) || 1);
       const e = {
         id: ++this.uid, type, a: Math.atan2(y0, x0), dist: Math.hypot(x0, y0), hp, maxHp: hp,
@@ -849,7 +851,7 @@
       if (this.dead) return;
       const s = this.s, frozen = this.frozen;
       this.time += dt;
-      this.waveT += dt;
+      this.waveT += dt * (this.isChal && this.rule === 'fast' ? P.chalFastWave : 1);
       for (const k in this.cd) this.cd[k] = Math.max(0, this.cd[k] - dt);
       this.spawnT += dt;
       while (this.queue.length && this.spawnT >= this.spawnGap) { this.spawnT -= this.spawnGap; this.spawn(this.queue.shift()); }
@@ -1412,6 +1414,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.3.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.3.2'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
