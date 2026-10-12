@@ -2,11 +2,13 @@
 // Strategie: eigene Dateien "network first" (online immer die neueste Version),
 // offline aus dem Cache. Schriften "cache first".
 // Bei jeder Veröffentlichung VERSION erhöhen (Schema 0.x.y), damit alte Caches verschwinden.
-const VERSION = '0.4.10';
+const VERSION = '0.4.11';
 const CACHE = 'kw-' + VERSION;
 const APP = [
   './',
   './index.html',
+  './i18n-en.js',
+  './i18n.js',
   './config.js',
   './core.js',
   './audio.js',
