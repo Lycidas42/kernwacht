@@ -182,6 +182,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .mtabs button { position: relative; }
 .mtabs button.can::after { content: ''; position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--energy); box-shadow: 0 0 6px var(--energy); }
 .msec { display: grid; gap: 6px; }
+.gsec { border: 1px solid var(--line); border-radius: 4px; padding: 0 12px; }
+.gsec summary { cursor: pointer; padding: 10px 0; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: .8rem; }
+.gsec[open] summary { color: var(--core); }
+.gitem { padding: 0 0 10px; }
+.gitem b { font-size: .86rem; }
+.gitem p { margin: 2px 0 0; font-size: .8rem; color: var(--ink-dim); line-height: 1.45; }
+#guide .card { display: grid; gap: 8px; }
 .setrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; font-size: .86rem; padding: 4px 0; }
 .setrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
@@ -588,6 +595,7 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec set-btn" id="setBtn">Optionen</button>
       </div>
     </div>
+    <button class="sec guide-btn" id="guideBtn">Anleitung</button>
     <ul class="howto">
       <li><b>Gegner antippen</b> markiert ihn als Ziel, bis er zerstört ist. Nochmal antippen hebt die Markierung auf.</li>
       <li><b>Orbitalschlag</b> lädt sich durch Abschüsse auf. Geladen trifft ein Tipp ins Feld genau dort, der Knopf trifft automatisch.</li>
@@ -765,6 +773,44 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<div class="ov" id="guide" hidden>
+  <div class="card">
+    <h2>Anleitung</h2>
+    <details class="gsec"><summary>Grundlagen</summary>
+      <div class="gitem"><b>Ziel</b><p>Deine Kanone verteidigt sich allein gegen Welle um Welle. Sie hält, bis sie fällt. Jeder Lauf bringt Kristalle, mit denen du im Labor dauerhaft stärker wirst.</p></div>
+      <div class="gitem"><b>Energie</b><p>Abschüsse bringen Energie. Damit kaufst du während des Laufs Upgrades in den Reitern Angriff, Abwehr und Ertrag. Mit AUTO kauft das Spiel für dich.</p></div>
+      <div class="gitem"><b>Wellen</b><p>Alle 20 Sekunden kommt eine neue Welle. „Welle ▸▸“ ruft sie früher und bringt Bonus-Energie. Jede zehnte Welle bringt ein Mutterschiff; solange es lebt, kommt keine neue Welle.</p></div>
+      <div class="gitem"><b>Tempo</b><p>Mit 1×, 2× und 4× läuft das Spiel schneller. II pausiert.</p></div>
+    </details>
+    <details class="gsec"><summary>Steuerung im Kampf</summary>
+      <div class="gitem"><b>Markieren</b><p>Tippe ein Schiff an, um es zu markieren. Die Kanone schießt dann zuerst darauf und macht zusätzlichen Präzisionsschaden. Die Markierung hält, bis das Ziel zerstört ist; nochmal antippen hebt sie auf. Ohne Markierung nimmt die Kanone Heiler automatisch zuerst.</p></div>
+      <div class="gitem"><b>Orbitalschlag</b><p>Lädt sich durch Abschüsse auf (Ring am Knopf unten rechts). Geladen trifft ein Tipp ins Feld genau dort und markiert das Ziel. Der Knopf selbst trifft automatisch das Mutterschiff oder die dichteste Gruppe. Lange drücken schaltet um, sodass nur der Knopf auslöst.</p></div>
+      <div class="gitem"><b>Stasis</b><p>Wird im Labor freigeschaltet. Friert alle Gegner für kurze Zeit ein, deine Kanone schießt weiter. Ideal, wenn die Hülle knapp wird.</p></div>
+      <div class="gitem"><b>Überladung</b><p>Wird im Labor freigeschaltet. Erhöht die Feuerrate für einige Sekunden stark, ideal gegen Mutterschiffe.</p></div>
+      <div class="gitem"><b>Tastatur</b><p>1 Orbitalschlag, 2 Stasis, 3 Überladung, N nächste Welle, Esc abbrechen.</p></div>
+    </details>
+    <details class="gsec"><summary>Gegner</summary>
+      <div class="gitem"><b>Jäger, Flitzer, Koloss</b><p>Die Grundtypen: normal, schnell, zäh. Kanonenboote schießen aus der Distanz.</p></div>
+      <div class="gitem"><b>Mutterschiff</b><p>Schwebt auf Abstand und wechselt zwischen Salven, Jägerstaffeln, Bomben, Schild und Laser. Der Laser bricht ab, wenn du genug Schaden machst. Nach einer Weile greift es den Wall an und zieht sich danach wieder zurück. Die Leiste oben zeigt seine Lebenspunkte.</p></div>
+      <div class="gitem"><b>Schildträger</b><p>Tragen einen Frontschild, der erst gebrochen werden muss und sich ohne Treffer wieder auflädt. Dauerfeuer und Flächenschaden helfen.</p></div>
+      <div class="gitem"><b>Phantom</b><p>Tarnt sich zeitweise. Die Zielerfassung macht Tarnung wirkungslos.</p></div>
+      <div class="gitem"><b>Splitter</b><p>Zerfällt beim Abschuss in kleinere Splitter.</p></div>
+      <div class="gitem"><b>Heiler</b><p>Repariert Schiffe in der Nähe, aber nur solange sie nicht beschossen werden. Höchstens zwei pro Welle. Die Kanone nimmt sie automatisch zuerst.</p></div>
+      <div class="gitem"><b>Bombe</b><p>Fliegt direkt auf die Kanone zu und richtet großen Schaden an. Die Kanone schießt Bomben immer zuerst.</p></div>
+    </details>
+    <details class="gsec"><summary>Fortschritt</summary>
+      <div class="gitem"><b>Labor</b><p>Dauerhafte Verbesserungen mit Kristallen. „Empfohlen kaufen“ wählt ein sinnvolles nächstes Upgrade.</p></div>
+      <div class="gitem"><b>Sprungtor</b><p>Startet Läufe später, abhängig von deiner Bestwelle. Die übersprungenen Wellen bringen Startenergie und Kristalle.</p></div>
+      <div class="gitem"><b>Module</b><p>Mutterschiffe lassen ab Welle 30 Module fallen. Drei kannst du ausrüsten. Weitere Funde und höhere Seltenheit machen sie stärker; im Werte-Reiter siehst du ihren Beitrag zum Schaden.</p></div>
+      <div class="gitem"><b>Kernfusion</b><p>Ab Bestwelle 50: setzt Labor, Kristalle und Bestwelle zurück und gibt Kernfragmente für dauerhafte Technik. Je weiter du kommst, desto mehr Fragmente, ab Welle 150 deutlich mehr.</p></div>
+      <div class="gitem"><b>Challenge</b><p>Läufe mit Handicap ab Rekordwelle 40. Jede Stufe gibt einen dauerhaften Bonus. Module sind dort abgeschaltet, außer den Leere-Modulen aus Sektor 5.</p></div>
+      <div class="gitem"><b>Tageslauf</b><p>Alle spielen dieselben Wellen mit Standard-Ausrüstung. Der erste Lauf am Tag bringt einen Kristallbonus.</p></div>
+      <div class="gitem"><b>Bergbau</b><p>Ab Rekordwelle 25: Planeten fördern Ressourcen, auch offline. Daraus werden Kristalle (Raffinerie), dauerhafte Forschung oder stärkere Module (Werkstatt).</p></div>
+      <div class="gitem"><b>Erfolge</b><p>Sammeln sich nebenbei und geben kleine dauerhafte Boni.</p></div>
+    </details>
+    <div class="actions"><button class="sec" id="guideClose">Zurück</button></div>
+  </div>
+</div>
 <div class="ov" id="settings" hidden>
   <div class="card">
     <h2>Einstellungen</h2>
@@ -778,6 +824,7 @@ textarea { resize: vertical; min-height: 70px; }
     <h3>Anzeige</h3>
     <div class="setrow"><div>Zahlenformat<small id="numEx"></small></div><div class="seg" data-set="numFmt"><button data-v="short">K · M · B · T</button><button data-v="sci">1,2e15</button></div></div>
     <div class="setrow"><div>Schadenszahlen<small>Zahlen über getroffenen Schiffen</small></div><div class="seg" data-set="dmgNums"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
+    <div class="setrow"><div>Tipps im Spiel<small>Kurze Hinweise beim ersten Kontakt mit neuen Dingen</small></div><div class="seg" data-set="tips"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <h3>Sprache</h3>
     <div class="setrow"><div>Sprache des Spiels<small>Englisch und Deutsch, jederzeit umschaltbar.</small></div><div class="seg" data-set="lang"><button data-v="de">Deutsch</button><button data-v="en">English</button></div></div>
     <div class="actions"><button class="sec" id="setClose">Zurück</button></div>

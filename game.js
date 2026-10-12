@@ -44,7 +44,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'settings', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'settings', 'guide', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -193,7 +193,7 @@
   $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
 
   // ---------- Einstellungen ----------
-  const SET_DEF = { numFmt: 'short', dmgNums: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
+  const SET_DEF = { numFmt: 'short', dmgNums: 'on', tips: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
   const setting = k => k === 'lang' ? ((window.KWI18n && KWI18n.lang) || 'de') : (meta.settings && meta.settings[k]) || SET_DEF[k];
   function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); }
   function renderSettings() {
@@ -205,9 +205,37 @@
     meta.settings = meta.settings || {}; meta.settings[k] = b.dataset.v;
     A.play('click'); applySettings(); save(); renderSettings(); refresh && refresh();
     // Sprache: Seite neu laden, damit alle Texte in der neuen Sprache aufgebaut werden
+    if (k === 'tips' && b.dataset.v === 'on') meta.tips = {}; // wieder einschalten zeigt alle Tipps erneut
     if (k === 'lang' && window.KWI18n && KWI18n.lang !== b.dataset.v) { KWI18n.setLang(b.dataset.v); save(); setTimeout(() => location.reload(), 150); }
   }));
   $$('.set-btn').forEach(b => b.addEventListener('click', () => show('settings')));
+  $('guideBtn').addEventListener('click', () => show('guide'));
+  $('guideClose').addEventListener('click', home);
+
+  // ---------- Tipps beim ersten Kontakt ----------
+  const TIPS = [
+    { id: 'mark', when: r => r.time > 4, txt: '<b>Tipp: Ziele markieren</b><br>Tippe ein Schiff an. Die Kanone schießt dann zuerst darauf, bis es zerstört ist.' },
+    { id: 'buy', when: r => r.time > 12, txt: '<b>Tipp: Upgrades</b><br>Abschüsse bringen Energie. Unten kaufst du damit Upgrades, „AUTO“ kauft für dich.' },
+    { id: 'strike', when: r => r.charge >= 1, txt: '<b>Orbitalschlag geladen</b><br>Tippe ins Feld, um genau dort einzuschlagen, oder auf den Knopf für einen automatischen Treffer.' },
+    { id: 'boss', when: r => r.enemies.some(e => e.type === 'boss'), txt: '<b>Mutterschiff!</b><br>Solange es lebt, kommt keine neue Welle. Die Leiste oben zeigt seine Lebenspunkte.' },
+    { id: 'freeze', when: r => r.abilityReady('freeze'), txt: '<b>Stasis bereit</b><br>Der Knopf rechts friert alle Gegner kurz ein. Gut, wenn die Hülle knapp wird.' },
+    { id: 'over', when: r => r.abilityReady('over'), txt: '<b>Überladung bereit</b><br>Der Knopf rechts erhöht kurz die Feuerrate stark, ideal gegen Mutterschiffe.' },
+    { id: 'mender', when: r => r.enemies.some(e => e.type === 'mender'), txt: '<b>Heiler</b><br>Repariert Schiffe in der Nähe, solange sie nicht beschossen werden. Die Kanone nimmt Heiler automatisch zuerst.' },
+    { id: 'bulwark', when: r => r.enemies.some(e => e.type === 'bulwark'), txt: '<b>Schildträger</b><br>Der Frontschild muss erst brechen und lädt sich ohne Treffer wieder auf. Dauerfeuer hilft.' },
+    { id: 'phantom', when: r => r.enemies.some(e => e.type === 'phantom'), txt: '<b>Phantom</b><br>Tarnt sich zeitweise. Das Modul Zielerfassung macht Tarnung wirkungslos.' },
+    { id: 'bomb', when: r => r.enemies.some(e => e.type === 'bomb'), txt: '<b>Bombe</b><br>Fliegt direkt auf die Kanone zu. Die Kanone schießt Bomben immer zuerst.' },
+  ];
+  let tipT = 0;
+  if (!meta.tips && (meta.runs || 0) > 20) meta.tips = { mark: 1, buy: 1, strike: 1, boss: 1, freeze: 1, over: 1 }; // erfahrene Spieler: Grundlagen-Tipps überspringen
+  function checkTips() {
+    if (!runAlive() || current || setting('tips') !== 'on' || Date.now() < tipT) return;
+    const seen = meta.tips = meta.tips || {};
+    const t = TIPS.find(x => !seen[x.id] && x.when(run));
+    if (!t) return;
+    seen[t.id] = 1; tipT = Date.now() + 9000; save();
+    toast(t.txt, 7000);
+  }
+  setInterval(checkTips, 1000);
   $('homeBtn').addEventListener('click', () => { A.play('click'); show('menu'); });
   $('setClose').addEventListener('click', home);
   applySettings();
