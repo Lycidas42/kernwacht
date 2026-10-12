@@ -1141,8 +1141,8 @@
         const mod = meta.modules[t]; if (C.MODULES[t].sector !== Q.sector) continue;
         const cc = C.modBoostCost(mod), rc = C.modRarCost(mod);
         rows.push(`<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${C.RARITY[mod.rar].name} · Fund ${mod.copies}/10</small></div>
-          <button data-imp="${t}" data-w="copy" ${mod.copies >= 10 || ore < cc ? 'disabled' : ''}>${mod.copies >= 10 ? 'Fund MAX' : `+1 Fund<br>${fmt(cc)} Erz`}</button>
-          <button data-imp="${t}" data-w="rar" ${mod.rar >= 3 || ore < rc ? 'disabled' : ''}>${mod.rar >= 3 ? 'legendär' : `Seltener<br>${fmt(rc)} Erz`}</button></div>`);
+          <button data-imp="${t}" data-w="copy" ${mod.copies >= 10 || ore < cc ? 'disabled' : ''}>${mod.copies >= 10 ? 'Fund MAX' : `+1 Fund<br>${fmt(cc)} ${Q.ore}`}</button>
+          <button data-imp="${t}" data-w="rar" ${mod.rar >= 3 || ore < rc ? 'disabled' : ''}>${mod.rar >= 3 ? 'legendär' : `Seltener<br>${fmt(rc)} ${Q.ore}`}</button></div>`);
       }
     }
     $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
