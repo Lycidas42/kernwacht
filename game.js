@@ -39,11 +39,12 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'daily'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'daily', 'profile', 'feedback', 'poll'];
   let current = 'menu';
   function show(name) {
     current = name;
     for (const k of OV) $(k).hidden = k !== name;
+    if (name === 'menu' || name === 'over') syncPollBanner();
     if (name === 'lab') renderLab();
     if (name === 'menu') renderMenu();
     if (name === 'board') renderBoard();
@@ -53,6 +54,9 @@
     if (name === 'modules') renderModules();
     if (name === 'chal') renderChal();
     if (name === 'daily') renderDaily();
+    if (name === 'profile') renderProfile();
+    if (name === 'feedback') renderFeedback();
+    if (name === 'poll') renderPoll();
     syncMetaBtns();
   }
   const runAlive = () => run && !run.dead;
@@ -95,7 +99,7 @@
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderRoadmap();
     if ((res.loot || []).length) A.play('loot');
-    submitScore();
+    submitScore(); cloudAuto();
     setTimeout(() => show('over'), early ? 0 : 900);
   }
 
@@ -123,6 +127,7 @@
     }
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderJump(); $$('#over .jumpbox').forEach(b => (b.hidden = true));
+    submitScore(); cloudAuto();
     renderRoadmap();
     setTimeout(() => show('over'), early ? 0 : 900);
   }
@@ -166,18 +171,16 @@
   async function renderDailyBoard(st, body) {
     body.innerHTML = '';
     if (!O.configured) { st.textContent = 'Der Vergleich mit anderen startet, sobald der Online-Dienst verbunden ist. Bis dahin zählt dein eigenes Tagesbestes.'; return; }
-    if (!meta.name) st.textContent = 'Gib in der Bestenliste einen Namen ein, um hier zu erscheinen.';
-    else st.textContent = 'Wird geladen …';
-    const data = await O.topDaily(today(), 20);
+    st.textContent = 'Wird geladen …';
+    const data = await O.dailyBoard(today(), 25);
     if (!data) { st.textContent = 'Die Tagesliste ist gerade nicht erreichbar.'; return; }
-    if (meta.name) st.textContent = data.length ? '' : 'Heute noch keine Einträge. Sei die oder der Erste.';
-    const me = O.pid();
-    body.innerHTML = data.map((r, i) => `<tr class="${r.player_id === me ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.name)}</td><td>Welle ${r.wave}</td></tr>`).join('');
+    st.textContent = data.length ? (meta.name ? '' : 'Lege im Profil einen Namen fest, um hier zu erscheinen.') : 'Heute noch keine Einträge. Sei die oder der Erste.';
+    body.innerHTML = boardRows(data, r => 'Welle ' + r.wave);
   }
   function submitDaily() {
     const d = dailyToday();
-    if (!O.configured || !meta.name || meta.adminTainted || !d || !d.best) return;
-    O.submitDaily(d.day, meta.name, d.best, d.kills || 0);
+    if (!O.configured || meta.adminTainted || !d || !d.best) return;
+    O.daily(d.day, d.best, d.kills || 0).catch(() => {});
   }
   $$('.daily-btn').forEach(b => b.addEventListener('click', () => show('daily')));
   $('dStart').addEventListener('click', () => { if (!runAlive()) startRun({ kind: 'daily' }); });
@@ -394,8 +397,23 @@
     m_freeze: l => dec(C.ABIL.freeze.dur(l), 1) + ' s, alle ' + dec(C.ABIL.freeze.cd(l), 1) + ' s',
     m_over: l => dec(C.ABIL.over.mult(l), 2) + '× für ' + dec(C.ABIL.over.dur(l), 1) + ' s, alle ' + C.ABIL.over.cd(l) + ' s',
   };
+  // Großansicht der Kanone im Labor: Vorschau-Lauf aus dem aktuellen Laborstand
+  let labR = null, labRun = null;
+  function renderCannonView() {
+    if (!labR) labR = window.KWRender.create($('labCv'));
+    labRun = runAlive() ? run : new C.Run(meta, { noFx: true });
+    const V = labR.cannonLook(labRun), M = id => C.mlv(meta, id), F = id => C.flv(meta, id);
+    const rows = [
+      ['Läufe', 'Schaden', M('m_dmg')], ['Rumpf', 'Strukturpunkte', M('m_hp')], ['Kühlrippen', 'Feuerrate', M('m_rate')],
+      ['Dioden', 'Reparatur', M('m_regen')], ['Panzerkuppel', 'Panzerung', M('m_armor')], ['Sammlerschüssel', 'Energie', M('m_loot')],
+      ['Kristallantenne', 'Kristalle', M('m_crys')], ['Fusionsringe', 'Fusionskern', F('f_core')],
+      ['Raketenwerfer', 'Fusion', F('f_rocket') ? 'aktiv' : 0], ['Kryowerfer', 'Fusion', F('f_cryo') ? 'aktiv' : 0],
+    ];
+    $('cvLegend').innerHTML = rows.map(([part, src, l]) => `<div class="${l ? '' : 'off'}" title="${src}"><span>${part}</span><b>${l ? (typeof l === 'number' ? 'St. ' + l : l) : '–'}</b></div>`).join('');
+  }
   function renderLab() {
     $('labK').textContent = fmt(meta.crystals);
+    renderCannonView();
     const list = $('labList'); list.innerHTML = '';
     renderJump();
     // Empfehlung: zeigt, was sich gerade am meisten lohnt, und warum
@@ -609,37 +627,233 @@
   // Audio darf erst nach einer Berührung starten
   window.addEventListener('pointerdown', () => { A.init(); A.setSfx(meta.sfx); A.setMusic(meta.music); }, { once: true, capture: true });
 
-  // ---------- Bestenliste / Online ----------
+  // ---------- Highscores / Online ----------
+  const chalSum = () => C.CHALLENGES.reduce((a, c) => a + C.chalTier(meta, c.id), 0);
   function submitScore() {
-    if (!O.configured || !meta.name || meta.adminTainted || !meta.best) return;
-    O.submit(meta.name, meta.best, meta.runs);
+    if (!O.configured || meta.adminTainted) return;
+    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum() }).catch(() => {});
   }
-  let lbTab = 'all';
+  const BOARDS = {
+    rec:   { col: 'best_ever', name: 'Rekord',            fmt: r => 'Welle ' + r.best_ever },
+    day:   { name: 'Tageslauf' },
+    kills: { col: 'kills',     name: 'Abschüsse',         fmt: r => fmt(r.kills) },
+    fus:   { col: 'fusions',   name: 'Fusionen',          fmt: r => r.fusions + '×' },
+    chal:  { col: 'chal',      name: 'Herausforderungen', fmt: r => r.chal + ' Stufen' },
+  };
+  function boardRows(data, val) {
+    const me = O.myId();
+    return data.map((r, i) => `<tr class="${r.id === me ? 'me' : ''}"><td>${i + 1}</td><td><span class="who">${avatarSvg(r.avatar, r.color, 22)}${esc(r.name)}</span></td><td>${val(r)}</td></tr>`).join('');
+  }
+  let lbTab = 'rec';
   $$('[data-lb]').forEach(b => b.addEventListener('click', () => { lbTab = b.dataset.lb; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false')); A.play('click'); renderBoard(); }));
   async function renderBoard() {
     const st = $('lbStatus'), body = $('lbBody');
     body.innerHTML = '';
-    if (lbTab === 'day') { $('lbName').hidden = !O.configured; $('nameInput').value = meta.name || ''; const d = dailyToday(); await renderDailyBoard(st, body); if (!O.configured && d && d.best) st.textContent += ` Dein Tagesbestes: Welle ${d.best}.`; return; }
-    $('lbName').hidden = !O.configured;
-    $('nameInput').value = meta.name || '';
-    if (!O.configured) { st.textContent = 'Die Bestenliste ist noch nicht eingerichtet. Sie wird aktiv, sobald der Online-Dienst verbunden ist.'; return; }
-    if (meta.adminTainted) st.textContent = 'Dieser Spielstand hat Admin-Eingriffe und wird nicht eingetragen.';
-    else st.textContent = meta.name ? 'Wird geladen …' : 'Gib einen Namen ein, um in der Liste zu erscheinen.';
-    const data = await O.top(20);
-    if (!data) { st.textContent = 'Die Bestenliste ist gerade nicht erreichbar.'; return; }
-    if (!meta.adminTainted) st.textContent = data.length ? '' : 'Noch keine Einträge.';
-    const me = O.pid();
-    body.innerHTML = data.map((r, i) => `<tr class="${r.player_id === me ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.name)}</td><td>Welle ${r.best_wave}</td></tr>`).join('');
+    $('lbMe').innerHTML = `${avatarSvg(meta.avatar, meta.color, 30)}<div><b>${esc(meta.name || 'Ohne Namen')}</b><small>Rekord ${C.record(meta)} · ${fmt(meta.kills)} Abschüsse</small></div>`;
+    if (lbTab === 'day') { const d = dailyToday(); await renderDailyBoard(st, body); if (!O.configured && d && d.best) st.textContent += ` Dein Tagesbestes: Welle ${d.best}.`; return; }
+    if (!O.configured) { st.textContent = 'Die Highscores sind noch nicht eingerichtet. Sie werden aktiv, sobald der Online-Dienst verbunden ist.'; return; }
+    st.textContent = 'Wird geladen …';
+    const B = BOARDS[lbTab], data = await O.board(B.col, 25);
+    if (!data) { st.textContent = 'Die Highscores sind gerade nicht erreichbar.'; return; }
+    st.textContent = meta.adminTainted ? 'Dieser Spielstand hat Admin-Eingriffe und wird nicht eingetragen.' : !meta.name ? 'Lege im Profil einen Namen fest, um in den Highscores zu erscheinen.' : data.length ? '' : 'Noch keine Einträge.';
+    body.innerHTML = boardRows(data, B.fmt);
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  $('nameInput').addEventListener('change', () => {
-    meta.name = $('nameInput').value.trim().slice(0, 16); save();
-    O.setStatus(meta.name, run ? run.wave : 0); submitScore(); submitDaily(); setTimeout(renderBoard, 600);
-  });
-  if (O.configured) {
-    O.start(meta.name);
-    O.onCount(n => { $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online'; });
+  $('lbProfile').addEventListener('click', () => show('profile'));
+
+  // ---------- Profil: Name und Profilbild ----------
+  const AV_COLORS = ['#3ef0ff', '#ff4fa0', '#ffc04d', '#5dffb0', '#c3a6ff', '#ff8a3d', '#7da8ff', '#f4f1ff'];
+  const AVATARS = [
+    '<path d="M4 19h16l-2-5h-3l-1-6h-4l-1 6H6z"/><path d="M12 8V3"/>',
+    '<path d="M12 3l8 17-8-4-8 4z"/>',
+    '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>',
+    '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="3"/>',
+    '<path d="M12 2l6 7-6 13-6-13z"/><path d="M6 9h12"/>',
+    '<circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="10" ry="3.5" transform="rotate(-20 12 12)"/>',
+    '<path d="M13 2L5 13h6l-1 9 8-11h-6z"/>',
+    '<path d="M15 3a9 9 0 1 0 6 13A7 7 0 0 1 15 3z"/>',
+    '<path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5z"/>',
+    '<path d="M12 2c3 3 4 7 4 11l-4 4-4-4c0-4 1-8 4-11z"/><path d="M8 15l-3 4h4M16 15l3 4h-4"/><circle cx="12" cy="9" r="1.5"/>',
+    '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7"/><path d="M9 3.5l3 2 3-2M9 20.5l3-2 3 2"/>',
+    '<circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>',
+  ];
+  function avatarSvg(a, c, size) {
+    const col = AV_COLORS[(c | 0) % AV_COLORS.length];
+    return `<svg class="av" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" style="--avc:${col}" aria-hidden="true">${AVATARS[(a | 0) % AVATARS.length]}</svg>`;
   }
+  let pDraft = null;
+  function renderProfile() {
+    if (!pDraft) pDraft = { name: meta.name || '', avatar: meta.avatar | 0, color: meta.color | 0 };
+    $('pPreview').innerHTML = avatarSvg(pDraft.avatar, pDraft.color, 64);
+    $('pName').value = pDraft.name;
+    $('pAvatars').innerHTML = AVATARS.map((_, i) => `<button class="avbtn" data-av="${i}" aria-pressed="${i === pDraft.avatar}">${avatarSvg(i, pDraft.color, 28)}</button>`).join('');
+    $('pColors').innerHTML = AV_COLORS.map((c, i) => `<button class="colbtn" data-col="${i}" aria-pressed="${i === pDraft.color}" style="--c:${c}" aria-label="Farbe ${i + 1}"></button>`).join('');
+    $$('#pAvatars [data-av]').forEach(b => b.addEventListener('click', () => { pDraft.avatar = +b.dataset.av; A.play('click'); renderProfile(); }));
+    $$('#pColors [data-col]').forEach(b => b.addEventListener('click', () => { pDraft.color = +b.dataset.col; A.play('click'); renderProfile(); }));
+    $('pStats').innerHTML = [['Rekord', C.record(meta)], ['Läufe', fmt(meta.runs)], ['Abschüsse', fmt(meta.kills)], ['Fusionen', meta.fusions || 0], ['Herausforderungs-Stufen', chalSum()], ['Kristalle gesamt', fmt(meta.totalCrystals || 0)]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+    renderCloud();
+  }
+  $('pName').addEventListener('input', () => { pDraft.name = $('pName').value; });
+  $('pSave').addEventListener('click', () => {
+    meta.name = pDraft.name.trim().slice(0, 16); meta.avatar = pDraft.avatar; meta.color = pDraft.color; save(); A.play('buy');
+    $('pNote').textContent = 'Profil gespeichert.'; $('pNote').className = 'note';
+    if (O.configured) { O.setStatus(meta.name, run ? run.wave : 0); O.profile(meta.name, meta.avatar, meta.color).then(() => { submitScore(); submitDaily(); }).catch(() => { $('pNote').textContent = 'Lokal gespeichert. Online gerade nicht erreichbar, es wird später übertragen.'; }); }
+  });
+  $('pClose').addEventListener('click', () => { pDraft = null; home(); });
+  $$('.prof-btn').forEach(b => b.addEventListener('click', () => { pDraft = null; show('profile'); }));
+
+  // ---------- Spielstand: Cloud, Spielercode, Export/Import ----------
+  const exportData = () => ({ v: 1, app: 'kernwacht', at: new Date().toISOString(), meta: JSON.parse(JSON.stringify(meta)) });
+  function applyImport(o, how) {
+    if (!o || o.v !== 1 || !o.meta || o.meta.v !== 1) throw new Error('Das ist kein gültiger Kernwacht-Spielstand.');
+    put(KEY, o.meta); put(RKEY, null);
+    try { sessionStorage.setItem('kw.imported', how); } catch (e) {}
+    location.reload();
+  }
+  const stamp = t => t ? new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
+  function cloudNote(txt, err) { $('cNote').textContent = txt; $('cNote').className = 'note' + (err ? ' err' : ''); }
+  function renderCloud() {
+    const on = O.configured;
+    $('cloudBox').hidden = !on;
+    if (on) {
+      const c = O.code();
+      $('cCode').textContent = $('cCode').dataset.show === '1' ? c : c.slice(0, 5) + '-•••••-•••••-•••••-•••••';
+      $('cLast').textContent = meta.cloudAt ? 'Zuletzt gesichert: ' + stamp(meta.cloudAt) : 'Noch nicht in der Cloud gesichert.';
+      $('cAuto').setAttribute('aria-pressed', meta.cloudAuto !== false ? 'true' : 'false');
+      $('cAuto').textContent = meta.cloudAuto !== false ? 'Automatisch sichern: an' : 'Automatisch sichern: aus';
+    }
+  }
+  let cloudBusy = false, cloudT = 0;
+  async function cloudSave(silent) {
+    if (!O.configured || cloudBusy) return false;
+    cloudBusy = true;
+    try {
+      const at = await O.save(exportData());
+      meta.cloudAt = at; save();
+      if (!silent) { cloudNote('In der Cloud gesichert.'); A.play('buy'); }
+      return true;
+    } catch (e) { if (!silent) cloudNote('Sichern fehlgeschlagen: ' + e.message, true); return false; }
+    finally { cloudBusy = false; if (current === 'profile') renderCloud(); }
+  }
+  // Automatisch nach jedem Lauf und beim Verlassen, höchstens alle 2 Minuten
+  function cloudAuto() { if (!O.configured || meta.cloudAuto === false || Date.now() - cloudT < 120e3) return; cloudT = Date.now(); cloudSave(true); }
+  let loadArmed = null;
+  async function cloudLoad(other) {
+    if (runAlive()) { cloudNote('Beende zuerst den laufenden Lauf.', true); return; }
+    try {
+      const r = await O.load(other);
+      if (!r) { cloudNote(other ? 'Zu diesem Spielercode gibt es keinen Spieler.' : 'Zu deinem Code ist noch nichts gesichert.', true); return; }
+      if (!r.data || !r.data.meta) { cloudNote('Zu diesem Code gibt es noch keinen gesicherten Spielstand.', true); return; }
+      const m = r.data.meta, key = (other || '') + r.updated_at;
+      if (loadArmed !== key) {
+        loadArmed = key;
+        cloudNote(`Cloud-Stand vom ${stamp(r.updated_at)}: ${r.name || 'ohne Namen'}, Rekord ${Math.max(m.bestEver || 0, m.best || 0)}, ${m.runs} Läufe. Hier auf dem Gerät: Rekord ${C.record(meta)}, ${meta.runs} Läufe. Zum Ersetzen nochmal tippen.`);
+        return;
+      }
+      if (other) O.adopt(other);
+      applyImport(r.data, 'cloud');
+    } catch (e) { cloudNote('Laden fehlgeschlagen: ' + e.message, true); }
+  }
+  $('cSave').addEventListener('click', () => cloudSave(false));
+  $('cLoad').addEventListener('click', () => cloudLoad(null));
+  $('cShow').addEventListener('click', () => { const el = $('cCode'); el.dataset.show = el.dataset.show === '1' ? '0' : '1'; $('cShow').textContent = el.dataset.show === '1' ? 'Verbergen' : 'Anzeigen'; renderCloud(); });
+  $('cCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(O.code()); cloudNote('Spielercode kopiert. Bewahre ihn sicher auf, er ist dein Zugang zum Cloud-Spielstand.'); } catch (e) { $('cCode').dataset.show = '1'; renderCloud(); cloudNote('Kopieren nicht möglich, der Code wird jetzt angezeigt.'); } });
+  $('cAuto').addEventListener('click', () => { meta.cloudAuto = meta.cloudAuto === false; save(); renderCloud(); A.play('click'); });
+  $('cUse').addEventListener('click', () => {
+    const v = $('cOther').value;
+    if (!O.validCode(v)) { cloudNote('Der Spielercode hat 25 Zeichen in fünf Gruppen, z. B. ABCDE-FGHJK-…', true); return; }
+    if (O.normCode(v) === O.code()) { cloudNote('Das ist bereits dein Code auf diesem Gerät.', true); return; }
+    cloudLoad(v);
+  });
+  // Lokal: Code zum Kopieren und Datei
+  function b64(str) { return btoa(String.fromCharCode(...new TextEncoder().encode(str))); }
+  function unb64(str) { return new TextDecoder().decode(Uint8Array.from(atob(str), c => c.charCodeAt(0))); }
+  $('xCopy').addEventListener('click', async () => {
+    const txt = 'KW1.' + b64(JSON.stringify(exportData()));
+    try { await navigator.clipboard.writeText(txt); $('xNote').textContent = 'Spielstand als Text kopiert. Einfügen und „Importieren“ auf dem anderen Gerät.'; }
+    catch (e) { $('xText').value = txt; $('xText').select(); $('xNote').textContent = 'Kopieren nicht möglich. Der Text steht unten im Feld.'; }
+    $('xNote').className = 'note';
+  });
+  $('xFile').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(exportData(), null, 1)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kernwacht-spielstand-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  });
+  let impArmed = 0;
+  function tryImport(raw) {
+    try {
+      raw = String(raw || '').trim();
+      const o = JSON.parse(raw.startsWith('KW1.') ? unb64(raw.slice(4)) : raw);
+      if (!o || !o.meta) throw new Error('Das ist kein gültiger Kernwacht-Spielstand.');
+      if (runAlive()) throw new Error('Beende zuerst den laufenden Lauf.');
+      if (!impArmed) { impArmed = setTimeout(() => (impArmed = 0), 6000); $('xNote').className = 'note'; $('xNote').textContent = `Import: Rekord ${Math.max(o.meta.bestEver || 0, o.meta.best || 0)}, ${o.meta.runs} Läufe. Ersetzt den Spielstand auf diesem Gerät. Zum Bestätigen nochmal tippen.`; return; }
+      clearTimeout(impArmed); impArmed = 0; applyImport(o, 'import');
+    } catch (e) { $('xNote').className = 'note err'; $('xNote').textContent = e.message.startsWith('Unexpected') || e.name === 'InvalidCharacterError' ? 'Der Text ist kein gültiger Spielstand.' : e.message; }
+  }
+  $('xImport').addEventListener('click', () => tryImport($('xText').value));
+  $('xPick').addEventListener('click', () => $('xFileIn').click());
+  $('xFileIn').addEventListener('change', () => { const f = $('xFileIn').files[0]; if (!f) return; f.text().then(t => { $('xText').value = t; impArmed = 0; tryImport(t); }); $('xFileIn').value = ''; });
+
+  // ---------- Feedback ----------
+  let fbKind = 'bug';
+  $$('[data-fb]').forEach(b => b.addEventListener('click', () => { fbKind = b.dataset.fb; $$('[data-fb]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false')); A.play('click'); }));
+  function renderFeedback() { $('fbNote').textContent = O.configured ? '' : 'Feedback braucht den Online-Dienst, der ist gerade nicht eingerichtet.'; $('fbSend').disabled = !O.configured; }
+  $('fbSend').addEventListener('click', async () => {
+    const body = $('fbText').value.trim();
+    if (body.length < 3) { $('fbNote').className = 'note err'; $('fbNote').textContent = 'Schreib bitte ein paar Worte dazu.'; return; }
+    $('fbSend').disabled = true;
+    const ctx = { version: C.VERSION, wave: run ? run.wave : 0, mode: run && run.mode ? run.mode.kind : null, best: meta.best, record: C.record(meta), fusions: meta.fusions || 0, screen: innerWidth + '×' + innerHeight, ua: navigator.userAgent.slice(0, 160), name: meta.name || '' };
+    try { await O.feedback(fbKind, body, ctx); $('fbText').value = ''; $('fbNote').className = 'note'; $('fbNote').textContent = 'Danke! Dein Feedback ist angekommen.'; A.play('buy'); }
+    catch (e) { $('fbNote').className = 'note err'; $('fbNote').textContent = 'Senden fehlgeschlagen: ' + e.message; }
+    finally { $('fbSend').disabled = false; }
+  });
+  $$('.fb-btn').forEach(b => b.addEventListener('click', () => show('feedback')));
+  $('fbClose').addEventListener('click', home);
+
+  // ---------- Umfragen ----------
+  let polls = [], pollCur = null;
+  meta.votes = meta.votes || {};
+  async function fetchPolls() {
+    if (!O.configured) return;
+    const p = await O.polls(); if (!p) return;
+    polls = p; syncPollBanner();
+  }
+  function syncPollBanner() {
+    const open = polls.filter(p => meta.votes[p.id] == null);
+    $$('.pollbanner').forEach(el => {
+      el.hidden = !polls.length;
+      if (!polls.length) return;
+      const p = open[0] || polls[0];
+      el.innerHTML = `<span>${open.length ? 'Neue Umfrage' : 'Umfrage'}</span><b>${esc(p.question)}</b><small>${open.length ? 'Tippen zum Abstimmen' : 'Ergebnis ansehen'}</small>`;
+      el.onclick = () => { pollCur = p; show('poll'); };
+    });
+  }
+  async function renderPoll() {
+    const p = pollCur; if (!p) return;
+    $('pqText').textContent = p.question;
+    const mine = meta.votes[p.id];
+    let res = null; try { res = await O.pollResults(p.id); } catch (e) {}
+    const counts = (res && res.counts) || {}, total = Object.values(counts).reduce((a, b) => a + b, 0);
+    const voted = (res && res.mine != null) ? res.mine : mine;
+    if (voted != null && mine == null) { meta.votes[p.id] = voted; save(); }
+    $('pqOpts').innerHTML = p.options.map((o, i) => {
+      const n = counts[i] || 0, k = total ? Math.round(n / total * 100) : 0;
+      return `<button class="pqopt${voted === i ? ' mine' : ''}" data-i="${i}">${voted != null ? `<i style="width:${k}%"></i>` : ''}<span>${esc(o)}</span>${voted != null ? `<b>${k} %</b>` : ''}</button>`;
+    }).join('');
+    $('pqNote').textContent = voted != null ? `${total} Stimme${total === 1 ? '' : 'n'} bisher. Du kannst deine Antwort noch ändern.` : 'Tippe auf eine Antwort.';
+    $$('#pqOpts .pqopt').forEach(b => b.addEventListener('click', async () => {
+      try { await O.vote(p.id, +b.dataset.i); meta.votes[p.id] = +b.dataset.i; save(); A.play('buy'); syncPollBanner(); renderPoll(); }
+      catch (e) { $('pqNote').textContent = 'Abstimmen fehlgeschlagen: ' + e.message; }
+    }));
+  }
+  $('pqClose').addEventListener('click', home);
+
+  if (O.configured) {
+    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); } });
+    O.onCount(n => { $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online'; });
+    setInterval(fetchPolls, 5 * 60e3);
+  }
+  try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
 
   // ---------- Admin ----------
   async function sha(text) {
@@ -728,7 +942,7 @@
     buildList();
   }));
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { save(); A.suspend(); }
+    if (document.hidden) { save(); A.suspend(); cloudAuto(); }
     else { A.resume(); welcomeBack(false); }
   });
   window.addEventListener('pagehide', save);
@@ -788,6 +1002,7 @@
     }
     saveT += realDt; if (saveT > 5) { saveT = 0; if (runAlive()) save(); }
     R.draw(now, realDt, run, { strikeArmed: armed === 'strike', armed });
+    if (current === 'lab' && labR && labRun && $('cannonView').open) labR.preview(labRun, now);
     requestAnimationFrame(frame);
   }
 

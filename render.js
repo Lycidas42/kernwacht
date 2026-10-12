@@ -193,9 +193,18 @@
     }
 
     // ---------- Kanone: Form folgt den Upgrades ----------
+    // Sichtbare Ausbaustufe: Lauf-Upgrades plus Labor und Fusion, damit das Labor die Kanone sichtbar verändert
+    function cannonLook(run) {
+      const L = id => run.L(id), M = id => C.mlv(run.meta, id), F = id => C.flv(run.meta, id);
+      return {
+        hp: L('hp') + M('m_hp') * 1.5, armor: L('armor') + M('m_armor') * 2.5, regen: L('regen') + M('m_regen'),
+        dmg: L('dmg') + M('m_dmg') * 1.5, rate: L('rate') + M('m_rate'), core: F('f_core'),
+        crys: M('m_crys'), loot: M('m_loot'), head: M('m_head'), cheap: M('m_cheap'),
+      };
+    }
     function drawCannon(run, t) {
-      const s = run.s, L = id => run.L(id);
-      const hpL = L('hp'), arL = L('armor'), rgL = L('regen'), dmgL = L('dmg');
+      const s = run.s, L = id => run.L(id), V = cannonLook(run);
+      const hpL = V.hp, arL = V.armor, rgL = V.regen, dmgL = V.dmg;
       const over = run.overActive;
       const coreCol = over ? PAL.heat : PAL.core;
       const w = 34 + Math.min(16, hpL * 0.25);
@@ -212,6 +221,24 @@
         ctx.globalAlpha = 0.18 + s.armor * 0.4;
         for (let i = 0; i < 7; i++) { const a = Math.PI + (i + 0.5) * Math.PI / 7; ctx.save(); ctx.translate(Math.cos(a) * (w - 2), 4 + Math.sin(a) * (w - 2)); hexPath(4, 0); ctx.strokeStyle = PAL.core; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); }
         ctx.globalAlpha = 1;
+      }
+
+      // Kristallantenne (Kristallresonanz) und Sammlerschüssel (Energiesammler) auf dem Fundament
+      if (V.crys > 0) {
+        const hgt = 10 + Math.min(14, V.crys * 0.7);
+        ctx.save(); ctx.translate(w * 0.5, -8);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -hgt); glow(PAL.crystal, 1.1, 0.8);
+        ctx.beginPath(); ctx.moveTo(0, -hgt - 6); ctx.lineTo(3.5, -hgt); ctx.lineTo(0, -hgt + 4); ctx.lineTo(-3.5, -hgt); ctx.closePath();
+        ctx.fillStyle = PAL.crystal; ctx.globalAlpha = 0.5 + 0.4 * Math.sin(t * 0.005); ctx.fill(); ctx.globalAlpha = 1; glow(PAL.crystal, 1);
+        ctx.restore();
+      }
+      if (V.loot > 0) {
+        const r = 4 + Math.min(3, V.loot * 0.15);
+        ctx.save(); ctx.translate(-w * 0.5, -8); ctx.rotate(-0.5 + 0.25 * Math.sin(t * 0.0012));
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -6); glow(PAL.energy, 1, 0.8);
+        ctx.beginPath(); ctx.arc(0, -6 - r * 0.2, r, Math.PI * 1.1, Math.PI * 1.9); glow(PAL.energy, 1.3, 0.9);
+        ctx.beginPath(); ctx.arc(0, -6 - r * 0.9, 1.3, 0, 7); ctx.fillStyle = PAL.energy; ctx.fill();
+        ctx.restore();
       }
 
       // Fundament mit Stützbeinen
@@ -240,7 +267,7 @@
       // Turm (dreht sich zum Ziel)
       ctx.save(); ctx.translate(0, -6); ctx.rotate(run.aim + Math.PI / 2);
       const n = 1 + s.multi;
-      const len = 34 + Math.min(40, L('range') * 1.1);
+      const len = 34 + Math.min(44, L('range') * 1.1 + V.dmg * 0.25);
       const thick = 5 + Math.min(5, dmgL * 0.06);
       const gap = thick * 2.2, back = recoil * 6;
       const heat = over ? 0.6 + 0.4 * Math.sin(t * 0.03) : 0;
@@ -261,7 +288,7 @@
         ctx.fillStyle = g; ctx.globalAlpha = 0.25 + Math.min(0.5, dmgL * 0.008) + heat * 0.3;
         ctx.fillRect(ox - thick * 0.18, -ln + bk + 4, thick * 0.36, ln - 14); ctx.globalAlpha = 1;
         // Kühlrippen (Feuerrate)
-        const fins = Math.min(6, Math.ceil(L('rate') / 4));
+        const fins = Math.min(7, Math.ceil(V.rate / 4));
         for (let f = 0; f < fins; f++) { const y = -14 - f * 5 + bk; ctx.beginPath(); ctx.moveTo(ox - thick * 0.95, y); ctx.lineTo(ox + thick * 0.95, y); glow(over ? PAL.heat : PAL.core, 1, 0.65); }
         // Mündungsbremse
         ctx.beginPath(); ctx.rect(ox - thick * 0.85, -ln + bk - 2, thick * 1.7, 6); fillHull(); glow(coreCol, 1.3);
@@ -281,6 +308,11 @@
       ctx.beginPath(); ctx.moveTo(-15, 8); ctx.lineTo(-17, -6); ctx.lineTo(-9, -16); ctx.lineTo(9, -16); ctx.lineTo(17, -6); ctx.lineTo(15, 8); ctx.closePath();
       fillHull(); glow(run.hp / s.maxHp < 0.3 ? PAL.hostile : coreCol, 2);
       ctx.restore();
+      // Fusionskern: Ringe um den Kern, je Fusionsstufe heller
+      if (V.core > 0) {
+        const rings = Math.min(3, 1 + Math.floor(V.core / 5));
+        for (let i = 0; i < rings; i++) { ctx.beginPath(); ctx.arc(0, -6, 10 + i * 3.2, t * 0.002 * (i % 2 ? -1 : 1) + i, t * 0.002 * (i % 2 ? -1 : 1) + i + Math.PI * 1.3); glow(PAL.heat, 1, 0.45 + Math.min(0.5, V.core * 0.04)); }
+      }
       // Kern
       ctx.beginPath(); ctx.arc(0, -6, 7, 0, 7); fillHull(); glow(coreCol, 1.6);
       const pulse = 3 + 1.2 * Math.sin(t * 0.008);
@@ -786,7 +818,25 @@
       ctx.restore();
     }
 
-    return { resize, toWorld, pushFx, step, draw, clear, view };
+    // Großansicht für das Labor: nur die Kanone, Turm schwenkt langsam
+    function preview(run, t) {
+      const r = cv.getBoundingClientRect(); if (!r.width) return;
+      const dpr = Math.min(2, window.devicePixelRatio || 1), cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
+      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
+      const k = Math.min(r.width / 170, r.height / 120);
+      ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * r.width / 2, dpr * (r.height * 0.72));
+      // Boden und Rasterbogen
+      ctx.beginPath(); ctx.moveTo(-90, 24); ctx.lineTo(90, 24); ctx.strokeStyle = PAL.line; ctx.lineWidth = 1; ctx.stroke();
+      for (const rr of [60, 90]) { ctx.beginPath(); ctx.arc(0, 0, rr, Math.PI, 0); ctx.strokeStyle = PAL.line; ctx.globalAlpha = 0.35; ctx.stroke(); ctx.globalAlpha = 1; }
+      const aim0 = run.aim; run.aim = -Math.PI / 2 + Math.sin(t * 0.0006) * 0.55;
+      const ph = (t * 0.0012) % 1; recoil = Math.max(0, 1 - ph * 5); flash = Math.max(0, 0.35 - ph * 3);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      drawSideGuns(run, t); drawCannon(run, t); drawModulePods(run, t);
+      run.aim = aim0; parts.length = 0;
+    }
+
+    return { resize, toWorld, pushFx, step, draw, clear, view, preview, cannonLook };
   }
 
   // Zahlenformat (de)

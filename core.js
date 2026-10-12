@@ -87,6 +87,7 @@
       const k = Math.floor(l * keep);
       if (k && (!u.req || tech)) lv[u.id] = k;
     }
+    meta.cph = (meta.cph || 0) * 0.3;
     meta.lv = lv; meta.crystals = 0; meta.best = 0; meta.startPref = null; meta.milestones = {};
     return gain;
   }
@@ -200,10 +201,12 @@
   // Kristalle pro abgeschlossener Welle (wächst mit, damit das Labor nie zur Mauer wird)
   const waveCrystals = w => P.cBase * Math.pow(P.cGrow, w) * (1 + Math.max(0, w - 40) * P.cLate);
 
-  // Offline-Ertrag: volle Rate, max. 24 h, keine Paywall
+  // Offline-Ertrag: ein fester Anteil dessen, was die letzten Läufe pro Stunde eingebracht haben (max. 24 h, keine Paywall)
+  const OFFLINE_SHARE = 0.2;
   function offlinePerHour(meta) {
     if (!meta.best) return 0;
-    return 6 * waveCrystals(meta.best * 0.8) * (1 + 0.1 * mlv(meta, 'm_crys')) * (1 + P.fCrys * flv(meta, 'f_crys'));
+    const est = 60 * waveCrystals(meta.best * 0.8) * (1 + 0.1 * mlv(meta, 'm_crys')) * (1 + P.fCrys * flv(meta, 'f_crys'));
+    return meta.cph ? Math.max(OFFLINE_SHARE * meta.cph, est * 0.5) : est;
   }
 
   const SOURCES = ['gun', 'rocket', 'cryo', 'mine', 'shock', 'blade', 'strike', 'mod'];
@@ -876,11 +879,26 @@
         }
       }
       for (const m of this.rockets) {
-        m.life -= dt;
-        const t = m.tgt && m.tgt.hp > 0 ? this.pos(m.tgt) : null;
-        if (t) { const dx = t.x - m.x, dy = t.y - m.y, d = Math.hypot(dx, dy) || 1; m.vx += (dx / d * 200 - m.vx) * 2.5 * dt; m.vy += (dy / d * 200 - m.vy) * 2.5 * dt; }
+        m.life -= dt; m.age = (m.age || 0) + dt;
+        // Zielsuchend: stirbt das Ziel, nimmt die Rakete das nächste Schiff in ihrer Nähe
+        if (!m.tgt || m.tgt.hp <= 0) {
+          let best = null, bd = 1e9;
+          for (const e of this.enemies) { if (e.hp <= 0 || this.cloaked(e)) continue; const p = this.pos(e), d = Math.hypot(p.x - m.x, p.y - m.y); if (d < bd) { bd = d; best = e; } }
+          m.tgt = best;
+        }
+        const t = m.tgt ? this.pos(m.tgt) : null;
+        const sp = Math.min(340, 120 + 260 * m.age);
+        if (t) {
+          // Lenkung mit begrenzter Drehrate, nach dem Start schnell zunehmend
+          const cur = Math.atan2(m.vy, m.vx), want = Math.atan2(t.y - m.y, t.x - m.x);
+          let da = want - cur; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+          const turn = (m.age < 0.25 ? 3 : 9) * dt, a = cur + Math.max(-turn, Math.min(turn, da));
+          m.vx = Math.cos(a) * sp; m.vy = Math.sin(a) * sp;
+        } else { const v = Math.hypot(m.vx, m.vy) || 1; m.vx = m.vx / v * sp; m.vy = m.vy / v * sp; }
         m.x += m.vx * dt; m.y += m.vy * dt;
-        const hit = t && Math.hypot(t.x - m.x, t.y - m.y) < m.tgt.r + 6;
+        // Annäherungszünder: explodiert am ersten Schiff, das sie berührt
+        let hit = false;
+        for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - m.x, p.y - m.y) < e.r + 8) { hit = true; break; } }
         if (hit || m.life <= 0 || (!t && m.y < -FIELD_H)) {
           m.done = true;
           for (const e of this.enemies) { const p = this.pos(e); if (e.hp > 0 && Math.hypot(p.x - m.x, p.y - m.y) < s.rocketR + e.r) this.hurt(e, s.rocketDmg, false, 'rocket'); }
@@ -1002,6 +1020,8 @@
         m.milestones[w] = 1; m.crystals += k; ms.push({ w, k });
       }
       const loot = this.loot.map(d => ({ type: d.type, rar: d.rar, result: addModule(m, d) }));
+      // Kristalle pro Stunde (Spielzeit) als gleitender Mittelwert: Grundlage für den Offline-Ertrag
+      if (!this.admin && this.time > 90) { const cur = c / this.time * 3600; m.cph = m.cph ? m.cph * 0.6 + cur * 0.4 : cur; }
       return { crystals: c, wave: this.wave, kills: this.kills, time: this.time, newBest, milestones: ms, loot };
     }
     // Sonderläufe: keine Bestwelle, keine Meilensteine, keine Module
@@ -1070,5 +1090,6 @@
   }
   const enemyHp = (type, w) => ENEMY[type].hp * hpScale(w);
 
-  root.Core = { CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  const VERSION = 'kw-16'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

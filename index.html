@@ -177,7 +177,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .lb { width: 100%; border-collapse: collapse; font-size: .86rem; }
 .lb td { padding: 6px 4px; border-top: 1px solid var(--line); }
 .lb td:first-child { width: 2em; color: var(--ink-dim); font-family: var(--font-num); }
-.lb td:last-child { text-align: right; font-family: var(--font-num); color: var(--core); }
+.lb td:last-child { text-align: right; font-family: var(--font-num); color: var(--core); white-space: nowrap; }
 .lb tr.me td { color: var(--energy); }
 .adm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .adm button { height: 40px; border: 1px solid var(--energy); color: var(--energy); border-radius: 4px; font-size: .8rem; font-weight: 600; }
@@ -238,6 +238,63 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .extra { display: grid; gap: 6px; font-size: .84rem; }
 .extra .loot { border-left: 2px solid var(--rc); padding-left: 8px; }
 .extra .loot b { color: var(--rc); }
+/* Profil, Cloud, Feedback, Umfragen */
+.av { flex: none; filter: drop-shadow(0 0 4px var(--avc)); vertical-align: middle; }
+.who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.who.big { gap: 10px; }
+.who.big b { display: block; font-size: .95rem; }
+.who.big small { color: var(--ink-dim); font-size: .74rem; font-family: var(--font-num); }
+.lbme { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
+.lbme .sec { height: 34px; padding: 0 12px; font-size: .74rem; }
+.lbtabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.lbtabs button { flex: 1 0 auto; padding: 0 10px; }
+.profhead { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: end; }
+.avbig { width: 76px; height: 76px; border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; }
+.pfield { display: grid; gap: 6px; }
+.avgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.avbtn { height: 44px; border: 1px solid var(--line); border-radius: 4px; display: grid; place-items: center; }
+.avbtn[aria-pressed="true"] { border-color: var(--core); background: color-mix(in srgb, var(--core) 10%, transparent); }
+.colgrid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.colbtn { height: 28px; border-radius: 4px; border: 2px solid transparent; background: var(--c); opacity: .75; }
+.colbtn[aria-pressed="true"] { border-color: var(--ink); opacity: 1; box-shadow: 0 0 10px var(--c); }
+.box { border: 1px solid var(--line); border-radius: 4px; padding: 12px; display: grid; gap: 10px; }
+.box p { font-size: .82rem; }
+.codebox code, textarea, input { user-select: text; -webkit-user-select: text; }
+.codebox { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; }
+.codebox code { font-family: var(--font-num); font-size: .78rem; letter-spacing: .04em; color: var(--core); overflow-wrap: anywhere; }
+.mini { height: 30px; padding: 0 9px; border: 1px solid var(--line); border-radius: 4px; font-size: .72rem; }
+.dim { color: var(--ink-dim); font-size: .74rem; }
+.inrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.inrow .sec { height: 40px; padding: 0 14px; }
+textarea, .inrow input, #pName { width: 100%; background: var(--deck-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 9px 10px; font: inherit; font-size: .9rem; }
+textarea { resize: vertical; min-height: 70px; }
+#cOther { font-family: var(--font-num); text-transform: uppercase; font-size: .8rem; }
+.lbtabs.three button { flex: 1; }
+.pollbanner { display: grid; gap: 2px; text-align: left; border: 1px solid color-mix(in srgb, var(--energy) 60%, var(--line)); background: color-mix(in srgb, var(--energy) 8%, transparent); border-radius: 4px; padding: 10px 12px; }
+.pollbanner span { font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--energy); font-weight: 700; }
+.pollbanner b { font-size: .92rem; }
+.pollbanner small { color: var(--ink-dim); font-size: .74rem; }
+.pq { color: var(--ink) !important; font-size: 1.02rem !important; font-weight: 600; }
+.pqopts { display: grid; gap: 8px; }
+.pqopt { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; text-align: left; font-weight: 600; }
+.pqopt i { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--core) 16%, transparent); }
+.pqopt span, .pqopt b { position: relative; }
+.pqopt b { font-family: var(--font-num); color: var(--core); }
+.pqopt.mine { border-color: var(--core); }
+.adminlink { display: grid; place-items: center; text-decoration: none; color: var(--energy); border-color: var(--energy); margin: 8px 0; font-size: .74rem; }
+.fb-btn { border-color: color-mix(in srgb, var(--energy) 50%, var(--line)); color: var(--energy); }
+.lb td:nth-child(2) { max-width: 0; width: 100%; }
+.lb .who { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cannonview { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
+.cannonview summary { cursor: pointer; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+#labCv { display: block; width: 100%; height: 190px; margin-top: 6px; background: radial-gradient(ellipse at 50% 75%, color-mix(in srgb, var(--core) 10%, transparent), transparent 70%); }
+.cvlegend { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; font-size: .74rem; margin-top: 6px; }
+.cvlegend div { display: flex; justify-content: space-between; gap: 6px; border-bottom: 1px dotted var(--line); padding: 2px 0; }
+.cvlegend span { color: var(--ink-dim); }
+.cvlegend b { font-family: var(--font-num); font-weight: 600; white-space: nowrap; }
+.cvlegend span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cvlegend .off b { color: var(--ink-dim); opacity: .6; }
 /* Herausforderungen und Tageslauf */
 .chal-btn { border-color: color-mix(in srgb, var(--hostile) 55%, var(--line)); color: var(--hostile); }
 .daily-btn { border-color: color-mix(in srgb, var(--heal) 55%, var(--line)); color: var(--heal); }
@@ -261,7 +318,6 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .twist .l { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
 .twist b { font-size: 1.05rem; color: var(--heal); }
 .twist span { font-size: .82rem; color: var(--ink-dim); }
-.lbtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .lbtabs button { height: 34px; border: 1px solid var(--line); border-radius: 4px; font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
 .lbtabs button[aria-selected="true"] { border-color: var(--core); color: var(--core); }
 .modetag { color: var(--hostile); }
@@ -342,6 +398,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <div class="stat"><div class="l">Läufe</div><div class="v num" id="mRuns">0</div></div>
       <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="mK">0</div></div>
     </div>
+    <button class="pollbanner" hidden></button>
     <div class="roadmap" hidden></div>
     <p class="metaline" id="fragLine" hidden></p>
     <div class="note" id="offlineNote" hidden></div>
@@ -357,7 +414,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <button class="cta" id="startBtn">Lauf starten</button>
       <div class="actions two">
         <button class="sec" id="labBtn">Labor</button>
-        <button class="sec" id="lbBtn">Bestenliste</button>
+        <button class="sec" id="lbBtn">Highscores</button>
       </div>
       <div class="actions two">
         <button class="sec mod-btn" id="modBtn">Module</button>
@@ -366,6 +423,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <div class="actions two">
         <button class="sec daily-btn" id="dailyBtn">Tageslauf</button>
         <button class="sec chal-btn" id="chalBtn">Herausforderungen</button>
+      </div>
+      <div class="actions two">
+        <button class="sec prof-btn" id="profBtn">Profil &amp; Spielstand</button>
+        <button class="sec fb-btn" id="fbBtn">Feedback</button>
       </div>
     </div>
     <div class="actions two">
@@ -393,11 +454,15 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <button class="cta" id="resumeBtn2">Weiterspielen</button>
       <div class="actions two">
         <button class="sec" id="labBtn3">Labor</button>
-        <button class="sec" id="lbBtn2">Bestenliste</button>
+        <button class="sec" id="lbBtn2">Highscores</button>
       </div>
       <div class="actions two">
         <button class="sec" id="sfxBtn2" aria-pressed="true">Ton an</button>
         <button class="sec" id="musicBtn2" aria-pressed="true">Musik an</button>
+      </div>
+      <div class="actions two">
+        <button class="sec prof-btn">Profil</button>
+        <button class="sec fb-btn">Feedback</button>
       </div>
       <button class="sec warn" id="endBtn">Lauf beenden</button>
       <button class="sec" id="admBtn" hidden>Admin</button>
@@ -426,6 +491,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
     </div>
     <div class="note" id="oBest">Neue Bestwelle.</div>
     <div class="extra" id="oExtra" hidden></div>
+    <button class="pollbanner" hidden></button>
     <div class="roadmap" hidden></div>
     <div class="jumpbox" hidden>
       <h3>Startwelle (Sprungtor)</h3>
@@ -461,6 +527,11 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
         <button class="sec" id="cheapBuy">Günstigstes kaufen</button>
       </div>
     </div>
+    <details class="cannonview" id="cannonView" open>
+      <summary>Deine Kanone</summary>
+      <canvas id="labCv"></canvas>
+      <div class="cvlegend" id="cvLegend"></div>
+    </details>
     <div id="labList"></div>
     <div class="jumpbox" hidden>
       <h3>Startwelle (Sprungtor)</h3>
@@ -484,11 +555,14 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 
 <div class="ov" id="board" hidden>
   <div class="card">
-    <h2>Bestenliste</h2>
-    <div class="lbtabs"><button data-lb="all" aria-selected="true">Bestwelle</button><button data-lb="day" aria-selected="false">Tageslauf heute</button></div>
-    <div id="lbName" hidden>
-      <h3>Dein Name</h3>
-      <input id="nameInput" maxlength="16" autocomplete="nickname" placeholder="Name für die Bestenliste">
+    <h2>Highscores</h2>
+    <div class="lbme"><div id="lbMe" class="who big"></div><button class="sec" id="lbProfile">Profil</button></div>
+    <div class="lbtabs">
+      <button data-lb="rec" aria-selected="true">Rekord</button>
+      <button data-lb="day" aria-selected="false">Tageslauf</button>
+      <button data-lb="kills" aria-selected="false">Abschüsse</button>
+      <button data-lb="fus" aria-selected="false">Fusionen</button>
+      <button data-lb="chal" aria-selected="false">Herausf.</button>
     </div>
     <p id="lbStatus">Wird geladen …</p>
     <table class="lb"><tbody id="lbBody"></tbody></table>
@@ -553,6 +627,64 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
   </div>
 </div>
 
+<div class="ov" id="profile" hidden>
+  <div class="card">
+    <h2>Profil</h2>
+    <div class="profhead"><div id="pPreview" class="avbig"></div><div class="pfield"><h3>Name</h3><input id="pName" maxlength="16" autocomplete="nickname" placeholder="Name für die Highscores"></div></div>
+    <h3>Profilbild</h3>
+    <div class="avgrid" id="pAvatars"></div>
+    <div class="colgrid" id="pColors"></div>
+    <button class="cta" id="pSave">Profil speichern</button>
+    <p class="note" id="pNote"></p>
+    <div class="kv" id="pStats"></div>
+
+    <div id="cloudBox" class="box" hidden>
+      <h3>Cloud-Spielstand</h3>
+      <p>Dein Spielstand wird online gesichert. Mit deinem Spielercode holst du ihn auf ein anderes Gerät. Behandle den Code wie ein Passwort.</p>
+      <div class="codebox"><code id="cCode"></code><button class="mini" id="cShow">Anzeigen</button><button class="mini" id="cCopy">Kopieren</button></div>
+      <small class="dim" id="cLast"></small>
+      <div class="actions two"><button class="sec" id="cSave">Jetzt sichern</button><button class="sec" id="cLoad">Aus Cloud laden</button></div>
+      <button class="sec" id="cAuto" aria-pressed="true">Automatisch sichern: an</button>
+      <h3>Anderes Gerät übernehmen</h3>
+      <div class="inrow"><input id="cOther" placeholder="Spielercode eingeben" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="sec" id="cUse">Laden</button></div>
+      <p class="note" id="cNote"></p>
+    </div>
+
+    <div class="box">
+      <h3>Lokal sichern (Export / Import)</h3>
+      <p>Ohne Internet: Spielstand als Text oder Datei sichern und auf einem anderen Gerät wieder einlesen.</p>
+      <div class="actions two"><button class="sec" id="xCopy">Als Text kopieren</button><button class="sec" id="xFile">Als Datei speichern</button></div>
+      <textarea id="xText" rows="3" placeholder="Exportierten Text hier einfügen"></textarea>
+      <div class="actions two"><button class="sec" id="xImport">Importieren</button><button class="sec" id="xPick">Datei wählen</button></div>
+      <input type="file" id="xFileIn" accept=".json,application/json,text/plain" hidden>
+      <p class="note" id="xNote"></p>
+    </div>
+    <div class="actions"><button class="sec" id="pClose">Zurück</button></div>
+  </div>
+</div>
+
+<div class="ov" id="feedback" hidden>
+  <div class="card">
+    <h2>Feedback</h2>
+    <p>Fehler gefunden oder eine Idee? Schreib es hier rein. Spielversion, Welle und Gerät werden automatisch mitgeschickt.</p>
+    <div class="lbtabs three"><button data-fb="bug" aria-selected="true">Fehler</button><button data-fb="idee" aria-selected="false">Idee</button><button data-fb="sonstiges" aria-selected="false">Sonstiges</button></div>
+    <textarea id="fbText" rows="6" maxlength="2000" placeholder="Was ist passiert, oder was wünschst du dir?"></textarea>
+    <button class="cta" id="fbSend">Senden</button>
+    <p class="note" id="fbNote"></p>
+    <div class="actions"><button class="sec" id="fbClose">Zurück</button></div>
+  </div>
+</div>
+
+<div class="ov" id="poll" hidden>
+  <div class="card">
+    <h2>Umfrage</h2>
+    <p class="pq" id="pqText"></p>
+    <div id="pqOpts" class="pqopts"></div>
+    <p class="note" id="pqNote"></p>
+    <div class="actions"><button class="sec" id="pqClose">Zurück</button></div>
+  </div>
+</div>
+
 <div class="ov" id="admin" hidden>
   <div class="card">
     <h2>Admin</h2>
@@ -565,7 +697,8 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <p class="note err" id="admErr" hidden>Passwort falsch.</p>
     </div>
     <div id="admPanel" hidden>
-      <p>Läufe mit Admin-Eingriffen zählen nicht für die Bestenliste.</p>
+      <p>Läufe mit Admin-Eingriffen zählen nicht für die Highscores.</p>
+      <a class="sec adminlink" href="admin.html" target="_blank" rel="noopener">Verwaltung öffnen: Feedback, Umfragen, Spieler</a>
       <h3>Kristalle und Labor</h3>
       <div class="adm">
         <button data-adm="k1k">+1.000 Kristalle</button>

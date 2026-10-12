@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#12102c">
+<title>Kernwacht Verwaltung</title>
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+:root {
+  --void: #12102c; --deck: #17143a; --deck-2: #221e4f; --line: #3a3474; --ink: #eeebff; --ink-dim: #a39ed0;
+  --core: #3ef0ff; --hostile: #ff4f9a; --energy: #ffc04d; --crystal: #c3a6ff; --heal: #5dffb0; --heat: #ff8a3d;
+  --font-ui: "Chakra Petch", system-ui, sans-serif; --font-num: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
+button { font: inherit; color: inherit; background: none; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; padding: 0 12px; height: 36px; font-weight: 600; letter-spacing: .04em; }
+button:hover { border-color: var(--core); }
+button.pri { background: var(--core); color: var(--void); border-color: var(--core); }
+button.warn { color: var(--hostile); border-color: color-mix(in srgb, var(--hostile) 60%, var(--line)); }
+button:disabled { opacity: .4; cursor: default; }
+input, textarea, select { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; width: 100%; }
+textarea { resize: vertical; }
+:focus-visible { outline: 2px solid var(--core); outline-offset: 2px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 60px; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+h1 { margin: 0; font-size: 1.6rem; letter-spacing: .05em; text-transform: uppercase; }
+h1 span { color: var(--core); }
+h2 { margin: 0 0 10px; font-size: 1rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.card { background: var(--deck); border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+.login { max-width: 420px; margin: 12vh auto; display: grid; gap: 12px; }
+.err { color: var(--hostile); }
+.ok { color: var(--heal); }
+.dim { color: var(--ink-dim); }
+.num { font-family: var(--font-num); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.kpi { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
+.kpi small { display: block; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.kpi b { font-family: var(--font-num); font-size: 1.4rem; font-weight: 600; }
+nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+nav button[aria-selected="true"] { border-color: var(--core); color: var(--core); }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+.filters button[aria-pressed="true"] { border-color: var(--energy); color: var(--energy); }
+.fb { border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px; display: grid; gap: 6px; }
+.fb.bug { border-left-color: var(--hostile); } .fb.idee { border-left-color: var(--heal); } .fb.sonstiges { border-left-color: var(--crystal); }
+.fb.erledigt, .fb.verworfen { opacity: .55; }
+.fbhead { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; font-size: .8rem; color: var(--ink-dim); }
+.fbhead b { color: var(--ink); font-size: .9rem; }
+.tag { font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; border: 1px solid currentColor; }
+.tag.bug { color: var(--hostile); } .tag.idee { color: var(--heal); } .tag.sonstiges { color: var(--crystal); }
+.tag.neu { color: var(--energy); } .tag.gesehen { color: var(--core); } .tag.erledigt { color: var(--heal); } .tag.verworfen { color: var(--ink-dim); }
+.fbbody { white-space: pre-wrap; overflow-wrap: anywhere; }
+.fbctx { font-family: var(--font-num); font-size: .72rem; color: var(--ink-dim); overflow-wrap: anywhere; }
+.fbact { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.fbact button { height: 30px; font-size: .78rem; }
+.fbact input { height: 30px; padding: 0 8px; flex: 1 1 200px; width: auto; font-size: .85rem; }
+.poll { border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 10px; display: grid; gap: 8px; }
+.poll.closed { opacity: .65; }
+.bar { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 70px; gap: 10px; align-items: center; font-size: .88rem; }
+.bar .t { height: 10px; background: var(--deck-2); border-radius: 5px; overflow: hidden; }
+.bar .t i { display: block; height: 100%; background: var(--core); box-shadow: 0 0 8px var(--core); }
+.bar .n { text-align: right; font-family: var(--font-num); font-size: .8rem; }
+.newpoll { display: grid; gap: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; cursor: pointer; }
+td.n, th.n { text-align: right; font-family: var(--font-num); }
+.tblwrap { overflow-x: auto; }
+@media (max-width: 560px) { .bar { grid-template-columns: 1fr 60px; } .bar .t { grid-column: 1 / -1; grid-row: 2; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="login" class="card login">
+    <h1>Kern<span>wacht</span> Verwaltung</h1>
+    <p class="dim">Feedback, Umfragen und Spieler. Zugang mit dem Verwaltungsschlüssel.</p>
+    <form id="loginForm" style="display:grid;gap:10px">
+      <input id="key" type="password" autocomplete="current-password" placeholder="Verwaltungsschlüssel" spellcheck="false">
+      <label class="dim" style="font-size:.85rem"><input type="checkbox" id="remember" style="width:auto;margin-right:6px">Auf diesem Gerät merken</label>
+      <button class="pri" type="submit">Anmelden</button>
+    </form>
+    <p id="loginErr" class="err" hidden></p>
+  </div>
+
+  <div id="app" hidden>
+    <header>
+      <h1>Kern<span>wacht</span> Verwaltung</h1>
+      <div style="display:flex;gap:6px"><button id="reload">Aktualisieren</button><a href="./" style="display:contents"><button>Zum Spiel</button></a><button id="logout" class="warn">Abmelden</button></div>
+    </header>
+    <div class="card"><div class="kpis" id="kpis"></div></div>
+    <nav>
+      <button data-tab="feedback" aria-selected="true">Feedback</button>
+      <button data-tab="polls" aria-selected="false">Umfragen</button>
+      <button data-tab="players" aria-selected="false">Spieler</button>
+    </nav>
+
+    <section id="t-feedback" class="card">
+      <h2>Feedback</h2>
+      <div class="filters" id="fbFilters">
+        <button data-f="offen" aria-pressed="true">Offen</button>
+        <button data-f="alle" aria-pressed="false">Alle</button>
+        <button data-f="bug" aria-pressed="false">Fehler</button>
+        <button data-f="idee" aria-pressed="false">Ideen</button>
+        <button data-f="erledigt" aria-pressed="false">Erledigt</button>
+      </div>
+      <div id="fbList"></div>
+    </section>
+
+    <section id="t-polls" class="card" hidden>
+      <h2>Neue Umfrage</h2>
+      <form class="newpoll" id="pollForm">
+        <input id="pQuestion" maxlength="300" placeholder="Frage, z. B. Was soll als Nächstes kommen?">
+        <textarea id="pOptions" rows="4" placeholder="Antworten, eine pro Zeile (2 bis 8)"></textarea>
+        <div><button class="pri" type="submit">Umfrage starten</button> <span id="pollMsg" class="dim"></span></div>
+      </form>
+      <h2 style="margin-top:20px">Alle Umfragen</h2>
+      <div id="pollList"></div>
+    </section>
+
+    <section id="t-players" class="card" hidden>
+      <h2>Spieler</h2>
+      <div class="tblwrap"><table><thead><tr>
+        <th data-s="name">Name</th><th class="n" data-s="best_ever">Rekord</th><th class="n" data-s="best">Bestwelle</th><th class="n" data-s="runs">Läufe</th><th class="n" data-s="kills">Abschüsse</th><th class="n" data-s="fusions">Fusionen</th><th class="n" data-s="chal">Herausf.</th><th data-s="has_save">Cloud</th><th data-s="updated_at">Zuletzt aktiv</th><th data-s="created_at">Seit</th>
+      </tr></thead><tbody id="plBody"></tbody></table></div>
+    </section>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase-js-2.117.2.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const cfg = window.KW_CONFIG || {};
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const when = t => t ? new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–';
+  const fmt = n => Number(n || 0).toLocaleString('de-DE');
+  if (!cfg.supabaseUrl || !cfg.supabaseKey) { $('loginErr').hidden = false; $('loginErr').textContent = 'In config.js ist kein Supabase-Projekt eingetragen.'; return; }
+  const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  let KEY = '';
+  try { KEY = sessionStorage.getItem('kw.adminkey') || localStorage.getItem('kw.adminkey') || ''; } catch (e) {}
+  async function call(fn, args) {
+    const { data, error } = await sb.rpc(fn, Object.assign({ key: KEY }, args || {}));
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  // ---------- Anmeldung ----------
+  async function enter() {
+    let ok = false;
+    try { ok = await call('kw_admin_check'); } catch (e) { $('loginErr').hidden = false; $('loginErr').textContent = 'Verbindung fehlgeschlagen: ' + e.message; return; }
+    if (!ok) { $('loginErr').hidden = false; $('loginErr').textContent = 'Schlüssel falsch.'; try { sessionStorage.removeItem('kw.adminkey'); localStorage.removeItem('kw.adminkey'); } catch (e) {} return; }
+    $('login').hidden = true; $('app').hidden = false;
+    loadAll();
+  }
+  $('loginForm').addEventListener('submit', ev => {
+    ev.preventDefault();
+    KEY = $('key').value.trim();
+    try { sessionStorage.setItem('kw.adminkey', KEY); if ($('remember').checked) localStorage.setItem('kw.adminkey', KEY); } catch (e) {}
+    enter();
+  });
+  $('logout').addEventListener('click', () => { try { sessionStorage.removeItem('kw.adminkey'); localStorage.removeItem('kw.adminkey'); } catch (e) {} location.reload(); });
+  $('reload').addEventListener('click', loadAll);
+
+  // ---------- Reiter ----------
+  document.querySelectorAll('nav [data-tab]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('nav [data-tab]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false'));
+    for (const t of ['feedback', 'polls', 'players']) $('t-' + t).hidden = t !== b.dataset.tab;
+  }));
+
+  async function loadAll() { await Promise.all([loadOverview(), loadFeedback(), loadPolls(), loadPlayers()]); }
+
+  async function loadOverview() {
+    try {
+      const o = await call('kw_admin_overview');
+      const k = [['Spieler', o.players], ['mit Namen', o.named], ['aktiv heute', o.active1], ['aktiv 7 Tage', o.active7], ['Cloud-Spielstände', o.saves], ['Tageslauf heute', o.daily_today], ['Feedback neu', o.feedback_new]];
+      $('kpis').innerHTML = k.map(([a, b]) => `<div class="kpi"><small>${a}</small><b>${fmt(b)}</b></div>`).join('');
+    } catch (e) { $('kpis').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  }
+
+  // ---------- Feedback ----------
+  let fb = [], fbFilter = 'offen';
+  const KIND = { bug: 'Fehler', idee: 'Idee', sonstiges: 'Sonstiges' };
+  document.querySelectorAll('#fbFilters [data-f]').forEach(b => b.addEventListener('click', () => {
+    fbFilter = b.dataset.f; document.querySelectorAll('#fbFilters [data-f]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); renderFeedback();
+  }));
+  async function loadFeedback() { try { fb = await call('kw_admin_feedback') || []; renderFeedback(); } catch (e) { $('fbList').innerHTML = `<p class="err">${esc(e.message)}</p>`; } }
+  function renderFeedback() {
+    const open = f => f.status === 'neu' || f.status === 'gesehen';
+    const list = fb.filter(f => fbFilter === 'alle' ? true : fbFilter === 'offen' ? open(f) : fbFilter === 'erledigt' ? !open(f) : f.kind === fbFilter && open(f));
+    if (!list.length) { $('fbList').innerHTML = '<p class="dim">Nichts in dieser Ansicht.</p>'; return; }
+    $('fbList').innerHTML = list.map(f => {
+      const c = f.ctx || {};
+      const ctx = [c.version, c.record != null && 'Rekord ' + c.record, c.wave && 'Welle ' + c.wave, c.mode, c.fusions && c.fusions + ' Fusionen', c.screen, c.ua].filter(Boolean).join(' · ');
+      return `<div class="fb ${f.kind} ${f.status}" data-id="${f.id}">
+        <div class="fbhead"><span class="tag ${f.kind}">${KIND[f.kind] || f.kind}</span><span class="tag ${f.status}">${f.status}</span><b>${esc(f.player_name || c.name || 'ohne Namen')}</b><span>${when(f.created_at)}</span><span class="num">#${f.id}</span></div>
+        <div class="fbbody">${esc(f.body)}</div>
+        <div class="fbctx">${esc(ctx)}</div>
+        <div class="fbact">
+          <button data-st="gesehen">Gesehen</button><button data-st="erledigt">Erledigt</button><button data-st="verworfen">Verwerfen</button><button data-st="neu">Wieder öffnen</button>
+          <input data-note placeholder="Notiz (nur für dich)" value="${esc(f.note || '')}">
+        </div></div>`;
+    }).join('');
+    document.querySelectorAll('#fbList .fb').forEach(el => {
+      const id = +el.dataset.id;
+      el.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', async () => {
+        try { await call('kw_admin_feedback_set', { p_id: id, p_status: b.dataset.st, p_note: null }); const f = fb.find(x => x.id === id); f.status = b.dataset.st; renderFeedback(); loadOverview(); } catch (e) { alertMsg(e); }
+      }));
+      el.querySelector('[data-note]').addEventListener('change', async ev => {
+        try { await call('kw_admin_feedback_set', { p_id: id, p_status: null, p_note: ev.target.value }); fb.find(x => x.id === id).note = ev.target.value; } catch (e) { alertMsg(e); }
+      });
+    });
+  }
+  function alertMsg(e) { console.error(e); $('pollMsg').textContent = 'Fehler: ' + e.message; }
+
+  // ---------- Umfragen ----------
+  $('pollForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const q = $('pQuestion').value.trim(), opts = $('pOptions').value.split('\n').map(s => s.trim()).filter(Boolean);
+    if (q.length < 3) { $('pollMsg').textContent = 'Bitte eine Frage eingeben.'; return; }
+    if (opts.length < 2 || opts.length > 8) { $('pollMsg').textContent = 'Bitte 2 bis 8 Antworten, eine pro Zeile.'; return; }
+    try { await call('kw_admin_poll_create', { p_question: q, p_options: opts }); $('pQuestion').value = ''; $('pOptions').value = ''; $('pollMsg').textContent = 'Umfrage läuft. Spieler sehen sie beim nächsten Öffnen des Menüs.'; loadPolls(); }
+    catch (e) { $('pollMsg').textContent = 'Fehler: ' + e.message; }
+  });
+  async function loadPolls() {
+    try {
+      const ps = await call('kw_admin_polls') || [];
+      if (!ps.length) { $('pollList').innerHTML = '<p class="dim">Noch keine Umfragen.</p>'; return; }
+      $('pollList').innerHTML = ps.map(p => {
+        const tot = Number(p.total) || 0;
+        const bars = p.options.map((o, i) => { const n = Number((p.counts || {})[i] || 0), k = tot ? Math.round(n / tot * 100) : 0; return `<div class="bar"><span>${esc(o)}</span><span class="t"><i style="width:${k}%"></i></span><span class="n">${n} · ${k} %</span></div>`; }).join('');
+        return `<div class="poll ${p.active ? '' : 'closed'}" data-id="${p.id}">
+          <div class="fbhead"><span class="tag ${p.active ? 'idee' : 'verworfen'}">${p.active ? 'läuft' : 'beendet'}</span><b>${esc(p.question)}</b><span>${when(p.created_at)}</span><span class="num">${tot} Stimmen</span></div>
+          ${bars}
+          <div class="fbact"><button data-act="${p.active ? 'close' : 'open'}">${p.active ? 'Beenden' : 'Wieder öffnen'}</button><button class="warn" data-act="del">Löschen</button></div></div>`;
+      }).join('');
+      document.querySelectorAll('#pollList .poll').forEach(el => {
+        const id = +el.dataset.id;
+        el.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', async () => {
+          try {
+            if (b.dataset.act === 'del') { if (b.dataset.sure !== '1') { b.dataset.sure = '1'; b.textContent = 'Wirklich löschen?'; return; } await call('kw_admin_poll_delete', { p_id: id }); }
+            else await call('kw_admin_poll_set', { p_id: id, p_active: b.dataset.act === 'open' });
+            loadPolls();
+          } catch (e) { alertMsg(e); }
+        }));
+      });
+    } catch (e) { $('pollList').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  }
+
+  // ---------- Spieler ----------
+  let pl = [], sortBy = 'updated_at', sortDir = -1;
+  document.querySelectorAll('th[data-s]').forEach(th => th.addEventListener('click', () => { const k = th.dataset.s; sortDir = sortBy === k ? -sortDir : -1; sortBy = k; renderPlayers(); }));
+  async function loadPlayers() { try { pl = await call('kw_admin_players') || []; renderPlayers(); } catch (e) { $('plBody').innerHTML = `<tr><td class="err">${esc(e.message)}</td></tr>`; } }
+  function renderPlayers() {
+    const v = x => x == null ? '' : x;
+    const rows = pl.slice().sort((a, b) => { const x = v(a[sortBy]), y = v(b[sortBy]); return (typeof x === 'number' || !isNaN(+x) && x !== '' ? (+x - +y) : String(x).localeCompare(String(y))) * sortDir; });
+    $('plBody').innerHTML = rows.map(p => `<tr><td>${p.name ? esc(p.name) : '<span class="dim">ohne Namen</span>'}</td><td class="n">${p.best_ever}</td><td class="n">${p.best}</td><td class="n">${fmt(p.runs)}</td><td class="n">${fmt(p.kills)}</td><td class="n">${p.fusions}</td><td class="n">${p.chal}</td><td>${p.has_save ? 'ja' : '–'}</td><td>${when(p.updated_at)}</td><td>${when(p.created_at)}</td></tr>`).join('') || '<tr><td class="dim">Noch keine Spieler.</td></tr>';
+  }
+
+  if (KEY) enter();
+})();
+</script>
+</body>
+</html>

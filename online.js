@@ -1,39 +1,64 @@
-// Kernwacht – Online-Anzeige (Presence) und Bestenliste über Supabase
+// Kernwacht – Online-Dienste über Supabase: Anzeige "online", Profil, Highscores, Tageslauf,
+// Cloud-Spielstand, Feedback und Umfragen.
 // Bleibt komplett inaktiv, solange in config.js keine Zugangsdaten stehen.
+//
+// Identität: ein geheimer Spielercode im Browser. Die Datenbank kennt nur seinen Hash;
+// geschrieben wird ausschließlich über die Funktionen kw_* (siehe supabase/migrations).
 (function (root) {
   'use strict';
   const cfg = root.KW_CONFIG || {};
   const configured = !!(cfg.supabaseUrl && cfg.supabaseKey);
   const LIB = 'vendor/supabase-js-2.117.2.js'; // offizielle Bibliothek, im Repo abgelegt (offline verfügbar)
-  let client = null, channel = null, count = 0, me = { name: '', wave: 0 };
+  const CODE_KEY = 'kernwacht.code', ID_KEY = 'kernwacht.pubid';
+  let client = null, channel = null, count = 0, me = { name: '', wave: 0 }, ready = null;
   const listeners = [];
 
-  function pid() {
-    try {
-      let id = localStorage.getItem('kernwacht.pid');
-      if (!id) { id = (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); })); localStorage.setItem('kernwacht.pid', id); }
-      return id;
-    } catch (e) { return 'anon-' + Math.random().toString(36).slice(2); }
+  // ---------- Spielercode ----------
+  const ALPH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function newCode() {
+    const b = new Uint8Array(25); (root.crypto || {}).getRandomValues ? crypto.getRandomValues(b) : b.forEach((_, i) => (b[i] = Math.random() * 256));
+    let s = ''; for (let i = 0; i < 25; i++) { if (i && i % 5 === 0) s += '-'; s += ALPH[b[i] % 32]; }
+    return s;
   }
+  function getStored(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function setStored(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+  function code() { let c = getStored(CODE_KEY); if (!c) { c = newCode(); setStored(CODE_KEY, c); } return c; }
+  const normCode = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/(.{5})(?=.)/g, '$1-');
+  const validCode = c => /^([A-Z0-9]{5}-){4}[A-Z0-9]{5}$/.test(normCode(c));
+
   function loadLib() {
     return new Promise((res, rej) => {
       if (root.supabase) return res();
       const s = document.createElement('script'); s.src = LIB; s.onload = res; s.onerror = rej; document.head.appendChild(s);
     });
   }
-  async function start(name) {
-    if (!configured || client) return;
+  // Verbindung aufbauen (einmal), Präsenz starten, Spieler anmelden
+  function start(name) {
+    if (!configured) return Promise.resolve(false);
+    if (ready) return ready;
     me.name = name || '';
-    try {
-      await loadLib();
-      client = root.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth: { persistSession: false } });
-      channel = client.channel('kernwacht-lobby', { config: { presence: { key: pid() } } });
-      channel.on('presence', { event: 'sync' }, () => {
-        count = Object.keys(channel.presenceState()).length;
-        listeners.forEach(f => f(count));
-      });
-      channel.subscribe(status => { if (status === 'SUBSCRIBED') channel.track({ name: me.name, wave: me.wave }); });
-    } catch (e) { client = null; }
+    ready = (async () => {
+      try {
+        await loadLib();
+        client = root.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+        channel = client.channel('kernwacht-lobby', { config: { presence: { key: getStored(ID_KEY) || code().slice(0, 5) } } });
+        channel.on('presence', { event: 'sync' }, () => {
+          count = Object.keys(channel.presenceState()).length;
+          listeners.forEach(f => f(count));
+        });
+        channel.subscribe(status => { if (status === 'SUBSCRIBED') channel.track({ name: me.name, wave: me.wave }); });
+        const { data } = await client.rpc('kw_register', { code: code() });
+        if (data) setStored(ID_KEY, data);
+        return true;
+      } catch (e) { client = null; ready = null; return false; }
+    })();
+    return ready;
+  }
+  async function rpc(fn, args) {
+    if (!(await start())) throw new Error('offline');
+    const { data, error } = await client.rpc(fn, Object.assign({ code: code() }, args || {}));
+    if (error) throw new Error(error.message);
+    return data;
   }
   let lastTrack = 0;
   function setStatus(name, wave) {
@@ -42,26 +67,50 @@
     const n = Date.now(); if (n - lastTrack < 15000) return; lastTrack = n;
     channel.track({ name: me.name, wave: me.wave });
   }
-  async function submit(name, best, runs) {
-    if (!client || !name) return false;
-    const { error } = await client.from('scores').upsert({ player_id: pid(), name, best_wave: best, runs, updated_at: new Date().toISOString() });
-    return !error;
-  }
-  async function top(limit) {
-    if (!client) return null;
-    const { data, error } = await client.from('scores').select('player_id,name,best_wave,runs').order('best_wave', { ascending: false }).limit(limit || 20);
+
+  // ---------- Profil und Werte ----------
+  const profile = (name, avatar, color) => rpc('kw_profile', { p_name: name || '', p_avatar: avatar | 0, p_color: color | 0 });
+  const stats = s => rpc('kw_stats', { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0 });
+  const daily = (day, wave, kills) => rpc('kw_daily', { p_day: day, p_wave: wave | 0, p_kills: kills | 0 });
+
+  // Highscores: Spalte der Spielertabelle, nur Spieler mit Namen
+  async function board(col, limit) {
+    if (!(await start())) return null;
+    const { data, error } = await client.from('players').select('id,name,avatar,color,' + col).not('name', 'is', null).gt(col, 0).order(col, { ascending: false }).limit(limit || 25);
     return error ? null : data;
   }
-  // Tageslauf: nur der beste Versuch des Tages wird eingetragen (das Spiel schickt nur Verbesserungen)
-  async function submitDaily(day, name, wave, kills) {
-    if (!client || !name) return false;
-    const { error } = await client.from('daily_scores').upsert({ day, player_id: pid(), name, wave, kills, updated_at: new Date().toISOString() });
-    return !error;
+  async function dailyBoard(day, limit) {
+    if (!(await start())) return null;
+    const { data, error } = await client.from('daily_scores').select('player_id,wave,kills,players(name,avatar,color)').eq('day', day).order('wave', { ascending: false }).order('kills', { ascending: false }).limit(60);
+    if (error) return null;
+    return data.filter(r => r.players && r.players.name).slice(0, limit || 25).map(r => ({ id: r.player_id, name: r.players.name, avatar: r.players.avatar, color: r.players.color, wave: r.wave }));
   }
-  async function topDaily(day, limit) {
-    if (!client) return null;
-    const { data, error } = await client.from('daily_scores').select('player_id,name,wave,kills').eq('day', day).order('wave', { ascending: false }).order('kills', { ascending: false }).limit(limit || 20);
+
+  // ---------- Cloud-Spielstand ----------
+  const save = data => rpc('kw_save', { p_data: data });
+  // Laden mit eigenem oder fremdem Code; adopt=true übernimmt den Code für dieses Gerät
+  async function load(other) {
+    const c = other ? normCode(other) : code();
+    if (!(await start())) throw new Error('offline');
+    const { data, error } = await client.rpc('kw_load', { code: c });
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  function adopt(c) { setStored(CODE_KEY, normCode(c)); setStored(ID_KEY, null); }
+
+  // ---------- Feedback und Umfragen ----------
+  const feedback = (kind, body, ctx) => rpc('kw_feedback', { p_kind: kind, p_body: body, p_ctx: ctx || {} });
+  async function polls() {
+    if (!(await start())) return null;
+    const { data, error } = await client.from('polls').select('id,question,options,created_at').eq('active', true).order('created_at', { ascending: false });
     return error ? null : data;
   }
-  root.KWOnline = { configured, start, setStatus, submit, top, submitDaily, topDaily, pid, onCount: f => listeners.push(f), get count() { return count; } };
+  const vote = (id, choice) => rpc('kw_vote', { p_poll: id, p_choice: choice });
+  const pollResults = id => rpc('kw_poll_results', { p_poll: id });
+
+  root.KWOnline = {
+    configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
+    profile, stats, daily, board, dailyBoard, save, load, feedback, polls, vote, pollResults,
+    onCount: f => listeners.push(f), get count() { return count; },
+  };
 })(window);

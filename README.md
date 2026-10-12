@@ -28,7 +28,8 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `game.js` | Steuerung: Zustand, Bedienung, Speichern, Werte-Tab, Admin-Modus, Spielschleife |
 | `render.js` | Grafik (Canvas 2D): Schiffe, Kanone, Minen, Effekte |
 | `audio.js` | Soundeffekte und Musik, komplett per WebAudio erzeugt |
-| `online.js`, `config.js` | Online-Anzeige und Bestenliste (optional, siehe unten) |
+| `online.js`, `config.js` | Online: Anzeige, Profil, Highscores, Cloud-Spielstand, Feedback, Umfragen (optional, siehe unten) |
+| `admin.html` | Verwaltungsseite: Feedback, Umfragen, Spieler |
 | `supabase/` | Supabase-Projekt: `config.toml` und Datenbank-Migrationen (GitHub-Integration) |
 | `vendor/` | `supabase-js`, die offizielle Client-Bibliothek |
 | `sw.js` | Service Worker: online immer neueste Version, offline aus dem Cache |
@@ -77,6 +78,14 @@ Neue Tabellen oder Regeln: neue Datei `supabase/migrations/<Zeitstempel>_<name>.
 Die Client-Bibliothek `supabase-js` liegt unter `vendor/` und wird erst geladen, wenn Zugangsdaten eingetragen sind.
 
 Der Publishable Key ist für den Browser gedacht und darf öffentlich sein; geschützt wird über Row Level Security. Jeder Spieler bekommt eine zufällige ID im Browser; Spielstände mit Admin-Eingriffen werden nicht eingetragen.
+
+### Spielercode, Cloud-Spielstand, Feedback, Umfragen
+
+- **Spielercode:** Jeder Spieler bekommt im Browser einen geheimen Code (25 Zeichen). Die Datenbank speichert nur dessen Hash. Mit dem Code holt man den Cloud-Spielstand auf ein anderes Gerät (Profil → Anderes Gerät übernehmen).
+- **Schreiben** geht nur über die Datenbankfunktionen `kw_*`, die den Code prüfen. Gelesen werden dürfen nur Profilname, Profilbild und Highscore-Werte.
+- **Verwaltung:** `admin.html` (Link auch im Admin-Modus des Spiels) zeigt Feedback, Umfragen und Spieler. Zugang mit dem Verwaltungsschlüssel; in der Migration steht nur sein Hash. Neuen Schlüssel setzen: im SQL Editor
+  `insert into admin_keys values (encode(sha256(convert_to('kernwacht-admin:' || 'NEUER-SCHLÜSSEL', 'UTF8')), 'hex'));` und den alten Eintrag löschen.
+- **Lokal sichern:** Profil → Export als Text oder Datei, Import auf einem anderen Gerät, ganz ohne Online-Dienst.
 
 ## Admin-Modus
 
