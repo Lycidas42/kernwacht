@@ -8,6 +8,7 @@
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
     labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 40, wmDmg: 0.35,
+    modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
   }, root.KW_P || {});
 
@@ -116,12 +117,12 @@
   const MODULES = {
     chain:     { sector: 1, name: 'Kettenblitz',       desc: v => `${pctS(v)} Chance, dass ein Treffer auf 2 Schiffe überspringt`, base: 0.10 },
     splinter:  { sector: 1, name: 'Splittermunition',  desc: v => `Abschüsse explodieren mit ${v.toFixed(1).replace('.', ',')}× Kanonenschaden im Umkreis`, base: 0.42 },
-    cryoammo:  { sector: 2, name: 'Kryo-Munition',     desc: v => `Treffer verlangsamen um ${pctS(v)}`, base: 0.10 },
+    cryoammo:  { sector: 2, name: 'Kältebruch',        desc: v => `Kanonentreffer auf verlangsamte Schiffe machen +${pctS(v)} Schaden. Treffer verlangsamen leicht (10 %)`, base: P0.modK.cryo },
     scanner:   { sector: 2, name: 'Zielerfassung',     desc: v => `+${pctS(v)} Krit-Chance, Tarnung wirkungslos`, base: 0.04 },
     overcharge:{ sector: 3, name: 'Überspannung',      desc: v => `Jeder 12. Schuss macht ${v.toFixed(1).replace('.', ',')}× Schaden`, base: 2, add: 1 },
-    plating:   { sector: 3, name: 'Reaktivpanzerung',  desc: v => `+${pctS(v)} Panzerung`, base: 0.04 },
-    leech:     { sector: 4, name: 'Energieleck',       desc: v => `+${pctS(v)} Energie pro Abschuss`, base: 0.10 },
-    nova:      { sector: 4, name: 'Notfallnova',       desc: v => `Unter 30 % LP: Nova mit ${Math.round(v)}× Schaden (alle 20 s)`, base: 15 },
+    plating:   { sector: 3, name: 'Dornenwall',        desc: v => `Schiffe am Schutzwall erleiden ${v.toFixed(1).replace('.', ',')}× Kanonenschaden pro Sekunde, +5 % Panzerung`, base: P0.modK.thorn },
+    leech:     { sector: 4, name: 'Energieleck',       desc: v => `+${pctS(v)} Energie pro Abschuss, Orbitalschlag lädt ${pctS(v / 2)} schneller`, base: P0.modK.leech },
+    nova:      { sector: 4, name: 'Nova-Impuls',       desc: v => `Alle 12 s eine Nova mit ${v.toFixed(1).replace('.', ',')}× Kanonenschaden auf alle Schiffe in Reichweite (sofort, wenn die Hülle unter 30 % fällt)`, base: P0.modK.nova },
     echo:      { sector: 5, name: 'Echo',              desc: v => `−${pctS(v)} Abklingzeit der Fähigkeiten`, base: 0.08 },
     crysmod:   { sector: 5, name: 'Kristallresonator', desc: v => `+${pctS(v)} Kristalle`, base: 0.15 },
   };
@@ -497,7 +498,7 @@
       for (const t of eq) { const m = this.meta.modules && this.meta.modules[t]; if (m) mod[t] = moduleValue(m); }
       s.mod = mod;
       if (mod.scanner) s.crit += mod.scanner;
-      if (mod.plating) s.armor = Math.min(P.arCap + 0.1, s.armor + mod.plating);
+      if (mod.plating) s.armor = Math.min(P.arCap + 0.1, s.armor + 0.05);
       if (mod.leech) s.loot *= 1 + mod.leech;
       if (mod.crysmod) s.crysMult *= 1 + mod.crysmod;
       if (this.rule === 'glass') s.regen = 0;
@@ -634,7 +635,7 @@
         this.energy += e.rw * this.s.loot;
         this.kills++;
         if (this.fxOn && this.s.mod && (this.s.mod.leech || this.s.mod.crysmod) && Math.random() < 0.5) { const p = this.pos(e); this.fx.push({ k: this.s.mod.leech ? 'leech' : 'crysfx', x: p.x, y: p.y, t: 0 }); }
-        if (!this.s.noGun) this.charge = Math.min(1, this.charge + (e.type === 'boss' ? 0.35 : e.type === 'bomb' ? 0 : 1 / STRIKE_KILLS));
+        if (!this.s.noGun) this.charge = Math.min(1, this.charge + (e.type === 'boss' ? 0.35 : e.type === 'bomb' ? 0 : 1 / STRIKE_KILLS) * (1 + ((this.s.mod && this.s.mod.leech) || 0) / 2));
         if (this.s.mod.splinter && src !== 'mod') {
           const p = this.pos(e), dmg = this.s.gunDmg * this.s.mod.splinter * P.splK;
           for (const o of this.enemies) if (o !== e && o.hp > 0) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 45 + o.r) this.hurt(o, dmg, false, 'mod'); }
@@ -672,12 +673,16 @@
       this.blocked = (this.blocked || 0) + d * this.s.armor;
       this.hp -= d * (1 - this.s.armor);
       if (this.fxOn) this.fx.push({ k: 'hurt', t: 0 });
-      if (this.s.mod && this.s.mod.nova && this.hp > 0 && this.hp < this.s.maxHp * 0.3 && this.time >= this.novaT) {
-        this.novaT = this.time + 20;
-        for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, this.s.dmg * this.s.mod.nova, false, 'mod'); if (e.hp > 0 && e.type !== 'boss') e.dist += 40; }
-        if (this.fxOn) this.fx.push({ k: 'nova', t: 0, r: this.s.range });
-      }
+      if (this.s.mod && this.s.mod.nova && this.hp > 0 && this.hp < this.s.maxHp * 0.3 && this.time >= this.novaT - 9) this.fireNova();
       if (this.hp <= 0 && !this.dead) { this.hp = 0; this.dead = true; }
+    }
+
+    // Nova-Impuls: Schaden auf alle Schiffe in Reichweite, kleine Schiffe werden zurückgeworfen
+    fireNova() {
+      this.novaT = this.time + 12;
+      const d = this.s.gunDmg * this.s.mod.nova;
+      for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, d, false, 'mod'); if (e.hp > 0 && e.type !== 'boss') e.dist += 30; }
+      if (this.fxOn) this.fx.push({ k: 'nova', t: 0, r: this.s.range });
     }
 
     // ---------- Spieleraktionen ----------
@@ -780,6 +785,17 @@
       }
 
       this.hp = Math.min(s.maxHp, this.hp + s.regen * dt);
+      if (s.mod.nova && this.time >= this.novaT && this.enemies.some(e => e.dist - e.r <= s.range)) this.fireNova();
+      // Dornenwall: Schaden an alle Schiffe direkt am Schutzwall
+      if (s.mod.plating) {
+        this.thornT = (this.thornT || 0) + dt;
+        if (this.thornT >= 0.5) {
+          this.thornT = 0;
+          let any = false;
+          for (const e of this.enemies) if (e.hp > 0 && e.dist <= WALL_R + e.r * 0.3 + 12) { this.hurt(e, s.gunDmg * s.mod.plating * 0.5, false, 'mod'); any = true; }
+          if (any && this.fxOn) this.fx.push({ k: 'thorn', t: 0 });
+        }
+      }
 
       if (!frozen) for (const e of this.enemies) {
         if (e.hp <= 0) continue;
@@ -881,8 +897,9 @@
         const p = this.pos(t), dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy), v = 650 * dt;
         if (d <= v + t.r) {
           b.done = true;
-          this.hurt(t, b.dmg, b.crit, 'gun');
-          if (s.mod.cryoammo && t.hp > 0) { t.slow = Math.max(t.slowUntil > this.time ? t.slow : 0, s.mod.cryoammo * (t.type === 'boss' ? 0.4 : 1)); t.slowUntil = this.time + 1.5; }
+          const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
+          this.hurt(t, b.dmg * brittle, b.crit, 'gun');
+          if (s.mod.cryoammo && t.hp > 0) { t.slow = Math.max(t.slowUntil > this.time ? t.slow : 0, 0.1 * (t.type === 'boss' ? 0.4 : 1)); t.slowUntil = this.time + 1.5; }
           if (s.mod.chain && Math.random() < s.mod.chain) {
             const others = this.enemies.filter(o => o !== t && o.hp > 0).map(o => ({ o, d: Math.hypot(this.pos(o).x - p.x, this.pos(o).y - p.y) })).filter(x => x.d < 110).sort((a, b) => a.d - b.d).slice(0, 2);
             for (const x of others) { this.hurt(x.o, b.dmg * 0.5, false, 'gun'); if (this.fxOn) { const q = this.pos(x.o); this.fx.push({ k: 'chain', x1: p.x, y1: p.y, x2: q.x, y2: q.y, t: 0 }); } }
@@ -1293,6 +1310,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-37'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-38'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
