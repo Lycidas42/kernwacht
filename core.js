@@ -316,7 +316,7 @@
     // 8 Stufen je Challenge; jede Stufe multipliziert den Bonus (×(1+step))
     { id: 'nodef', name: 'Ohne Abwehr',  rule: 'Keine Abwehr-Upgrades im Lauf: Hülle, Reparatur, Panzerung, Rückstoß, Schockwelle und Klingen bleiben gesperrt.', goals: [15, 25, 40, 55, 70, 90, 110, 135], bonus: 'hp',   step: 0.06, bname: 'Strukturpunkte' },
     { id: 'fast',  name: 'Hetzjagd',     rule: 'Alle Gegner fliegen doppelt so schnell.', goals: [30, 50, 70, 90, 110, 130, 150, 175], bonus: 'rate', step: 0.05, bname: 'Feuerrate' },
-    { id: 'mines', name: 'Nur Minen',    rule: 'Kanone, Nebenkanonen, Schockwelle, Klingen und Orbitalschlag schweigen. Nur der Minenwerfer arbeitet, er ist von Beginn an aktiv.', goals: [30, 50, 70, 90, 110, 130, 150, 175], bonus: 'crys', step: 0.08, bname: 'Kristalle' },
+    { id: 'mines', name: 'Nur Minen',    rule: 'Kanone, Nebenkanonen, Raketen, Kryowerfer, Schockwelle, Klingen und Orbitalschlag schweigen. Nur der Minenwerfer arbeitet, er ist von Beginn an aktiv. Schaden und Reichweite (Größe des Minenfelds) lassen sich ausbauen.', goals: [30, 50, 70, 90, 110, 130, 150, 175], bonus: 'crys', step: 0.08, bname: 'Kristalle' },
     { id: 'glass', name: 'Glaskanone',   rule: 'Nur ein Viertel der Strukturpunkte und keine Reparatur.', goals: [20, 40, 55, 70, 90, 110, 130, 155], bonus: 'dmg',  step: 0.06, bname: 'Schaden' },
     { id: 'poor',  name: 'Sparflamme',   rule: 'Abschüsse bringen nur halb so viel Energie, keine Wellenprämie.', goals: [20, 40, 60, 80, 100, 120, 145, 170], bonus: 'loot', step: 0.07, bname: 'Energie' },
   ];
@@ -383,7 +383,7 @@
   // Was eine Herausforderung im Lauf sperrt
   const BLOCK = {
     nodef: u => u.tab === 'def',
-    mines: u => (u.tab === 'atk' && u.id !== 'dmg' && u.id !== 'mine') || u.id === 'shock' || u.id === 'blade',
+    mines: u => (u.tab === 'atk' && u.id !== 'dmg' && u.id !== 'mine' && u.id !== 'range') || u.id === 'shock' || u.id === 'blade', // nur Schadensquellen sperren; Reichweite bestimmt das Minenfeld
     glass: u => u.id === 'regen',
     poor:  u => u.id === 'interest',
   };
@@ -1412,6 +1412,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-48'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-49'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
