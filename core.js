@@ -653,7 +653,7 @@
           this.waveT = WAVE_LEN; this.holding = true;
           // Verstärkung, solange das Mutterschiff lebt: keine Verschnaufpause
           this.reinfT += dt;
-          if (this.reinfT >= 3.5 && !frozen && this.enemies.length < 35) {
+          if (this.wave >= 20 && this.reinfT >= 3.5 && !frozen && this.enemies.length < 35) {
             this.reinfT = 0;
             for (let i = 0; i < 2 + Math.floor(this.wave / 30); i++) this.spawn(Math.random() < 0.3 ? 'runner' : 'grunt');
           }
@@ -671,7 +671,7 @@
           else {
             e.hoverT += dt;
             e.a = e.a0 + Math.sin(e.hoverT * 0.45) * 0.35;
-            if (e.hoverT > 40) e.enraged = true;
+            if (e.hoverT > (this.wave < 30 ? 65 : 40)) e.enraged = true;
             if (e.laser > 0) {
               e.laser -= dt;
               if (e.laserDmg >= e.maxHp * 0.06) { e.laser = 0; if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'broken', x: p.x, y: p.y, t: 0 }); } }
