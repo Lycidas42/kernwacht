@@ -1244,7 +1244,11 @@
   });
   $('pauseBtn').addEventListener('click', () => { if (runAlive()) setPaused(!paused); });
   // Nächste Welle vorzeitig rufen (mit Energie-Bonus für die gesparte Zeit)
-  function callWave() { if (!runAlive() || paused || current || !run.canCallWave()) { A.play('hurt'); return; } run.callWave(); $('callBtn').disabled = true; }
+  function callWave() { if (!runAlive() || paused || current || !run.canCallWave()) { A.play('hurt'); return; } run.callWave(); }
+  // Automatisch rufen: sobald die aktuelle Welle komplett gestartet ist (kein Mutterschiff)
+  function syncAutoCall() { const on = !!meta.autoCall; $$('.autocall').forEach(b => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.textContent = on ? 'Wellen automatisch rufen: an' : 'Wellen automatisch rufen: aus'; }); $('callBtn').classList.toggle('auto', on); }
+  $$('.autocall').forEach(b => b.addEventListener('click', () => { meta.autoCall = !meta.autoCall; save(); syncAutoCall(); A.play('click'); }));
+  syncAutoCall();
   $('callBtn').addEventListener('click', callWave);
   $$('#ctrl [data-speed]').forEach(b => b.addEventListener('click', () => {
     speed = +b.dataset.speed; meta.speed = speed;
@@ -1285,7 +1289,7 @@
     if (live) {
       let left = realDt * speed;
       while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
-      autoT += realDt; if (autoT > 0.3) { autoT = 0; autoBuy(); }
+      autoT += realDt; if (autoT > 0.3) { autoT = 0; autoBuy(); if (meta.autoCall && !run.queue.length && run.canCallWave()) run.callWave(); }
       dpsT += realDt * speed; if (dpsT >= 1) { dpsT = 0; sampleDps(); }
       for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); }
       run.fx.length = 0;

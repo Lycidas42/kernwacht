@@ -92,6 +92,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #ctrl { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 5px; }
 #ctrl .callbtn { color: var(--energy); border-color: color-mix(in srgb, var(--energy) 55%, var(--line)); font-family: var(--font-ui); font-weight: 600; letter-spacing: .03em; }
 #ctrl .callbtn:disabled { opacity: .35; }
+#ctrl .callbtn.auto { background: color-mix(in srgb, var(--energy) 18%, transparent); }
 #ctrl [aria-pressed="true"] { color: var(--void); background: var(--core); border-color: var(--core); }
 #menuBtn { position: absolute; left: 10px; bottom: 10px; font-family: var(--font-ui); letter-spacing: .05em; }
 
@@ -510,7 +511,7 @@ textarea { resize: vertical; min-height: 70px; }
       <li><b>Orbitalschlag</b> lädt sich durch Abschüsse auf. Antippen, dann ins Feld tippen.</li>
       <li><b>Stasis und Überladung</b> schaltest du im Labor frei.</li>
       <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. N ruft die nächste Welle.</li>
-      <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, sobald alle Schiffe gestartet sind. Die gesparte Zeit bringt Bonus-Energie.</li>
+      <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, auch mehrfach hintereinander (nicht während eines Mutterschiffs). Die gesparte Zeit bringt Bonus-Energie. Im Pausenmenü lässt sich das automatische Rufen einschalten.</li>
     </ul>
     <div class="verline"><span id="verTxt"></span><button class="mini" id="updBtn">Nach Update suchen</button></div>
     <ul class="fair">
@@ -541,6 +542,7 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec fb-btn">Feedback</button>
       </div>
       <button class="sec" id="catchBtn" aria-pressed="true">Weiterlaufen im Hintergrund: an</button>
+      <button class="sec autocall" aria-pressed="false">Wellen automatisch rufen: aus</button>
       <button class="sec warn" id="endBtn">Lauf beenden</button>
       <button class="sec" id="admBtn" hidden>Admin</button>
     </div>

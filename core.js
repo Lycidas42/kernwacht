@@ -522,13 +522,17 @@
 
     // Nächste Welle vorzeitig rufen: geht, sobald alle Schiffe der aktuellen Welle gestartet sind und kein Mutterschiff lebt.
     // Bonus: Energie für die übersprungene Wartezeit
-    canCallWave() { return !this.dead && !this.holding && !(this.queue || []).length && !this.bossAlive() && this.waveT < WAVE_LEN; }
+    // Jederzeit möglich, außer solange ein Mutterschiff lebt oder noch kommt. Noch nicht gestartete Schiffe der
+    // aktuellen Welle bleiben in der Warteschlange, es wird also nichts übersprungen; mehrfaches Rufen stapelt Wellen.
+    canCallWave() { return !this.dead && !this.bossAlive(); }
     callWave() {
       if (!this.canCallWave()) return 0;
-      const left = (WAVE_LEN - this.waveT) / WAVE_LEN, bonus = waveEnergy(this.wave) * this.s.loot * 0.3 * left;
+      const left = Math.max(0, (WAVE_LEN - this.waveT) / WAVE_LEN), bonus = waveEnergy(this.wave) * this.s.loot * 0.3 * left;
       this.energy += bonus; this.called = (this.called || 0) + 1;
       if (this.fxOn && bonus > 0) this.fx.push({ k: 'bonus', t: 0, v: bonus });
+      const rest = (this.queue || []).slice();
       this.nextWave();
+      if (rest.length) { this.queue = rest.concat(this.queue); this.spawnGap = SPAWN_LEN / this.queue.length; this.spawnT = 0; }
       return bonus;
     }
     bossAlive() { return this.enemies.some(e => e.type === 'boss' && e.hp > 0) || (this.queue || []).includes('boss'); }
@@ -1234,6 +1238,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-27'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-28'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, DRILL_MAX, STORE_MAX, mineState, mineRate, mineCapH, mineCap, drillCost, storeCost, planetOpen, mineTick, mineCollect, mineUpgrade, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
