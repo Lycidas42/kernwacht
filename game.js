@@ -96,6 +96,10 @@
       ex.push(`<div class="loot r${d.rar}">Beute: <b>${M.name}</b> (${C.RARITY[d.rar].name}) · ${txt}</div>`);
     }
     for (const u of C.ROADMAP) if (u.w > recBefore && u.w <= C.record(meta)) ex.unshift(`<div class="unl">Freigeschaltet: ${u.label}</div>`);
+    // Beute-Übersicht: wie viele Mutterschiffe, warum ggf. keine Module
+    if (res.noLoot === 'admin') ex.push('<div>Lauf mit Admin-Eingriffen: Mutterschiffe lassen keine Module fallen.</div>');
+    else if (res.bossKills && !(res.loot || []).length) ex.push(`<div>${res.bossKills} Mutterschiff${res.bossKills === 1 ? '' : 'e'} besiegt, diesmal ohne Beute. Beim nächsten steigt die Chance um ${10 * (meta.dry || 0)} Prozentpunkte.</div>`);
+    else if (!res.bossKills && C.record(meta) >= C.MODULES_AT && res.wave < 30) ex.push('<div>Module gibt es erst von Mutterschiffen ab Welle 30.</div>');
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderRoadmap();
     if ((res.loot || []).length) A.play('loot');
@@ -588,7 +592,7 @@
       slots.appendChild(d);
     }
     const bw = Math.max(30, Math.floor(Math.max(meta.best, 30) / 10) * 10);
-    $('dropLine').innerHTML = `Beutechance je Mutterschiff: <b>${Math.round(C.dropChance(30) * 100)} %</b> bei Welle 30 · <b>${Math.round(C.dropChance(bw) * 100)} %</b> bei Welle ${bw} · bis <b>85 %</b>. Höhere Wellen bringen auch seltenere Module.`;
+    $('dropLine').innerHTML = `Beutechance je Mutterschiff ab Welle 30: <b>${Math.round(C.dropChance(30) * 100)} %</b> bei Welle 30 · <b>${Math.round(C.dropChance(bw) * 100)} %</b> bei Welle ${bw} · bis <b>85 %</b>. Das erste Mutterschiff ab Welle 30 bringt immer ein Modul. Jedes Mutterschiff ohne Beute erhöht die Chance beim nächsten um 10 Prozentpunkte${meta.dry ? ` (gerade <b>+${10 * meta.dry} %</b>)` : ''}. Läufe mit Admin-Eingriffen, Herausforderungen und Tagesläufe bringen keine Module.`;
     const list = $('modList'); list.innerHTML = '';
     for (const sec of C.SECTORS) {
       const types = Object.keys(C.MODULES).filter(t => C.MODULES[t].sector === sec.n);

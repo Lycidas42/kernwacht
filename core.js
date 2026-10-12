@@ -399,7 +399,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'mode', 'waveType', 'waveMod'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
       const o = {}; keep.forEach(k => (o[k] = this[k]));
       o.enemies = this.enemies.map(e => Object.assign({}, e));
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -622,9 +622,16 @@
           this.crystals += P.cBoss * waveCrystals(this.wave) * this.s.crysMult;
           const modOk = Math.max(record(this.meta), this.wave) >= MODULES_AT;
           const first = !this.meta.modules || !Object.keys(this.meta.modules).length;
-          if (!this.admin && !this.mode && modOk && (first && !this.loot.length || Math.random() < dropChance(this.wave))) {
-            const drop = rollModule(this.wave); this.loot.push(drop);
-            if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'loot', x: p.x, y: p.y, t: 0, drop }); }
+          if (modOk) this.bossKills = (this.bossKills || 0) + 1;
+          if (this.admin) this.noLoot = 'admin';
+          else if (this.mode) this.noLoot = 'mode';
+          else if (modOk) {
+            // Pech-Ausgleich: jedes Mutterschiff ohne Beute erhöht die Chance beim nächsten um 10 Prozentpunkte
+            const ch = dropChance(this.wave) + 0.1 * (this.meta.dry || 0);
+            if (first && !this.loot.length || Math.random() < ch) {
+              const drop = rollModule(this.wave); this.loot.push(drop); this.meta.dry = 0;
+              if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'loot', x: p.x, y: p.y, t: 0, drop }); }
+            } else this.meta.dry = (this.meta.dry || 0) + 1;
           }
           if (e.sector === 4) { const p = this.pos(e); for (let i = -1; i <= 1; i++) this.spawnAt('splitter', p.x + i * 30, p.y, {}); }
         }
@@ -1022,7 +1029,7 @@
       const loot = this.loot.map(d => ({ type: d.type, rar: d.rar, result: addModule(m, d) }));
       // Kristalle pro Stunde (Spielzeit) als gleitender Mittelwert: Grundlage für den Offline-Ertrag
       if (!this.admin && this.time > 90) { const cur = c / this.time * 3600; m.cph = m.cph ? m.cph * 0.6 + cur * 0.4 : cur; }
-      return { crystals: c, wave: this.wave, kills: this.kills, time: this.time, newBest, milestones: ms, loot };
+      return { crystals: c, wave: this.wave, kills: this.kills, time: this.time, newBest, milestones: ms, loot, bossKills: this.bossKills || 0, noLoot: this.noLoot || null };
     }
     // Sonderläufe: keine Bestwelle, keine Meilensteine, keine Module
     finishMode() {
@@ -1090,6 +1097,6 @@
   }
   const enemyHp = (type, w) => ENEMY[type].hp * hpScale(w);
 
-  const VERSION = 'kw-17'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-18'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
