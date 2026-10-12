@@ -4,7 +4,7 @@
   'use strict';
   const cfg = root.KW_CONFIG || {};
   const configured = !!(cfg.supabaseUrl && cfg.supabaseKey);
-  const LIB = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
+  const LIB = 'vendor/supabase-js-2.117.2.js'; // offizielle Bibliothek, im Repo abgelegt (offline verfügbar)
   let client = null, channel = null, count = 0, me = { name: '', wave: 0 };
   const listeners = [];
 

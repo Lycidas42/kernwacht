@@ -28,7 +28,9 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `game.js` | Steuerung: Zustand, Bedienung, Speichern, Werte-Tab, Admin-Modus, Spielschleife |
 | `render.js` | Grafik (Canvas 2D): Schiffe, Kanone, Minen, Effekte |
 | `audio.js` | Soundeffekte und Musik, komplett per WebAudio erzeugt |
-| `online.js`, `config.js`, `supabase.sql` | Online-Anzeige und Bestenliste (optional, siehe unten) |
+| `online.js`, `config.js` | Online-Anzeige und Bestenliste (optional, siehe unten) |
+| `supabase/` | Supabase-Projekt: `config.toml` und Datenbank-Migrationen (GitHub-Integration) |
+| `vendor/` | `supabase-js`, die offizielle Client-Bibliothek |
 | `sw.js` | Service Worker: online immer neueste Version, offline aus dem Cache |
 | `manifest.webmanifest`, `icons/` | PWA-Metadaten und App-Icons |
 | `tools/sim.js` | Simuliert Läufe mit einem Kauf-Bot und gibt die erreichten Wellen aus |
@@ -62,14 +64,18 @@ node tools/tune.js 300 240        # bis zu 300 Varianten, max. 240 s
 
 ## Online: Spieler online und Bestenliste
 
-Läuft über [Supabase](https://supabase.com) (kostenloser Tarif reicht). Ohne Eintrag in `config.js` bleibt alles aus.
+Läuft über [Supabase](https://supabase.com) (kostenloser Tarif reicht). Ohne Eintrag in `config.js` bleibt alles aus. Die Datenbank-Struktur liegt als Migration in `supabase/migrations/` und wird über die GitHub-Integration automatisch eingespielt.
 
 1. Projekt anlegen, Region **Frankfurt (eu-central-1)** wählen.
-2. Im **SQL Editor** den Inhalt von `supabase.sql` ausführen (legt die Bestenliste und die Tages-Bestenliste an).
-3. Unter **Project Settings → API** die *Project URL* und den *anon public* Key in `config.js` eintragen.
-4. `sw.js`: `VERSION` erhöhen, committen, pushen.
+2. **Project Settings → Integrations → GitHub**: Repo `Lycidas42/kernwacht` verbinden, Working directory `.`, Produktionszweig `main`, **Deploy to production** an. Automatische Preview-Branches aus (kosten pro Stunde und fallen nicht unter die Ausgabengrenze).
+3. Unter **Project Settings → API Keys** die *Project URL* und den **Publishable Key** (`sb_publishable_…`) in `config.js` eintragen. Nie den Secret Key.
+4. `sw.js`: `VERSION` erhöhen, committen, pushen. Der Push spielt auch die Migration ein.
 
-Der anon Key ist für den Browser gedacht und darf öffentlich sein. Jeder Spieler bekommt eine zufällige ID im Browser; Spielstände mit Admin-Eingriffen werden nicht eingetragen.
+Neue Tabellen oder Regeln: neue Datei `supabase/migrations/<Zeitstempel>_<name>.sql` anlegen und pushen. Ohne GitHub-Integration lässt sich eine Migration auch von Hand im **SQL Editor** ausführen.
+
+Die Client-Bibliothek `supabase-js` liegt unter `vendor/` und wird erst geladen, wenn Zugangsdaten eingetragen sind.
+
+Der Publishable Key ist für den Browser gedacht und darf öffentlich sein; geschützt wird über Row Level Security. Jeder Spieler bekommt eine zufällige ID im Browser; Spielstände mit Admin-Eingriffen werden nicht eingetragen.
 
 ## Admin-Modus
 

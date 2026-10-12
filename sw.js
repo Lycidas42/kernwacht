@@ -2,7 +2,7 @@
 // Strategie: eigene Dateien "network first" (online immer die neueste Version),
 // offline aus dem Cache. Schriften "cache first".
 // Bei jeder Veröffentlichung VERSION erhöhen, damit alte Caches verschwinden.
-const VERSION = 'kw-13';
+const VERSION = 'kw-14';
 const APP = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const APP = [
   './render.js',
   './online.js',
   './game.js',
+  './vendor/supabase-js-2.117.2.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',

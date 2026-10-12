@@ -3,5 +3,5 @@
 // Leer lassen = Online-Funktionen bleiben aus, das Spiel läuft komplett lokal.
 window.KW_CONFIG = {
   supabaseUrl: '',   // z. B. 'https://abcdefgh.supabase.co'
-  supabaseKey: '',   // der "anon public" Key aus Project Settings → API
+  supabaseKey: '',   // der Publishable Key (sb_publishable_…) aus Project Settings → API Keys
 };
