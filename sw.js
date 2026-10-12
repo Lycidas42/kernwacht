@@ -1,8 +1,9 @@
 // Kernwacht Service Worker
 // Strategie: eigene Dateien "network first" (online immer die neueste Version),
 // offline aus dem Cache. Schriften "cache first".
-// Bei jeder Veröffentlichung VERSION erhöhen, damit alte Caches verschwinden.
-const VERSION = 'kw-50';
+// Bei jeder Veröffentlichung VERSION erhöhen (Schema 0.x.y), damit alte Caches verschwinden.
+const VERSION = '0.3.1';
+const CACHE = 'kw-' + VERSION;
 const APP = [
   './',
   './index.html',
@@ -23,7 +24,7 @@ const APP = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('message', e => { if (e.data === 'skip') self.skipWaiting(); });
@@ -31,7 +32,7 @@ self.addEventListener('message', e => { if (e.data === 'skip') self.skipWaiting(
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== 'kw-fonts').map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'kw-fonts').map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -58,7 +59,7 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     fetch(req, { cache: 'no-cache' })
       .then(res => {
-        if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
         return res;
       })
       .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))

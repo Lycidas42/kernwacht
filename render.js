@@ -212,12 +212,15 @@
       const sk = (meta && meta.skin) || {}, c = C.SKIN.color.find(x => x.id === sk.color) || C.SKIN.color[0];
       return { col: c.col || `hsl(${Math.round((t * 0.04) % 360)},100%,66%)`, turret: sk.turret || 'hex', base: sk.base || 'bunker', deco: new Set(sk.deco || []) };
     }
+    // Kanone samt Anbauten kleiner zeichnen, damit sie den Schutzwall nicht ausfüllt
+    const RIG = 0.78;
+    function drawRig(run, t) { ctx.save(); ctx.scale(RIG, RIG); drawSideGuns(run, t); drawCannon(run, t); drawModulePods(run, t); ctx.restore(); }
     function drawCannon(run, t) {
       const s = run.s, L = id => run.L(id), V = cannonLook(run), SK = skinLook(run.meta, t), CC = SK.col;
       const hpL = V.hp, arL = V.armor, rgL = V.regen, dmgL = V.dmg;
       const over = run.overActive;
       const coreCol = over ? PAL.heat : CC;
-      const w = 34 + Math.min(16, hpL * 0.25);
+      const w = 28 + Math.min(8, hpL * 0.15); // Fundament schmaler als der Schutzwall
       ctx.save(); ctx.scale(0.95, 0.95);
 
       // Schutzkuppel (Panzerung)
@@ -319,7 +322,7 @@
       // Turm (dreht sich zum Ziel)
       ctx.save(); ctx.translate(0, -6); ctx.rotate(run.aim + Math.PI / 2);
       const n = 1 + s.multi;
-      const len = Math.min(C.WALL_R - 14, 26 + Math.min(14, L('range') * 0.4 + V.dmg * 0.12)); // Spitze bleibt hinter dem Schutzwall
+      const len = Math.min((C.WALL_R - 11) / (RIG * 0.95) - 6, 34 + Math.min(20, L('range') * 0.5 + V.dmg * 0.15)); // Spitze bleibt hinter dem Schutzwall
       const thick = 5 + Math.min(5, dmgL * 0.06);
       const gap = thick * 2.2, back = recoil * 6;
       const heat = over ? 0.6 + 0.4 * Math.sin(t * 0.03) : 0;
@@ -571,9 +574,7 @@
         if (Math.random() < 0.5) parts.push({ x: b.x, y: b.y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 0.35, t: 0, c: '#cff6ff', k: 'spark' });
       }
       drawWall(run, t);
-      drawSideGuns(run, t);
-      drawCannon(run, t);
-      drawModulePods(run, t);
+      drawRig(run, t);
 
       // Partikel
       for (const p of parts) {
@@ -930,7 +931,7 @@
       const dpr = Math.min(2, window.devicePixelRatio || 1), cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
       if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
-      const k = Math.min(r.width / 170, r.height / 120);
+      const k = Math.min(r.width / 170, r.height / 120) / RIG * 0.95;
       ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * r.width / 2, dpr * (r.height * 0.72));
       // Boden und Rasterbogen
       ctx.beginPath(); ctx.moveTo(-90, 24); ctx.lineTo(90, 24); ctx.strokeStyle = PAL.line; ctx.lineWidth = 1; ctx.stroke();
@@ -938,7 +939,7 @@
       const aim0 = run.aim; run.aim = -Math.PI / 2 + Math.sin(t * 0.0006) * 0.55;
       const ph = (t * 0.0012) % 1; recoil = Math.max(0, 1 - ph * 5); flash = Math.max(0, 0.35 - ph * 3);
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      drawSideGuns(run, t); drawCannon(run, t); drawModulePods(run, t);
+      drawRig(run, t);
       run.aim = aim0; parts.length = 0;
     }
 
