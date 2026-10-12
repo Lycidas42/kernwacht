@@ -455,6 +455,7 @@
   window.addEventListener('keydown', ev => {
     if (ev.target && ev.target.tagName === 'INPUT') return;
     if (ev.key === 'Escape') { armed = null; return; }
+    if ((ev.key === 'n' || ev.key === 'N') && !current) { callWave(); return; }
     const id = KEYS[ev.key];
     if (!id || current || paused) return;
     if (!canArm(id)) { A.play('hurt'); return; }
@@ -1221,6 +1222,9 @@
     endRun(true);
   });
   $('pauseBtn').addEventListener('click', () => { if (runAlive()) setPaused(!paused); });
+  // Nächste Welle vorzeitig rufen (mit Energie-Bonus für die gesparte Zeit)
+  function callWave() { if (!runAlive() || paused || current || !run.canCallWave()) { A.play('hurt'); return; } run.callWave(); $('callBtn').disabled = true; }
+  $('callBtn').addEventListener('click', callWave);
   $$('#ctrl [data-speed]').forEach(b => b.addEventListener('click', () => {
     speed = +b.dataset.speed; meta.speed = speed;
     $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
@@ -1291,6 +1295,7 @@
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
       $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';
       $('wavebar').classList.toggle('hold', !!run.holding);
+      $('callBtn').disabled = !run.canCallWave();
       updateAbilities();
       refresh();
       if (O.configured) O.setStatus(meta.name, run.wave);

@@ -84,6 +84,8 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 /* Steuerung im Feld */
 .fbtn { min-width: 36px; height: 30px; padding: 0 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--deck) 88%, transparent); border-radius: 4px; font-family: var(--font-num); font-size: .76rem; color: var(--ink-dim); }
 #ctrl { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 5px; }
+#ctrl .callbtn { color: var(--energy); border-color: color-mix(in srgb, var(--energy) 55%, var(--line)); font-family: var(--font-ui); font-weight: 600; letter-spacing: .03em; }
+#ctrl .callbtn:disabled { opacity: .35; }
 #ctrl [aria-pressed="true"] { color: var(--void); background: var(--core); border-color: var(--core); }
 #menuBtn { position: absolute; left: 10px; bottom: 10px; font-family: var(--font-ui); letter-spacing: .05em; }
 
@@ -424,6 +426,7 @@ textarea { resize: vertical; min-height: 70px; }
     </div>
     <div id="hint" hidden>Tippe ins Feld, um den Schlag zu setzen</div>
     <div id="ctrl">
+      <button class="fbtn callbtn" id="callBtn" aria-label="Nächste Welle jetzt rufen" title="Nächste Welle jetzt rufen (Taste N)">Welle ▸▸</button>
       <button class="fbtn" id="pauseBtn" aria-label="Pause">II</button>
       <button class="fbtn" data-speed="1" aria-pressed="true">1×</button>
       <button class="fbtn" data-speed="2" aria-pressed="false">2×</button>
@@ -498,7 +501,8 @@ textarea { resize: vertical; min-height: 70px; }
       <li><b>Gegner antippen</b> markiert ihn 6 Sekunden lang als Ziel.</li>
       <li><b>Orbitalschlag</b> lädt sich durch Abschüsse auf. Antippen, dann ins Feld tippen.</li>
       <li><b>Stasis und Überladung</b> schaltest du im Labor frei.</li>
-      <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus.</li>
+      <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. N ruft die nächste Welle.</li>
+      <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, sobald alle Schiffe gestartet sind. Die gesparte Zeit bringt Bonus-Energie.</li>
     </ul>
     <ul class="fair">
       <li>Kein Shop, keine Werbung, keine Premiumwährung</li>
