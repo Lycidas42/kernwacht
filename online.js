@@ -70,7 +70,7 @@
 
   // ---------- Profil und Werte ----------
   const profile = (name, avatar, color) => rpc('kw_profile', { p_name: name || '', p_avatar: avatar | 0, p_color: color | 0 });
-  const stats = s => rpc('kw_stats', { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0 });
+  const stats = s => rpc('kw_stats', { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0 });
   const daily = (day, wave, kills) => rpc('kw_daily', { p_day: day, p_wave: wave | 0, p_kills: kills | 0 });
 
   // Highscores: Spalte der Spielertabelle, nur Spieler mit Namen

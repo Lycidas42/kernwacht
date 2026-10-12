@@ -173,6 +173,22 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .stat .v { font-family: var(--font-num); font-size: 1.05rem; margin-top: 2px; }
 .actions { display: grid; gap: 8px; }
 .actions.two { grid-template-columns: 1fr 1fr; }
+.actions.three { grid-template-columns: 1fr 1fr 1fr; }
+.ach-btn { border-color: color-mix(in srgb, var(--energy) 55%, var(--line)); color: var(--energy); }
+#achList { display: grid; gap: 8px; }
+.ach { border: 1px solid var(--line); border-left: 2px solid var(--energy); border-radius: 4px; padding: 9px 12px; display: grid; gap: 5px; }
+.ach.done { border-left-color: var(--heal); }
+.ach .hd { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ach .hd b { font-size: .95rem; }
+.ach .pips { display: flex; gap: 3px; }
+.ach .pips i { width: 9px; height: 9px; border-radius: 2px; border: 1px solid var(--line); }
+.ach .pips i.on { background: var(--energy); border-color: var(--energy); box-shadow: 0 0 5px var(--energy); }
+.ach.done .pips i.on { background: var(--heal); border-color: var(--heal); box-shadow: 0 0 5px var(--heal); }
+.ach .ln { display: flex; justify-content: space-between; gap: 8px; font-size: .78rem; color: var(--ink-dim); }
+.ach .ln b { color: var(--ink); font-family: var(--font-num); }
+.ach .bar i { background: var(--energy); }
+.ach.done .bar i { background: var(--heal); }
+.ach small { font-size: .7rem; color: var(--ink-dim); }
 .cta { height: 48px; border-radius: 4px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; background: var(--core); color: var(--void); box-shadow: 0 0 20px color-mix(in srgb, var(--core) 40%, transparent); }
 .sec { height: 44px; border-radius: 4px; border: 1px solid var(--line); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .sec[aria-pressed="false"] { color: var(--ink-dim); }
@@ -423,7 +439,7 @@ textarea { resize: vertical; min-height: 70px; }
 .chal .hd b { font-size: .98rem; }
 .chal .hd span { font-family: var(--font-num); font-size: .74rem; color: var(--ink-dim); }
 .chal .rule { font-size: .8rem; color: var(--ink-dim); line-height: 1.4; }
-.tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .tier { border: 1px solid var(--line); border-radius: 3px; padding: 5px 6px; font-size: .72rem; text-align: center; color: var(--ink-dim); }
 .tier b { display: block; font-family: var(--font-num); font-size: .84rem; color: var(--ink); }
 .tier.ok { border-color: var(--heal); color: var(--heal); background: color-mix(in srgb, var(--heal) 8%, transparent); }
@@ -540,9 +556,10 @@ textarea { resize: vertical; min-height: 70px; }
         <button class="sec mod-btn" id="modBtn">Module</button>
         <button class="sec fus-btn" id="fusBtn">Kernfusion</button>
       </div>
-      <div class="actions two">
+      <div class="actions three">
         <button class="sec daily-btn" id="dailyBtn">Tageslauf</button>
         <button class="sec chal-btn" id="chalBtn">Challenge</button>
+        <button class="sec ach-btn" id="achBtn">Erfolge</button>
       </div>
       <div class="actions two">
         <button class="sec hang-btn" id="hangBtn">Hangar</button>
@@ -695,7 +712,8 @@ textarea { resize: vertical; min-height: 70px; }
       <button data-lb="day" aria-selected="false">Tageslauf</button>
       <button data-lb="kills" aria-selected="false">Abschüsse</button>
       <button data-lb="fus" aria-selected="false">Fusionen</button>
-      <button data-lb="chal" aria-selected="false">Herausf.</button>
+      <button data-lb="chal" aria-selected="false">Challenge</button>
+      <button data-lb="ach" aria-selected="false">Erfolge</button>
     </div>
     <p id="lbStatus">Wird geladen …</p>
     <table class="lb"><tbody id="lbBody"></tbody></table>
@@ -731,10 +749,19 @@ textarea { resize: vertical; min-height: 70px; }
   </div>
 </div>
 
+<div class="ov" id="ach" hidden>
+  <div class="card">
+    <h2>Erfolge</h2>
+    <p>Erfolge sammeln sich nebenbei. Jede Stufe gibt einen dauerhaften Bonus, der auch jede Kernfusion überdauert.</p>
+    <p class="bonusline" id="achSum"></p>
+    <div id="achList"></div>
+    <div class="actions"><button class="sec" id="achClose">Zurück</button></div>
+  </div>
+</div>
 <div class="ov" id="chal" hidden>
   <div class="card">
-    <h2>Herausforderungen</h2>
-    <p>Läufe mit Handicap ab Welle 1. Jede erreichte Stufe gibt einen dauerhaften Bonus, der auch jede Kernfusion überdauert. Sprungtor, Bestwelle und Module zählen hier nicht, Kristalle gibt es zur Hälfte.</p>
+    <h2>Challenge</h2>
+    <p>Läufe mit Handicap. Jede der 8 Stufen vervielfacht einen dauerhaften Bonus, der auch jede Kernfusion überdauert. Du startest am zuletzt erreichten Stufenziel mit passender Startenergie. Bestwelle und Module zählen hier nicht, Kristalle gibt es zur Hälfte.</p>
     <p class="bonusline" id="chalBonus"></p>
     <div id="chalList"></div>
     <div class="actions"><button class="sec" id="chalClose">Zurück</button></div>

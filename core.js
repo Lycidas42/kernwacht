@@ -71,7 +71,7 @@
   const flv = (m, id) => (m.flv && m.flv[id]) || 0;
   function fragmentsFor(meta) {
     if (meta.best < FUSION_MIN) return 0;
-    return Math.floor(P.fragK * Math.pow(meta.best / 10, P.fragExp) * (1 + 0.2 * flv(meta, 'f_frag')));
+    return Math.floor(P.fragK * Math.pow(meta.best / 10, P.fragExp) * (1 + 0.2 * flv(meta, 'f_frag')) * achBonus(meta).frag);
   }
   // Fusion: Labor, Kristalle und Bestwelle zurücksetzen, Kernfragmente gutschreiben
   function fuse(meta) {
@@ -313,18 +313,72 @@
   // ---------- Herausforderungen: Läufe mit Handicap, Stufen bringen dauerhafte Boni (überdauern die Fusion) ----------
   const CHAL_AT = 40, DAILY_AT = 15;
   const CHALLENGES = [
-    { id: 'nodef', name: 'Ohne Abwehr',  rule: 'Keine Abwehr-Upgrades im Lauf: Hülle, Reparatur, Panzerung, Rückstoß, Schockwelle und Klingen bleiben gesperrt.', goals: [15, 25, 40], bonus: 'hp',   step: 0.05, bname: 'Strukturpunkte' },
-    { id: 'fast',  name: 'Hetzjagd',     rule: 'Alle Gegner fliegen doppelt so schnell.', goals: [30, 50, 70], bonus: 'rate', step: 0.04, bname: 'Feuerrate' },
-    { id: 'mines', name: 'Nur Minen',    rule: 'Kanone, Nebenkanonen, Schockwelle, Klingen und Orbitalschlag schweigen. Nur der Minenwerfer arbeitet, er ist von Beginn an aktiv.', goals: [30, 50, 70], bonus: 'crys', step: 0.08, bname: 'Kristalle' },
-    { id: 'glass', name: 'Glaskanone',   rule: 'Nur ein Viertel der Strukturpunkte und keine Reparatur.', goals: [20, 40, 55], bonus: 'dmg',  step: 0.04, bname: 'Schaden' },
-    { id: 'poor',  name: 'Sparflamme',   rule: 'Abschüsse bringen nur halb so viel Energie, keine Wellenprämie.', goals: [20, 40, 60], bonus: 'loot', step: 0.06, bname: 'Energie' },
+    // 8 Stufen je Challenge; jede Stufe multipliziert den Bonus (×(1+step))
+    { id: 'nodef', name: 'Ohne Abwehr',  rule: 'Keine Abwehr-Upgrades im Lauf: Hülle, Reparatur, Panzerung, Rückstoß, Schockwelle und Klingen bleiben gesperrt.', goals: [15, 25, 40, 55, 70, 90, 110, 135], bonus: 'hp',   step: 0.06, bname: 'Strukturpunkte' },
+    { id: 'fast',  name: 'Hetzjagd',     rule: 'Alle Gegner fliegen doppelt so schnell.', goals: [30, 50, 70, 90, 110, 130, 150, 175], bonus: 'rate', step: 0.05, bname: 'Feuerrate' },
+    { id: 'mines', name: 'Nur Minen',    rule: 'Kanone, Nebenkanonen, Schockwelle, Klingen und Orbitalschlag schweigen. Nur der Minenwerfer arbeitet, er ist von Beginn an aktiv.', goals: [30, 50, 70, 90, 110, 130, 150, 175], bonus: 'crys', step: 0.08, bname: 'Kristalle' },
+    { id: 'glass', name: 'Glaskanone',   rule: 'Nur ein Viertel der Strukturpunkte und keine Reparatur.', goals: [20, 40, 55, 70, 90, 110, 130, 155], bonus: 'dmg',  step: 0.06, bname: 'Schaden' },
+    { id: 'poor',  name: 'Sparflamme',   rule: 'Abschüsse bringen nur halb so viel Energie, keine Wellenprämie.', goals: [20, 40, 60, 80, 100, 120, 145, 170], bonus: 'loot', step: 0.07, bname: 'Energie' },
   ];
   const CHAL_BY_ID = {}; CHALLENGES.forEach(c => (CHAL_BY_ID[c.id] = c));
-  const chalTier = (m, id) => (m.chal && m.chal[id] && m.chal[id].tier) || 0;
+  // Stufe aus der Bestwelle (so wachsen alte Spielstände automatisch in neue Stufen hinein)
+  const chalTier = (m, id) => { const st = m.chal && m.chal[id]; if (!st) return 0; const C_ = CHAL_BY_ID[id]; return Math.max(st.tier || 0, C_ ? C_.goals.filter(g => (st.best || 0) >= g).length : 0); };
+  const chalMult = (c, tier) => Math.pow(1 + c.step, tier);
   function chalBonus(m) {
     const b = { hp: 1, rate: 1, dmg: 1, loot: 1, crys: 1 };
-    for (const c of CHALLENGES) b[c.bonus] += c.step * chalTier(m, c.id);
+    for (const c of CHALLENGES) b[c.bonus] *= chalMult(c, chalTier(m, c.id));
     return b;
+  }
+  // Einstieg in eine Challenge: am zuletzt erreichten Stufenziel (Bosswellen werden um eine Welle vorgezogen)
+  function chalStart(m, id) {
+    const C_ = CHAL_BY_ID[id], t = chalTier(m, id); if (!C_ || !t) return 1;
+    let w = C_.goals[Math.min(t, C_.goals.length) - 1]; if (w % 10 === 0) w -= 1; return Math.max(1, w);
+  }
+
+  // ---------- Erfolge: mehrere Stufen je Erfolg, jede Stufe gibt einen dauerhaften Bonus ----------
+  const ACH = [
+    { id: 'waves',  name: 'Wellenbrecher',   what: 'Wellen überstanden',     goals: [100, 500, 2e3, 1e4, 5e4, 2e5],        bonus: 'dmg',    step: 0.02, bname: 'Schaden' },
+    { id: 'best',   name: 'Vorstoß',          what: 'Höchste Welle',          goals: [25, 50, 100, 150, 200, 300, 400],     bonus: 'hp',     step: 0.03, bname: 'Strukturpunkte' },
+    { id: 'kills',  name: 'Jägerschreck',     what: 'Abschüsse',              goals: [1e3, 1e4, 1e5, 1e6, 1e7],             bonus: 'rate',   step: 0.02, bname: 'Feuerrate' },
+    { id: 'crys',   name: 'Kristallhort',     what: 'Kristalle verdient',     goals: [1e4, 1e6, 1e8, 1e10, 1e12],           bonus: 'crys',   step: 0.03, bname: 'Kristalle' },
+    { id: 'bosses', name: 'Mutterschiffjäger', what: 'Mutterschiffe besiegt', goals: [10, 50, 250, 1e3, 5e3],               bonus: 'boss',   step: 0.04, bname: 'Schaden gegen Mutterschiffe' },
+    { id: 'mods',   name: 'Sammler',          what: 'Modulkopien gesammelt',  goals: [10, 25, 50, 75, 100],                 bonus: 'mod',    step: 0.02, bname: 'Modulwirkung' },
+    { id: 'fus',    name: 'Kernschmelze',     what: 'Kernfusionen',           goals: [1, 3, 5, 10, 20],                     bonus: 'frag',   step: 0.04, bname: 'Fusionsfragmente' },
+    { id: 'daily',  name: 'Stammgast',        what: 'Tagesläufe',             goals: [5, 20, 50, 100],                      bonus: 'loot',   step: 0.03, bname: 'Energie' },
+    { id: 'ore',    name: 'Tiefbohrer',       what: 'Erz abgebaut',           goals: [1e4, 1e6, 1e8, 1e10],                 bonus: 'mine',   step: 0.05, bname: 'Förderung' },
+    { id: 'strike', name: 'Feuer von oben',   what: 'Orbitalschläge',         goals: [50, 250, 1e3, 5e3],                   bonus: 'strike', step: 0.03, bname: 'Orbitalschaden' },
+    { id: 'chal',   name: 'Bezwinger',        what: 'Challenge-Stufen',       goals: [5, 10, 20, 30, 40],                   bonus: 'all',    step: 0.01, bname: 'auf alles' },
+  ];
+  const statOf = m => (m.stat = m.stat || { waves: Math.round(record(m) * (m.runs || 0) * 0.5), bosses: 0, strikes: 0 });
+  function achVal(m, id) {
+    const st = statOf(m);
+    switch (id) {
+      case 'waves': return st.waves || 0;
+      case 'best': return record(m);
+      case 'kills': return Math.floor(m.kills || 0);
+      case 'crys': return Math.floor(m.totalCrystals || 0);
+      case 'bosses': return st.bosses || 0;
+      case 'mods': return Object.values(m.modules || {}).reduce((a, x) => a + (x.copies || 0), 0);
+      case 'fus': return m.fusions || 0;
+      case 'daily': return m.dailyCount || 0;
+      case 'ore': return Math.floor((m.mine && m.mine.mined) || 0);
+      case 'strike': return st.strikes || 0;
+      case 'chal': return CHALLENGES.reduce((a, c) => a + chalTier(m, c.id), 0);
+    }
+    return 0;
+  }
+  const achTier = (m, a) => { const v = achVal(m, a.id); return a.goals.filter(g => v >= g).length; };
+  function achBonus(m) {
+    const b = { dmg: 1, hp: 1, rate: 1, crys: 1, boss: 1, mod: 1, frag: 1, loot: 1, mine: 1, strike: 1, all: 1 };
+    for (const a of ACH) b[a.bonus] += a.step * achTier(m, a);
+    return b;
+  }
+  const achPoints = m => ACH.reduce((s, a) => s + achTier(m, a), 0);
+  // Dauerhafte Boni aus Challenges und Erfolgen zusammen
+  function permBonus(m) {
+    const c = chalBonus(m), a = achBonus(m);
+    return { hp: c.hp * a.hp * a.all, rate: c.rate * a.rate * a.all, dmg: c.dmg * a.dmg * a.all, loot: c.loot * a.loot * a.all, crys: c.crys * a.crys * a.all,
+      boss: a.boss, mod: a.mod, strike: a.strike, frag: a.frag, mine: a.mine };
   }
   // Was eine Herausforderung im Lauf sperrt
   const BLOCK = {
@@ -394,10 +448,13 @@
       this.holding = false; this.god = false; this.ring = null;
       this.rockets = []; this.bolts = []; this.rocketT = 0; this.cryoT = 0; this.reinfT = 0; this.loot = []; this.novaT = 0;
       this.startWave = 1;
-      const S = this.mode ? 1 : Math.min(opts.startWave || 1, maxStartWave(meta));
+      const chalS = this.mode && this.mode.kind === 'chal' ? (opts.chalStart != null ? Math.min(opts.chalStart, chalStart(meta, this.mode.id)) : chalStart(meta, this.mode.id)) : 1;
+      const S = this.mode ? chalS : Math.min(opts.startWave || 1, maxStartWave(meta));
       if (S > 1) {
         const jb = jumpBonus(meta, S);
-        this.energy += jb.energy; this.crystals += jb.crystals;
+        // Challenge-Einstieg: Startenergie wie beim Wellensprung, aber keine Kristalle
+        if (this.mode) this.energy += jb.energy * (this.rule === 'poor' ? 0.5 : 1);
+        else { this.energy += jb.energy; this.crystals += jb.crystals; }
         this.wave = S - 1; this.startWave = S; this.skipCrystalsOnce = true;
       }
       this.recalc();
@@ -442,7 +499,7 @@
       const s = {};
       const F = id => flv(this.meta, id);
       s.fusion = Math.pow(P.fCore, F('f_core'));
-      const cb = chalBonus(this.meta); s.chal = cb;
+      const cb = permBonus(this.meta); s.chal = cb;
       s.dmg = P.pDmg * Math.pow(P.lvDmg, L('dmg')) * Math.pow(1.08, M('m_dmg')) * s.fusion * cb.dmg;
       s.rate = 1.2 * (1 + 0.05 * L('rate')) * (1 + 0.03 * M('m_rate')) * cb.rate;
       s.range = 150 + 5 * L('range');
@@ -481,7 +538,7 @@
       s.mineMax = mi ? 4 + Math.floor(mi / 5) : 0;
       s.mineTrig = 16;
       s.mineBlast = 45 + mi;
-      s.strikeDmg = s.dmg * 25;
+      s.strikeDmg = s.dmg * 25 * cb.strike;
       // Raketenwerfer (links): langsam, zielsuchend, großer Explosionsradius
       const ro = L('rocket');
       s.rocketCd = ro ? Math.max(2.6, 5 - 0.08 * ro) : 0;
@@ -496,7 +553,7 @@
       s.cryoRange = s.range; // gleiche Reichweite wie die Hauptkanone
       // Ausgerüstete Module
       const mod = {}; const eq = this.meta.equip || [];
-      for (const t of eq) { const m = this.meta.modules && this.meta.modules[t]; if (m) mod[t] = moduleValue(m); }
+      for (const t of eq) { const m = this.meta.modules && this.meta.modules[t]; if (m) mod[t] = moduleValue(m) * cb.mod; }
       s.mod = mod;
       if (mod.scanner) s.crit += mod.scanner;
       if (mod.plating) s.armor = Math.min(P.arCap + 0.1, s.armor + 0.05);
@@ -552,6 +609,7 @@
         const bonus = this.waveBonusAmount();
         if (bonus > 0) { this.energy += bonus; if (this.fxOn) this.fx.push({ k: 'bonus', t: 0, v: bonus }); }
       }
+      if (this.wave > 0 && !this.admin) statOf(this.home).waves++;
       this.skipCrystalsOnce = false;
       this.wave++;
       this.waveT = 0;
@@ -622,6 +680,7 @@
     credit(tag, v) { if (v > 0) this.modDealt[tag] = (this.modDealt[tag] || 0) + v; }
     hurt(e, d, crit, src, tag) {
       if (e.hp <= 0) return 0;
+      if (e.type === 'boss' && this.s.chal && this.s.chal.boss > 1) d *= this.s.chal.boss;
       if (e.shieldUntil && e.shieldUntil > this.time) { d *= 0.15; if (this.fxOn && Math.random() < 0.25) { const p = this.pos(e); this.fx.push({ k: 'shieldhit', x: p.x, y: p.y, t: 0 }); } }
       if (e.type === 'bulwark' && e.guard > 0) {
         // Frontschild fängt Schaden ab, bis es bricht
@@ -650,6 +709,7 @@
           const modOk = Math.max(record(this.meta), this.wave) >= MODULES_AT;
           const first = !this.meta.modules || !Object.keys(this.meta.modules).length;
           if (modOk) this.bossKills = (this.bossKills || 0) + 1;
+          if (!this.admin) statOf(this.home).bosses++;
           if (this.admin) this.noLoot = 'admin';
           else if (this.mode) this.noLoot = 'mode';
           else if (modOk) {
@@ -714,7 +774,7 @@
     }
     strike(x, y) {
       if (this.charge < 1 || this.dead) return false;
-      this.charge = 0;
+      this.charge = 0; if (!this.admin) statOf(this.home).strikes++;
       for (const e of this.enemies) {
         if (e.hp <= 0) continue;
         const p = this.pos(e);
@@ -1226,7 +1286,7 @@
     for (const P_ of PLANETS) {
       const pl = M.p[P_.id]; if (!pl || !pl.d) continue;
       const dt = Math.max(0, Math.min(48 * 3600e3, now - (pl.t || now))), h = dt / 3600e3;
-      const cap = mineCap(pl, P_), rate = mineRate(pl.d, P_);
+      const cap = mineCap(pl, P_), rate = mineRate(pl.d, P_) * achBonus(m).mine;
       if (pl.dr) {
         // Mit Drohnen läuft die Förderung (bis zur Drohnenleistung) direkt ins Lager
         const fl = rate * h * droneRate(pl.dr), take = Math.floor(fl + (pl.carry || 0));
@@ -1260,7 +1320,7 @@
   // Lasermeißel: Bohrkraft lädt sich auf, jeder Treffer bringt Erz (etwa 20 s Förderung bzw. ein Grundwert)
   const tapMax = lz => 20 + 2 * lz;
   const tapRegen = 0.25; // pro Sekunde
-  function tapYield(m, P_) { const pl = plOf(m, P_.id); return Math.max(1, (Math.max(mineRate(pl.d, P_), 45) / 30) * (1 + 0.5 * (pl.lz - 1)) * trv(P_, 'tap')); }
+  function tapYield(m, P_) { const pl = plOf(m, P_.id); return Math.max(1, (Math.max(mineRate(pl.d, P_), 45) / 30) * (1 + 0.5 * (pl.lz - 1)) * trv(P_, 'tap') * achBonus(m).mine); }
   function tapEnergy(m, now) { const M = mineState(m); now = now || Date.now(); const T = M.tap = M.tap || { e: 20, t: now }; const mx = Math.max(...PLANETS.map(P_ => tapMax((M.p[P_.id] || {}).lz || 0))); T.e = Math.min(mx, T.e + (now - T.t) / 1000 * tapRegen); T.t = now; return T; }
   function mineTap(m, id, rnd) {
     const P_ = PDEF(id), pl = plOf(m, id); if (!P_ || !planetOpen(m, P_) || !pl.lz) return null;
@@ -1352,6 +1412,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-47'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  const VERSION = 'kw-48'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

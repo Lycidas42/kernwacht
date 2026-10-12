@@ -44,7 +44,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -58,6 +58,7 @@
     if (name === 'fusion') renderFusion();
     if (name === 'modules') renderModules();
     if (name === 'chal') renderChal();
+    if (name === 'ach') renderAch();
     if (name === 'daily') renderDaily();
     if (name === 'profile') renderProfile();
     if (name === 'feedback') renderFeedback();
@@ -167,7 +168,7 @@
 
   // ---------- Herausforderungen ----------
   const chalOf = id => C.CHALLENGES.find(c => c.id === id);
-  const chalBonusTxt = (c, t) => '+' + Math.round(c.step * 100 * t) + ' % ' + c.bname;
+  const chalBonusTxt = (c, t) => '+' + Math.round((C.chalMult(c, t) - 1) * 100) + ' % ' + c.bname;
   function renderChal() {
     const tot = C.CHALLENGES.map(c => ({ c, t: C.chalTier(meta, c.id) })).filter(x => x.t);
     $('chalBonus').innerHTML = tot.length ? 'Deine Boni: ' + tot.map(x => `<b>${chalBonusTxt(x.c, x.t)}</b>`).join(' · ') : 'Noch keine Boni. Die erste Stufe ist meist schnell geschafft.';
@@ -177,14 +178,46 @@
       el.className = 'chal' + (t >= c.goals.length ? ' done' : '');
       el.innerHTML = `<div class="hd"><b>${c.name}</b><span>${st && st.best ? 'Bestes: Welle ' + st.best : 'noch nicht gespielt'}</span></div>
         <div class="rule">${c.rule}</div>
-        <div class="tiers">${c.goals.map((g, i) => `<div class="tier${i < t ? ' ok' : ''}"><b>Welle ${g}</b>${i < t ? '✓ ' : ''}+${Math.round(c.step * 100)} % ${c.bname}</div>`).join('')}</div>
-        <button class="go">${runAlive() ? 'Erst laufenden Lauf beenden' : t >= c.goals.length ? 'Nochmal spielen' : 'Starten'}</button>`;
+        <div class="tiers">${c.goals.map((g, i) => `<div class="tier${i < t ? ' ok' : ''}"><b>${i < t ? '✓ ' : ''}Welle ${g}</b>${chalBonusTxt(c, i + 1).replace(' ' + c.bname, '')}</div>`).join('')}</div>
+        <div class="rule">Bonus: ${c.bname}${t ? ', jetzt <b>' + chalBonusTxt(c, t).replace(' ' + c.bname, '') + '</b>' : ''}. ${C.chalStart(meta, c.id) > 1 ? 'Start bei Welle ' + C.chalStart(meta, c.id) + ' mit passender Startenergie.' : 'Start bei Welle 1.'}</div>
+        <button class="go">${runAlive() ? 'Erst laufenden Lauf beenden' : (t >= c.goals.length ? 'Nochmal spielen' : 'Starten') + (C.chalStart(meta, c.id) > 1 ? ' ab Welle ' + C.chalStart(meta, c.id) : '')}</button>`;
       const b = el.querySelector('.go'); b.disabled = runAlive();
       b.addEventListener('click', () => { if (!runAlive()) startRun({ kind: 'chal', id: c.id }); });
       list.appendChild(el);
     }
   }
   $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
+
+  // ---------- Erfolge ----------
+  const big = n => n >= 1e12 ? fmt(n) : n >= 1e4 ? fmt(n) : String(n);
+  const achBonusTxt = (a, t) => '+' + Math.round(a.step * 100 * t) + ' % ' + a.bname;
+  function renderAch() {
+    const pts = C.achPoints(meta), max = C.ACH.reduce((s, a) => s + a.goals.length, 0);
+    $('achSum').innerHTML = `<b>${pts}</b> von ${max} Stufen erreicht`;
+    const list = $('achList'); list.innerHTML = '';
+    for (const a of C.ACH) {
+      const v = C.achVal(meta, a.id), t = C.achTier(meta, a), nx = a.goals[t], prev = t ? a.goals[t - 1] : 0;
+      const frac = nx ? Math.max(0, Math.min(1, (v - prev) / (nx - prev))) : 1;
+      const el = document.createElement('div'); el.className = 'ach' + (nx ? '' : ' done');
+      el.innerHTML = `<div class="hd"><b>${a.name}</b><span class="pips">${a.goals.map((_, i) => `<i class="${i < t ? 'on' : ''}"></i>`).join('')}</span></div>
+        <div class="ln"><span>${a.what}: <b>${big(v)}</b>${nx ? ' / ' + big(nx) : ''}</span><span>${t ? '<b>' + achBonusTxt(a, t) + '</b>' : a.bname}</span></div>
+        <div class="bar"><i style="width:${frac * 100}%"></i></div>
+        <small>${nx ? 'Nächste Stufe: ' + achBonusTxt(a, t + 1) : 'Alle Stufen erreicht'}</small>`;
+      list.appendChild(el);
+    }
+  }
+  $$('.ach-btn').forEach(b => b.addEventListener('click', () => show('ach')));
+  $('achClose').addEventListener('click', home);
+  // Neue Erfolgsstufen melden (alle paar Sekunden geprüft)
+  function checkAch(silent) {
+    const seen = meta.achSeen = meta.achSeen || {}, news = [];
+    for (const a of C.ACH) { const t = C.achTier(meta, a); if (t > (seen[a.id] || 0)) { if (seen[a.id] != null || silent === false) news.push({ a, t }); seen[a.id] = t; } }
+    if (news.length === 1) toast(`<b>Erfolg: ${news[0].a.name} · Stufe ${news[0].t}</b><br>${achBonusTxt(news[0].a, news[0].t)}`, 4000);
+    else if (news.length > 1) toast(`<b>${news.length} neue Erfolgsstufen</b><br>${news.map(x => x.a.name + ' ' + x.t).join(' · ')}`, 5000);
+    if (news.length) { A.play('loot'); submitScore(); }
+  }
+  if (!meta.achSeen) { checkAch(true); const n = C.achPoints(meta); if (n) setTimeout(() => toast(`<b>Neu: Erfolge</b><br>Du hast schon ${n} Erfolgsstufen. Im Menü unter „Erfolge“.`, 6000), 1500); }
+  setInterval(() => checkAch(), 2500);
   $('chalClose').addEventListener('click', home);
 
   // ---------- Tageslauf ----------
@@ -799,14 +832,15 @@
   const chalSum = () => C.CHALLENGES.reduce((a, c) => a + C.chalTier(meta, c.id), 0);
   function submitScore() {
     if (!O.configured || meta.adminTainted) return;
-    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum() }).catch(() => {});
+    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta) }).catch(() => {});
   }
   const BOARDS = {
     rec:   { col: 'best_ever', name: 'Rekord',            fmt: r => 'Welle ' + r.best_ever },
     day:   { name: 'Tageslauf' },
     kills: { col: 'kills',     name: 'Abschüsse',         fmt: r => fmt(r.kills) },
     fus:   { col: 'fusions',   name: 'Fusionen',          fmt: r => r.fusions + '×' },
-    chal:  { col: 'chal',      name: 'Herausforderungen', fmt: r => r.chal + ' Stufen' },
+    chal:  { col: 'chal',      name: 'Challenge',         fmt: r => r.chal + ' Stufen' },
+    ach:   { col: 'ach',       name: 'Erfolge',           fmt: r => r.ach + ' Stufen' },
   };
   function boardRows(data, val) {
     const me = O.myId();
@@ -858,7 +892,7 @@
     $('pColors').innerHTML = AV_COLORS.map((c, i) => `<button class="colbtn" data-col="${i}" aria-pressed="${i === pDraft.color}" style="--c:${c}" aria-label="Farbe ${i + 1}"></button>`).join('');
     $$('#pAvatars [data-av]').forEach(b => b.addEventListener('click', () => { pDraft.avatar = +b.dataset.av; A.play('click'); renderProfile(); }));
     $$('#pColors [data-col]').forEach(b => b.addEventListener('click', () => { pDraft.color = +b.dataset.col; A.play('click'); renderProfile(); }));
-    $('pStats').innerHTML = [['Rekord', C.record(meta)], ['Läufe', fmt(meta.runs)], ['Abschüsse', fmt(meta.kills)], ['Fusionen', meta.fusions || 0], ['Herausforderungs-Stufen', chalSum()], ['Kristalle gesamt', fmt(meta.totalCrystals || 0)]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+    $('pStats').innerHTML = [['Rekord', C.record(meta)], ['Läufe', fmt(meta.runs)], ['Abschüsse', fmt(meta.kills)], ['Fusionen', meta.fusions || 0], ['Challenge-Stufen', chalSum()], ['Erfolgsstufen', C.achPoints(meta)], ['Kristalle gesamt', fmt(meta.totalCrystals || 0)]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
     renderCloud();
   }
   $('pName').addEventListener('input', () => { pDraft.name = $('pName').value; });

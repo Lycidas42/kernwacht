@@ -2,7 +2,9 @@
 
 Idle Tower Defense im Neon-Look. Deine Kanone steht unten, Raumschiffe greifen von oben an. Wenn sie fällt, gibt es Kristalle für dauerhafte Upgrades im Labor.
 
-Herausforderungen (ab Rekordwelle 40): Läufe mit Handicap wie „Ohne Abwehr“, „Hetzjagd“ oder „Nur Minen“. Jede erreichte Stufe gibt einen dauerhaften Bonus, der auch die Kernfusion überdauert.
+Challenges (ab Rekordwelle 40): Läufe mit Handicap wie „Ohne Abwehr“, „Hetzjagd“ oder „Nur Minen“, je 8 Stufen. Jede Stufe vervielfacht einen dauerhaften Bonus (×1,05 bis ×1,08), der auch die Kernfusion überdauert. Gestartet wird am zuletzt erreichten Stufenziel mit passender Startenergie.
+
+Erfolge: 11 Erfolge mit je 4–7 Stufen (Wellen, Höchste Welle, Abschüsse, Kristalle, Mutterschiffe, Modulkopien, Fusionen, Tagesläufe, Erz, Orbitalschläge, Challenge-Stufen). Jede Stufe gibt einen kleinen dauerhaften Bonus. Erfolgsstufen erscheinen im Profil und in der Bestenliste.
 
 Tageslauf (ab Rekordwelle 15): Alle spielen am selben Tag dieselben Wellen mit derselben Standard-Ausrüstung und einer Tages-Besonderheit. Der erste Versuch am Tag bringt einen Kristallbonus, der beste Versuch kommt in die Tages-Bestenliste. Das ist die Vorstufe zum späteren Battle Mode.
 
