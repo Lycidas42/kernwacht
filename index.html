@@ -109,6 +109,9 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .ab svg { position: absolute; inset: 0; transform: rotate(-90deg); }
 .ab .key { position: absolute; top: -4px; left: -4px; width: 18px; height: 18px; border-radius: 3px; background: var(--deck-2); border: 1px solid var(--line); font: 600 .62rem/16px var(--font-num); color: var(--ink-dim); display: none; }
 @media (hover: hover) and (pointer: fine) { .ab .key { display: block; } }
+.ab .smode { position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); padding: 0 5px; border-radius: 6px; background: var(--deck-2); border: 1px solid var(--line); font: 600 .5rem/12px var(--font-num); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); white-space: nowrap; }
+.ab.aim .smode { color: #ff8ac0; border-color: #ff4f9a; }
+#ab-strike { -webkit-touch-callout: none; user-select: none; }
 .ab .lbl { position: relative; font-size: .54rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); line-height: 1.15; text-align: center; font-weight: 600; }
 .ab.ready .lbl { color: var(--ink); }
 .ab.ready { filter: drop-shadow(0 0 6px var(--glow, var(--hostile))); }
@@ -470,7 +473,7 @@ textarea { resize: vertical; min-height: 70px; }
     <div id="abil">
       <button class="ab" id="ab-strike" style="--glow: var(--hostile)" aria-label="Orbitalschlag">
         <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#17143a" stroke="#3a3474" stroke-width="3"/><circle class="ring" cx="28" cy="28" r="25" fill="none" stroke="#ff4f9a" stroke-width="3" stroke-linecap="round" stroke-dasharray="157.1" stroke-dashoffset="157.1"/></svg>
-        <span class="key">1</span><span class="lbl">Orbital<br><span class="st">0 %</span></span>
+        <span class="key">1</span><span class="smode">Auto</span><span class="lbl">Orbital<br><span class="st">0 %</span></span>
       </button>
       <button class="ab" id="ab-freeze" style="--glow: var(--frost)" aria-label="Stasisfeld" hidden>
         <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#17143a" stroke="#3a3474" stroke-width="3"/><circle class="ring" cx="28" cy="28" r="25" fill="none" stroke="#9fe8ff" stroke-width="3" stroke-linecap="round" stroke-dasharray="157.1" stroke-dashoffset="0"/></svg>

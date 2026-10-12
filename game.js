@@ -451,6 +451,8 @@
     if (armed && !canArm(armed)) armed = null;
     sb.classList.toggle('ready', ch >= 1); sb.classList.toggle('armed', armed === 'strike');
     sb.querySelector('.st').textContent = armed === 'strike' ? 'Ziel' : ch >= 1 ? 'bereit' : Math.floor(ch * 100) + ' %';
+    const sm = sb.querySelector('.smode'), aim = meta.strikeMode === 'aim';
+    if (sm.textContent !== (aim ? 'Ziel' : 'Auto')) { sm.textContent = aim ? 'Ziel' : 'Auto'; sb.classList.toggle('aim', aim); }
     $('hint').hidden = !armed;
     if (armed) $('hint').textContent = HINT[armed];
     for (const id of ['freeze', 'over']) {
@@ -472,8 +474,28 @@
     if (run.useAbility(id)) { A.play(id); return true; }
     return false;
   }
-  // Knöpfe: Orbitalschlag braucht ein Ziel, Stasis und Überladung lösen sofort aus
-  $('ab-strike').addEventListener('click', () => { if (!canArm('strike')) return; armed = armed === 'strike' ? null : 'strike'; A.play('click'); });
+  // Orbitalschlag: „Auto“ schlägt sofort auf das Mutterschiff bzw. die dichteste Ballung, „Ziel“ wartet auf einen Klick ins Feld.
+  // Lange drücken (oder Rechtsklick) wechselt den Modus.
+  function strikeNow() {
+    if (!canArm('strike')) { A.play('hurt'); return; }
+    if (meta.strikeMode === 'aim') { armed = armed === 'strike' ? null : 'strike'; A.play('click'); return; }
+    armed = null;
+    const p = run.strikeTarget();
+    if (!p) { toast('Kein Ziel in Sicht.', 1500); return; }
+    fire('strike', p);
+  }
+  function toggleStrikeMode() {
+    meta.strikeMode = meta.strikeMode === 'aim' ? 'auto' : 'aim'; armed = null; save(); A.play('click');
+    toast(meta.strikeMode === 'aim' ? '<b>Orbitalschlag: Ziel wählen</b><br>Knopf, dann Klick ins Feld. Lange drücken wechselt zurück.' : '<b>Orbitalschlag: automatisch</b><br>Trifft sofort das Mutterschiff oder die dichteste Gruppe. Lange drücken wechselt.', 3000);
+    updateAbilities();
+  }
+  {
+    const sb = $('ab-strike'); let lpT = 0, lpDone = false;
+    sb.addEventListener('pointerdown', () => { lpDone = false; clearTimeout(lpT); lpT = setTimeout(() => { lpDone = true; toggleStrikeMode(); }, 550); });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) sb.addEventListener(ev, () => clearTimeout(lpT));
+    sb.addEventListener('contextmenu', ev => { ev.preventDefault(); if (!lpDone) toggleStrikeMode(); lpDone = true; });
+    sb.addEventListener('click', () => { if (lpDone) { lpDone = false; return; } strikeNow(); });
+  }
   $('ab-freeze').addEventListener('click', () => { armed = null; fire('freeze'); });
   $('ab-over').addEventListener('click', () => { armed = null; fire('over'); });
   // Tastatur: 1–5 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. Esc bricht ab.
@@ -484,6 +506,7 @@
     if ((ev.key === 'n' || ev.key === 'N') && !current) { callWave(); return; }
     const id = KEYS[ev.key];
     if (!id || current || paused) return;
+    if (id === 'strike') { strikeNow(); return; }
     if (!canArm(id)) { A.play('hurt'); return; }
     armed = armed === id ? null : id; A.play('click');
   });

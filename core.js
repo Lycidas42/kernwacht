@@ -697,6 +697,21 @@
       if (best) { this.focus = best; this.focusUntil = this.time + 6; }
       return best;
     }
+    // Bester Punkt für den Orbitalschlag: das Mutterschiff, sonst die Stelle mit den meisten Lebenspunkten im Wirkradius
+    strikeTarget() {
+      const alive = this.enemies.filter(e => e.hp > 0 && e.dist < FIELD_H + 40);
+      if (!alive.length) return null;
+      const boss = alive.filter(e => e.type === 'boss').sort((a, b) => a.dist - b.dist)[0];
+      if (boss) return this.pos(boss);
+      let best = null, bv = -1;
+      for (const c of alive) {
+        const pc = this.pos(c); let v = 0;
+        for (const e of alive) { const p = this.pos(e); if (Math.hypot(p.x - pc.x, p.y - pc.y) <= STRIKE_R + e.r) v += e.hp; }
+        v *= 1 + 0.5 * Math.max(0, 1 - c.dist / 300); // nähere Ballungen bevorzugen
+        if (v > bv) { bv = v; best = pc; }
+      }
+      return best;
+    }
     strike(x, y) {
       if (this.charge < 1 || this.dead) return false;
       this.charge = 0;
@@ -1337,6 +1352,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-41'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-42'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
