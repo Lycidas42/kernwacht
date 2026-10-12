@@ -1425,9 +1425,9 @@
   $('cv').addEventListener('pointerdown', ev => {
     if (!runAlive() || paused || current) return;
     const w = R.toWorld(ev.clientX, ev.clientY);
-    if (armed) { if (fire(armed, w)) armed = null; }
+    if (armed) { if (armed === 'strike') run.markAt(w.x, w.y); if (fire(armed, w)) armed = null; }
     // Orbitalschlag geladen: Tippen ins Feld schlägt genau dort ein (außer im Modus „nur Knopf“)
-    else if (meta.strikeMode !== 'btn' && canArm('strike')) fire('strike', w);
+    else if (meta.strikeMode !== 'btn' && canArm('strike')) { run.markAt(w.x, w.y); fire('strike', w); }
     else if (run.markAt(w.x, w.y)) A.play('mark');
   });
 
