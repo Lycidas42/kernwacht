@@ -530,9 +530,15 @@
           ctx.fillStyle = SHIP[e.type]; ctx.fillRect(p.x - w / 2, hy, w * Math.max(0, e.hp / e.maxHp), 3);
         }
         if (run.focus === e) {
-          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(t * 0.004);
-          for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(e.r * 1.5 + 6, -4); ctx.lineTo(e.r * 1.5 + 10, 0); ctx.lineTo(e.r * 1.5 + 6, 4); glow(PAL.range, 1.6); }
+          // Markiertes Ziel: Leitstrahl von der Kanone, pulsierender Ring, Eckklammern und Schriftzug
+          const MK = '#ffd23f', R0 = e.r * 1.5 + 8, pul = 0.5 + 0.5 * Math.sin(t * 0.008);
+          ctx.save(); ctx.setLineDash([2, 6]); ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(p.x, p.y); ctx.strokeStyle = MK; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.2; ctx.stroke(); ctx.restore(); ctx.globalAlpha = 1;
+          ctx.save(); ctx.translate(p.x, p.y);
+          ctx.beginPath(); ctx.arc(0, 0, R0 + 3 * pul, 0, 7); glow(MK, 1.2, 0.35 + 0.35 * pul);
+          ctx.rotate(t * 0.002);
+          for (let i = 0; i < 4; i++) { ctx.rotate(Math.PI / 2); ctx.beginPath(); ctx.moveTo(R0 + 2, -7); ctx.lineTo(R0 + 7, -7); ctx.lineTo(R0 + 7, 7); ctx.lineTo(R0 + 2, 7); glow(MK, 2.2); }
           ctx.restore();
+          ctx.font = `700 9px ${FONT_UI()}`; ctx.textAlign = 'center'; ctx.fillStyle = MK; ctx.fillText('ZIEL', p.x, p.y + R0 + 18);
         }
       }
       // Projektile

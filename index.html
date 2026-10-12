@@ -78,6 +78,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .pill.mine b { color: var(--core); font-weight: 600; }
 .pill.online { color: var(--heal); }
 .pill.online::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--heal); margin-right: 5px; box-shadow: 0 0 6px var(--heal); vertical-align: .1em; }
+.pill.markpill { color: #1a1430; background: #ffd23f; border-color: #ffd23f; font-weight: 700; letter-spacing: .06em; }
 .pill.admin { color: var(--void); background: var(--energy); border-color: var(--energy); font-weight: 700; }
 .bar { height: 6px; background: var(--deck-2); border-radius: 3px; overflow: hidden; position: relative; }
 .bar i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px; }
@@ -482,6 +483,7 @@ textarea { resize: vertical; min-height: 70px; }
         <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>
         <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
         <div class="pill num k" id="runK">0</div>
+        <div class="pill markpill" id="markPill" hidden>◎ Ziel</div>
       </div>
       <div class="bar" id="wavebar"><i></i></div>
       <div class="hpline"><span>Kanone</span><span class="num" id="hpTxt">0 / 0</span></div>

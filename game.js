@@ -1425,12 +1425,13 @@
   $('cv').addEventListener('pointerdown', ev => {
     if (!runAlive() || paused || current) return;
     const w = R.toWorld(ev.clientX, ev.clientY);
-    if (armed) { if (armed === 'strike') run.markAt(w.x, w.y); if (fire(armed, w)) armed = null; }
+    if (armed) { if (armed === 'strike') run.markAt(w.x, w.y, true); if (fire(armed, w)) armed = null; }
     // Orbitalschlag geladen: Tippen ins Feld schlägt genau dort ein (außer im Modus „nur Knopf“)
-    else if (meta.strikeMode !== 'btn' && canArm('strike')) { run.markAt(w.x, w.y); fire('strike', w); }
+    else if (meta.strikeMode !== 'btn' && canArm('strike')) { run.markAt(w.x, w.y, true); fire('strike', w); }
     else if (run.markAt(w.x, w.y)) A.play('mark');
   });
 
+  const MARK_NAME = { grunt: 'Jäger', runner: 'Flitzer', brute: 'Koloss', shooter: 'Kanonenboot', boss: 'Mutterschiff', mender: 'Heiler', bulwark: 'Schildträger', splitter: 'Splitter', shard: 'Splitter', phantom: 'Phantom', bomb: 'Bombe' };
   // ---------- Schleife ----------
   const SOUND_OF = { loot: 'loot', rlaunch: 'rlaunch', cryo: 'cryo', laserhit: 'laserhit', nova: 'nova', eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
   let last = performance.now(), uiT = 0, saveT = 0, autoT = 0, dpsT = 0, lastShots = 0;
@@ -1466,6 +1467,7 @@
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
+      { const mp = $('markPill'), f = run.focus && run.focus.hp > 0 ? run.focus : null; mp.hidden = !f; if (f) mp.textContent = '◎ ' + (MARK_NAME[f.type] || 'Ziel'); }
       $('myDmg').textContent = fmt(run.s.gunDmg);
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));
       $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
