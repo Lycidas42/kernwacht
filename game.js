@@ -522,8 +522,8 @@
       $('recTxt').innerHTML = `Empfehlung: <b>${rec.u.name}</b> (${fmt(rec.cost)} Kristalle). ${rec.why}${can ? '' : ` Spare noch ${fmt(rec.cost - meta.crystals)} Kristalle.`}`;
       $('recBuy').disabled = !can; $('recBuy').textContent = can ? 'Empfohlen kaufen' : 'Spare für ' + rec.u.name;
     } else { $('recTxt').textContent = 'Alles ausgebaut.'; $('recBuy').disabled = true; }
-    $('cheapBuy').disabled = !ch || meta.crystals < ch.cost;
-    $('cheapBuy').textContent = ch ? 'Günstigstes: ' + ch.u.name : 'Günstigstes kaufen';
+    $('cheapBuy').disabled = !rec || meta.crystals < rec.cost;
+    $('cheapBuy').textContent = 'Alle Empfehlungen kaufen';
     for (const u of C.META_UPG) {
       if (!C.gateOk(meta, u.id)) {
         if (u.req) continue;
@@ -557,7 +557,18 @@
     A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab();
   }
   $('recBuy').addEventListener('click', () => labBuy(C.recommend));
-  $('cheapBuy').addEventListener('click', () => labBuy(C.cheapest));
+  // So lange die jeweils beste Empfehlung kaufen, wie die Kristalle reichen
+  $('cheapBuy').addEventListener('click', () => {
+    const got = {}; let n = 0, spent = 0;
+    for (let guard = 0; guard < 2000; guard++) {
+      const o = C.recommend(meta); if (!o || meta.crystals < o.cost) break;
+      const c = o.cost; if (!C.metaBuy(meta, o.u)) break;
+      got[o.u.name] = (got[o.u.name] || 0) + 1; n++; spent += c;
+    }
+    if (!n) return;
+    A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab();
+    toast(`<b>${n} Labor-Upgrades gekauft</b> für ${fmt(spent)} Kristalle<br>` + Object.entries(got).map(([k, v]) => `${k} +${v}`).join(' · '), 5000);
+  });
 
   // ---------- Menü, Sprungtor ----------
   function renderMenu() {
