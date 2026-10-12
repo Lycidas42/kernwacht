@@ -430,7 +430,7 @@
   ];
   let statEls = null;
   // Schadensbeitrag eines Moduls: gemessene DPS (10 s) und Anteil am Gesamtschaden des Laufs
-  const NO_DMG = { leech: 'mehr Energie', echo: 'kürzere Abklingzeiten', crysmod: 'mehr Kristalle' };
+  const NO_DMG = { leech: 'mehr Energie', echo: 'kürzere Abklingzeiten', crysmod: 'weniger Gegner-LP' };
   function modShare(t, total) {
     if (NO_DMG[t]) return `<em class="mshare off">kein Schaden · ${NO_DMG[t]}</em>`;
     const v = (run.modDealt && run.modDealt[t]) || 0, share = total ? v / total : 0;

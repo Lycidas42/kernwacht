@@ -126,7 +126,7 @@
     leech:     { sector: 4, name: 'Energieleck',       desc: v => `+${pctS(v)} Energie pro Abschuss, Orbitalschlag lädt ${pctS(v / 2)} schneller`, base: P0.modK.leech },
     nova:      { sector: 4, name: 'Nova-Impuls',       desc: v => `Alle 12 s eine Nova mit ${v.toFixed(1).replace('.', ',')}× Kanonenschaden auf alle Schiffe in Reichweite (sofort, wenn die Hülle unter 30 % fällt)`, base: P0.modK.nova },
     echo:      { sector: 5, name: 'Echo',              desc: v => `−${pctS(Math.min(0.6, v))} Abklingzeit, +${pctS(v / 2)} Dauer von Stasis und Überladung. Wirkt auch in Challenges`, base: 0.1 },
-    crysmod:   { sector: 5, name: 'Kristallresonator', desc: v => `+${pctS(v)} Kristalle. In Challenges haben Gegner ${pctS(1 - 1 / (1 + 0.4 * v))} weniger Lebenspunkte`, base: 0.15 },
+    crysmod:   { sector: 5, name: 'Leerenresonator',   desc: v => `Gegner haben ${pctS(1 - 1 / (1 + 0.17 * v))} weniger Lebenspunkte, in Challenges ${pctS(1 - 1 / (1 + 0.4 * v))}`, base: 0.15 },
   };
   const RARITY = [
     { id: 0, name: 'gewöhnlich', mult: 1 },
@@ -579,7 +579,6 @@
       if (mod.scanner) s.crit += mod.scanner;
       if (mod.plating) s.armor = Math.min(P.arCap + 0.1, s.armor + 0.05);
       if (mod.leech) s.loot *= 1 + mod.leech;
-      if (mod.crysmod) s.crysMult *= 1 + mod.crysmod;
       if (this.rule === 'glass') s.regen = 0;
       s.noGun = this.rule === 'mines';
       if (s.noGun) { s.rocketCd = 0; s.cryoCd = 0; s.shockCd = 0; s.blades = 0; }
@@ -675,7 +674,7 @@
       // Frühe Mutterschiffe schwächer, volle Stärke ab etwa Welle 60
       const wm = type === 'boss' || type === 'bomb' || !this.waveMod ? { hp: 1, rw: 1, dmg: 1, spd: 1, big: 1 } : this.waveMod;
       const tw = this.twist();
-      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1) * (this.isChal ? P.chalHp / (1 + 0.4 * ((this.s && this.s.mod && this.s.mod.crysmod) || 0)) : 1);
+      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1) * (this.isChal ? P.chalHp : 1) / (1 + (this.isChal ? 0.4 : 0.17) * ((this.s && this.s.mod && this.s.mod.crysmod) || 0)); // Leerenresonator
       const spdK = (this.rule === 'fast' ? 2 : 1) * ((tw && tw.spd) || 1);
       const e = {
         id: ++this.uid, type, a: Math.atan2(y0, x0), dist: Math.hypot(x0, y0), hp, maxHp: hp,
@@ -1468,6 +1467,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.4.6'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.4.7'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
