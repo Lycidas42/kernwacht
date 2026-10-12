@@ -407,6 +407,7 @@
       s.cryoDmg = s.dmg * (0.3 + 0.025 * cr);
       s.cryoSlow = Math.min(0.6, 0.3 + 0.01 * cr);
       s.cryoR = 40 + cr;
+      s.cryoRange = s.range * 1.35 + 20; // reicht weiter als die Hauptkanone
       // Ausgerüstete Module
       const mod = {}; const eq = this.meta.equip || [];
       for (const t of eq) { const m = this.meta.modules && this.meta.modules[t]; if (m) mod[t] = moduleValue(m); }
@@ -803,7 +804,8 @@
       if (s.cryoCd) {
         this.cryoT += dt;
         if (this.cryoT >= s.cryoCd) {
-          const cand = this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.range && !this.cloaked(e) && !(e.slowUntil > this.time + 0.5)).sort((a, b) => a.dist - b.dist);
+          // Ziel: am weitesten entfernte, noch nicht verlangsamte Schiffe im Anflug (am Wall bringt Bremsen nichts)
+          const cand = this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.cryoRange && e.dist > WALL_R + 40 && !this.cloaked(e) && !(e.slowUntil > this.time + 0.5) && !(e.stop && e.dist <= e.stop)).sort((a, b) => b.dist - a.dist);
           if (cand.length) { this.cryoT = 0; this.bolts.push({ x: 40, y: -6, tgt: cand[0] }); } else this.cryoT = s.cryoCd;
         }
       }

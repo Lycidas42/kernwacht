@@ -41,7 +41,7 @@
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
     const ICON_PATH = {}; for (const k in ICONS) ICON_PATH[k] = new Path2D(ICONS[k]);
-    const LIFE = { wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.35, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -299,6 +299,7 @@
         const c = f.k === 'leech' ? PAL.heal : PAL.crystal;
         for (let i = 0; i < 5; i++) { const dx = -f.x, dy = -8 - f.y, d = Math.hypot(dx, dy) || 1, v = 160 + Math.random() * 80; parts.push({ x: f.x + (Math.random() - 0.5) * 10, y: f.y + (Math.random() - 0.5) * 10, vx: dx / d * v, vy: dy / d * v, life: Math.min(1.2, d / v), t: 0, c, k: 'spark', nodrag: true }); }
       }
+      if (f.k === 'cryo') for (let i = 0; i < 12; i++) { const a = Math.random() * 6.28, v = 50 + Math.random() * 90; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.45, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10, sz: 2 + Math.random() * 2.5 }); }
       if (f.k === 'splinter') for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28, v = 80 + Math.random() * 100; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: '#ffb0b0', k: 'spark' }); }
       if (f.k === 'mine') mineBoom(f);
       if (f.k === 'strike') shake = Math.max(shake, 0.35);
@@ -366,6 +367,7 @@
       ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0); glow(PAL.range, 2, 0.9);
       ctx.setLineDash([]);
 
+      if (s.cryoCd) { ctx.setLineDash([3, 9]); ctx.beginPath(); ctx.arc(0, 0, s.cryoRange, Math.PI, 0); ctx.strokeStyle = PAL.frost; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]); }
       drawScanner(run, t);
       // Klingenbahn
       if (s.blades) {
@@ -405,7 +407,12 @@
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(facing); ctx.scale(1.5, 1.5);
         if (cloak) ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.01 + e.seed);
         drawShip(e, t, frozen || e.slowUntil > run.time); ctx.restore(); ctx.globalAlpha = 1;
-        if (e.slowUntil > run.time && !frozen) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.6, 0, 7); ctx.fillStyle = 'rgba(159,232,255,0.12)'; ctx.fill(); }
+        if (e.slowUntil > run.time && !frozen) {
+          ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.7, 0, 7); ctx.fillStyle = 'rgba(159,232,255,0.18)'; ctx.fill();
+          ctx.save(); ctx.translate(p.x, p.y - e.r * 1.9); ctx.rotate(t * 0.002);
+          for (let i = 0; i < 3; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.strokeStyle = PAL.frost; ctx.lineWidth = 1.2; ctx.stroke(); }
+          ctx.restore();
+        }
         if (e.type === 'boss' && e.shieldUntil > run.time) {
           const left = e.shieldUntil - run.time;
           ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 2.3, 0, 7);
@@ -453,8 +460,12 @@
         if (Math.random() < 0.6) parts.push({ x: m.x, y: m.y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, life: 0.6, t: 0, c: '#8a7aa8', k: 'smoke', sz: 3 + Math.random() * 3 });
       }
       for (const b of run.bolts) {
-        const tp = run.pos(b.tgt), d = Math.hypot(tp.x - b.x, tp.y - b.y) || 1;
-        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 10, b.y - (tp.y - b.y) / d * 10); glow(PAL.frost, 2.2);
+        const tp = run.pos(b.tgt), d = Math.hypot(tp.x - b.x, tp.y - b.y) || 1, ux = (tp.x - b.x) / d, uy = (tp.y - b.y) / d;
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - ux * 22, b.y - uy * 22); glow(PAL.frost, 2.5, 0.7);
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(Math.atan2(uy, ux));
+        ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(0, -3.5); ctx.lineTo(-5, 0); ctx.lineTo(0, 3.5); ctx.closePath(); ctx.fillStyle = '#e8fbff'; ctx.fill(); glow(PAL.frost, 1.4);
+        ctx.restore();
+        if (Math.random() < 0.5) parts.push({ x: b.x, y: b.y, vx: (Math.random() - 0.5) * 20, vy: (Math.random() - 0.5) * 20, life: 0.35, t: 0, c: '#cff6ff', k: 'spark' });
       }
       drawWall(run, t);
       drawSideGuns(run, t);
