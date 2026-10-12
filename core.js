@@ -713,6 +713,7 @@
       if (id === 'freeze') this.freezeUntil = this.time + A.dur(l);
       if (id === 'over') this.overUntil = this.time + A.dur(l);
       if (this.fxOn) this.fx.push({ k: id, t: 0 });
+      if (this.fxOn && this.s.mod && this.s.mod.echo) this.fx.push({ k: 'echo', t: 0 });
       return true;
     }
     get frozen() { return this.freezeUntil > this.time; }
@@ -791,9 +792,9 @@
         this.thornT = (this.thornT || 0) + dt;
         if (this.thornT >= 0.5) {
           this.thornT = 0;
-          let any = false;
-          for (const e of this.enemies) if (e.hp > 0 && e.dist <= WALL_R + e.r * 0.3 + 12) { this.hurt(e, s.gunDmg * s.mod.plating * 0.5, false, 'mod'); any = true; }
-          if (any && this.fxOn) this.fx.push({ k: 'thorn', t: 0 });
+          const pts = [];
+          for (const e of this.enemies) if (e.hp > 0 && e.dist <= WALL_R + e.r * 0.3 + 12) { const p = this.pos(e); this.hurt(e, s.gunDmg * s.mod.plating * 0.5, false, 'mod'); pts.push(p); }
+          if (pts.length && this.fxOn) this.fx.push({ k: 'thorn', t: 0, pts: pts.slice(0, 8) });
         }
       }
 
@@ -899,6 +900,7 @@
           b.done = true;
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
           this.hurt(t, b.dmg * brittle, b.crit, 'gun');
+          if (brittle > 1 && this.fxOn && Math.random() < 0.35) this.fx.push({ k: 'brittle', x: p.x, y: p.y, t: 0 });
           if (s.mod.cryoammo && t.hp > 0) { t.slow = Math.max(t.slowUntil > this.time ? t.slow : 0, 0.1 * (t.type === 'boss' ? 0.4 : 1)); t.slowUntil = this.time + 1.5; }
           if (s.mod.chain && Math.random() < s.mod.chain) {
             const others = this.enemies.filter(o => o !== t && o.hp > 0).map(o => ({ o, d: Math.hypot(this.pos(o).x - p.x, this.pos(o).y - p.y) })).filter(x => x.d < 110).sort((a, b) => a.d - b.d).slice(0, 2);
@@ -1310,6 +1312,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-38'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-39'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

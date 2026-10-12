@@ -1401,6 +1401,18 @@
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
       $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';
       $('wavebar').classList.toggle('hold', !!run.holding);
+      // Lebensleiste des Mutterschiffs (stärkstes lebendes, falls mehrere)
+      let boss = null;
+      for (const e of run.enemies) if (e.type === 'boss' && e.hp > 0 && (!boss || e.hp > boss.hp)) boss = e;
+      const bb = $('bossBar');
+      if (bb.hidden !== !boss) bb.hidden = !boss;
+      if (boss) {
+        const pct = Math.max(0, boss.hp / boss.maxHp * 100);
+        bb.lastElementChild.firstElementChild.style.width = pct + '%';
+        const sh = boss.shieldUntil > run.time;
+        bb.classList.toggle('shield', sh);
+        $('bossPct').textContent = (pct < 1 ? pct.toFixed(1) : Math.ceil(pct)) + ' %' + (sh ? ' · Schild' : '');
+      }
       $('callBtn').disabled = !run.canCallWave();
       updateAbilities();
       refresh();

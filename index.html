@@ -82,6 +82,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .bar i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px; }
 #hpbar i { background: linear-gradient(90deg, var(--heal), var(--core)); box-shadow: 0 0 8px var(--core); }
 #wavebar { height: 2px; }
+#bossBar { margin-top: 6px; padding: 5px 8px 6px; border: 1px solid rgba(255,80,200,.55); border-radius: 8px; background: rgba(40,6,34,.82); box-shadow: 0 0 14px rgba(255,60,190,.35); }
+#bossBar .bossline { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #ffb3ea; margin-bottom: 4px; }
+#bossBar .bossline b { font-size: 15px; color: #fff; letter-spacing: 0; }
+#bossBar .bar { height: 8px; background: rgba(255,255,255,.08); }
+#bossBar .bar i { background: linear-gradient(90deg, #ff3fa4, #ff8a3d); box-shadow: 0 0 10px #ff3fa4; transition: width .15s linear; }
+#bossBar.shield { border-color: #7fe3ff; box-shadow: 0 0 14px rgba(120,220,255,.5); }
+#bossBar.shield .bar i { background: linear-gradient(90deg, #6fd6ff, #c8f4ff); box-shadow: 0 0 10px #6fd6ff; }
 #wavebar i { background: var(--ink-dim); }
 #wavebar.hold i { background: var(--hostile); animation: blink .8s ease-in-out infinite alternate; }
 @keyframes blink { to { opacity: .35; } }
@@ -453,6 +460,7 @@ textarea { resize: vertical; min-height: 70px; }
       <div class="bar" id="wavebar"><i></i></div>
       <div class="hpline"><span>Kanone</span><span class="num" id="hpTxt">0 / 0</span></div>
       <div class="bar" id="hpbar"><i></i></div>
+      <div id="bossBar" hidden><div class="bossline"><span id="bossName">Mutterschiff</span><b class="num" id="bossPct">100 %</b></div><div class="bar"><i></i></div></div>
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>
     <div id="abil">

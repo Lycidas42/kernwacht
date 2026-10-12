@@ -41,7 +41,7 @@
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
     const ICON_PATH = {}; for (const k in ICONS) ICON_PATH[k] = new Path2D(ICONS[k]);
-    const LIFE = { wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -319,7 +319,7 @@
       // Turm (dreht sich zum Ziel)
       ctx.save(); ctx.translate(0, -6); ctx.rotate(run.aim + Math.PI / 2);
       const n = 1 + s.multi;
-      const len = 34 + Math.min(44, L('range') * 1.1 + V.dmg * 0.25);
+      const len = Math.min(C.WALL_R - 14, 26 + Math.min(14, L('range') * 0.4 + V.dmg * 0.12)); // Spitze bleibt hinter dem Schutzwall
       const thick = 5 + Math.min(5, dmgL * 0.06);
       const gap = thick * 2.2, back = recoil * 6;
       const heat = over ? 0.6 + 0.4 * Math.sin(t * 0.03) : 0;
@@ -398,6 +398,8 @@
         for (let i = 0; i < 5; i++) { const dx = -f.x, dy = -8 - f.y, d = Math.hypot(dx, dy) || 1, v = 160 + Math.random() * 80; parts.push({ x: f.x + (Math.random() - 0.5) * 10, y: f.y + (Math.random() - 0.5) * 10, vx: dx / d * v, vy: dy / d * v, life: Math.min(1.2, d / v), t: 0, c, k: 'spark', nodrag: true }); }
       }
       if (f.k === 'cryo') for (let i = 0; i < 12; i++) { const a = Math.random() * 6.28, v = 50 + Math.random() * 90; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.45, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10, sz: 2 + Math.random() * 2.5 }); }
+      if (f.k === 'brittle') for (let i = 0; i < 6; i++) { const a = Math.random() * 6.28, v = 60 + Math.random() * 80; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: 8, sz: 1.5 + Math.random() * 2 }); }
+      if (f.k === 'thorn') for (const p of f.pts) for (let i = 0; i < 3; i++) parts.push({ x: p.x, y: p.y, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 50, life: 0.3, t: 0, c: '#ff6a8a', k: 'spark' });
       if (f.k === 'splinter') for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28, v = 80 + Math.random() * 100; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: '#ffb0b0', k: 'spark' }); }
       if (f.k === 'mine') mineBoom(f);
       if (f.k === 'strike') shake = Math.max(shake, 0.35);
@@ -601,7 +603,24 @@
           ctx.beginPath(); ctx.arc(f.x2, f.y2, 8 * a + 2, 0, 7); glow('#d6f7ff', 1.2, a);
         } else if (f.k === 'splinter') {
           ctx.beginPath(); ctx.arc(f.x, f.y, 45 * (0.3 + k), 0, 7); glow('#ffb0b0', 1.2, a * 0.8);
+        } else if (f.k === 'thorn') {
+          // Dornenwall: Stacheln am Schutzwall blitzen auf, Linien zu den getroffenen Schiffen
+          const R0 = C.WALL_R;
+          ctx.beginPath();
+          for (let i = 0; i <= 18; i++) { const an = Math.PI + i * Math.PI / 18; ctx.moveTo(Math.cos(an) * R0, Math.sin(an) * R0); ctx.lineTo(Math.cos(an) * (R0 + 7 + 3 * a), Math.sin(an) * (R0 + 7 + 3 * a)); }
+          glow('#ff4f6a', 1.3, a * 0.9);
+          for (const p of f.pts) { const an = Math.atan2(p.y, p.x); ctx.beginPath(); ctx.moveTo(Math.cos(an) * R0, Math.sin(an) * R0); ctx.lineTo(p.x, p.y); glow('#ff8aa0', 1.6, a); }
+        } else if (f.k === 'brittle') {
+          // Kältebruch: Eisstern am Treffer
+          ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(k * 2);
+          ctx.beginPath(); for (let i = 0; i < 6; i++) { const an = i * Math.PI / 3; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(an) * (6 + 10 * k), Math.sin(an) * (6 + 10 * k)); }
+          glow('#dff8ff', 1.4, a); ctx.restore();
+        } else if (f.k === 'echo') {
+          // Echo: violette Ringe laufen von der Kanone aus
+          for (let i = 0; i < 3; i++) { const kk = Math.max(0, k - i * 0.15); if (kk <= 0) continue; ctx.beginPath(); ctx.arc(0, -8, 20 + kk * 160, Math.PI, 0); glow('#c3a6ff', 1.6, (1 - kk) * 0.8); }
         } else if (f.k === 'nova') {
+          ctx.beginPath(); ctx.arc(0, -8, (f.r || 200) * Math.min(1, k * 1.5), Math.PI, 0);
+          ctx.fillStyle = `rgba(255,240,200,${0.08 * a})`; ctx.fill();
           ctx.beginPath(); ctx.arc(0, -8, (f.r || 200) * Math.min(1, k * 1.5), Math.PI, 0); glow('#ffffff', 4 * a + 1, a);
         } else if (f.k === 'laserhit') {
           const bx = Math.cos(f.a) * f.d, by = Math.sin(f.a) * f.d;
