@@ -183,6 +183,47 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .adm button { height: 40px; border: 1px solid var(--energy); color: var(--energy); border-radius: 4px; font-size: .8rem; font-weight: 600; }
 .adm button[aria-pressed="true"] { background: var(--energy); color: var(--void); }
 
+/* Fusion und Module */
+.frag { color: var(--heat); }
+.frag::before { content: ""; display: inline-block; width: .6em; height: .6em; margin-right: .3em; vertical-align: .02em; border-radius: 50% 0; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.metaline { font-size: .84rem; color: var(--ink-dim); }
+.metaline b { color: var(--heat); font-family: var(--font-num); font-weight: 600; }
+.fus-btn { border-color: color-mix(in srgb, var(--heat) 60%, var(--line)); color: var(--heat); }
+.fus-btn.ready { background: color-mix(in srgb, var(--heat) 16%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--heat) 35%, transparent); }
+.mod-btn { border-color: color-mix(in srgb, var(--crystal) 55%, var(--line)); color: var(--crystal); }
+.cta.fuse { background: var(--heat); box-shadow: 0 0 20px color-mix(in srgb, var(--heat) 40%, transparent); }
+.cta.fuse:disabled { background: var(--deck-2); color: var(--ink-dim); box-shadow: none; cursor: default; }
+.cta.fuse.armed { background: var(--hostile); }
+.fusbox { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
+.fusrow { display: flex; justify-content: space-between; gap: 10px; font-size: .84rem; }
+.fusrow span { color: var(--ink-dim); }
+#fusList, #modList { display: grid; gap: 4px; }
+#fusList .row .ds, #modList .row .ds { display: block; }
+.buy.f-btn { border-color: var(--heat); color: var(--heat); }
+.buy.f-btn.ok { background: color-mix(in srgb, var(--heat) 15%, transparent); }
+.slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.slot { border: 1px dashed var(--line); border-radius: 4px; padding: 8px; min-height: 58px; font-size: .78rem; display: grid; align-content: center; text-align: center; color: var(--ink-dim); min-width: 0; }
+.slot.on { border-style: solid; color: var(--ink); }
+.slot b { display: block; font-size: .76rem; overflow-wrap: anywhere; }
+.r0 { --rc: #a39ed0; } .r1 { --rc: #3ef0ff; } .r2 { --rc: #c3a6ff; } .r3 { --rc: #ffc04d; }
+.slot.on, .modrow { border-color: var(--rc, var(--line)); }
+.modrow { border-left-color: var(--rc, var(--line)); cursor: pointer; }
+.modrow .rar { color: var(--rc); font-family: var(--font-num); font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; }
+.modrow.unknown { opacity: .5; cursor: default; }
+.modrow.eq { background: color-mix(in srgb, var(--rc) 10%, transparent); }
+.modsec { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); margin: 8px 0 2px; }
+.recbox { display: grid; gap: 8px; border: 1px solid color-mix(in srgb, var(--heal) 45%, var(--line)); border-radius: 4px; padding: 10px; }
+.rectxt { font-size: .84rem; line-height: 1.4; color: var(--ink-dim); }
+.rectxt b { color: var(--heal); font-weight: 600; }
+.sec.rec { border-color: var(--heal); color: var(--heal); }
+.sec:disabled { opacity: .4; cursor: default; }
+.row.recd { border-left-color: var(--heal); background: color-mix(in srgb, var(--heal) 7%, transparent); }
+.row .tag { font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: var(--void); background: var(--heal); padding: 1px 5px; border-radius: 2px; font-weight: 700; }
+.extra { display: grid; gap: 6px; font-size: .84rem; }
+.extra .loot { border-left: 2px solid var(--rc); padding-left: 8px; }
+.extra .loot b { color: var(--rc); }
+.extra .ms { color: var(--crystal); }
+
 @media (min-height: 940px) { .row .ds { display: block; } }
 @media (min-width: 900px) {
   #app { flex-direction: row; }
@@ -257,6 +298,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <div class="stat"><div class="l">Läufe</div><div class="v num" id="mRuns">0</div></div>
       <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="mK">0</div></div>
     </div>
+    <p class="metaline" id="fragLine" hidden></p>
     <div class="note" id="offlineNote" hidden></div>
     <div class="jumpbox" hidden>
       <h3>Startwelle (Sprungtor)</h3>
@@ -271,6 +313,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <div class="actions two">
         <button class="sec" id="labBtn">Labor</button>
         <button class="sec" id="lbBtn">Bestenliste</button>
+      </div>
+      <div class="actions two">
+        <button class="sec mod-btn" id="modBtn">Module</button>
+        <button class="sec fus-btn" id="fusBtn">Kernfusion</button>
       </div>
     </div>
     <div class="actions two">
@@ -330,6 +376,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="oK">0</div></div>
     </div>
     <div class="note" id="oBest">Neue Bestwelle.</div>
+    <div class="extra" id="oExtra" hidden></div>
     <div class="jumpbox" hidden>
       <h3>Startwelle (Sprungtor)</h3>
       <div class="stepper">
@@ -340,6 +387,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
     </div>
     <div class="actions">
       <button class="cta" id="labBtn2">Ins Labor</button>
+      <div class="actions two">
+        <button class="sec mod-btn" id="modBtn2">Module</button>
+        <button class="sec fus-btn" id="fusBtn2">Kernfusion</button>
+      </div>
       <button class="sec" id="againBtn">Sofort neu starten</button>
     </div>
   </div>
@@ -349,6 +400,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
   <div class="card">
     <div class="labhead"><h2>Labor</h2><span class="num k" id="labK">0</span></div>
     <p>Dauerhafte Verbesserungen für alle kommenden Läufe.</p>
+    <div class="recbox">
+      <div class="rectxt" id="recTxt"></div>
+      <div class="actions two">
+        <button class="sec rec" id="recBuy">Empfohlen kaufen</button>
+        <button class="sec" id="cheapBuy">Günstigstes kaufen</button>
+      </div>
+    </div>
     <div id="labList"></div>
     <div class="jumpbox" hidden>
       <h3>Startwelle (Sprungtor)</h3>
@@ -360,6 +418,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
     </div>
     <div class="actions">
       <button class="cta" id="labStart">Lauf starten</button>
+      <div class="actions two">
+        <button class="sec mod-btn" id="modBtn3">Module</button>
+        <button class="sec fus-btn" id="fusBtn3">Kernfusion</button>
+      </div>
       <button class="sec" id="labClose">Zurück</button>
     </div>
     <button class="danger" id="resetBtn">Spielstand löschen</button>
@@ -376,6 +438,33 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
     <p id="lbStatus">Wird geladen …</p>
     <table class="lb"><tbody id="lbBody"></tbody></table>
     <div class="actions"><button class="sec" id="lbClose">Zurück</button></div>
+  </div>
+</div>
+
+<div class="ov" id="fusion" hidden>
+  <div class="card">
+    <div class="labhead"><h2>Kernfusion</h2><span class="num frag" id="fusFrag">0</span></div>
+    <p>Die Fusion setzt Labor, Kristalle und Bestwelle zurück. Dafür bekommst du Kernfragmente für dauerhafte Verbesserungen, die jede weitere Fusion überdauern. Module bleiben erhalten.</p>
+    <div class="fusbox">
+      <div class="fusrow"><span>Bestwelle in diesem Zyklus</span><b class="num" id="fusBest">0</b></div>
+      <div class="fusrow"><span>Kernfragmente aus der Fusion</span><b class="num frag" id="fusGain">0</b></div>
+      <div class="fusrow"><span>Fusionen bisher · Rekord aller Zeiten</span><b class="num" id="fusStats">0 · 0</b></div>
+    </div>
+    <p class="note" id="fusNote"></p>
+    <button class="cta fuse" id="fuseBtn">Fusion auslösen</button>
+    <h3>Fragment-Technik</h3>
+    <div id="fusList"></div>
+    <div class="actions"><button class="sec" id="fusClose">Zurück</button></div>
+  </div>
+</div>
+
+<div class="ov" id="modules" hidden>
+  <div class="card">
+    <h2>Module</h2>
+    <p>Mutterschiffe lassen Module fallen. Jeder Sektor hat eigene Typen, und jeder weitere Fund macht ein Modul stärker. Tippe ein Modul an, um es auszurüsten.</p>
+    <div class="slots" id="modSlots"></div>
+    <div id="modList"></div>
+    <div class="actions"><button class="sec" id="modClose">Zurück</button></div>
   </div>
 </div>
 
@@ -398,6 +487,8 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
         <button data-adm="k1m">+1 Mio Kristalle</button>
         <button data-adm="labmax">Labor maximieren</button>
         <button data-adm="labreset">Labor zurücksetzen</button>
+        <button data-adm="frag">+100 Fragmente</button>
+        <button data-adm="loot">Zufallsmodul</button>
       </div>
       <h3>Laufender Lauf</h3>
       <div class="adm">

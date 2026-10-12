@@ -2,6 +2,8 @@
 
 Idle Tower Defense im Neon-Look. Deine Kanone steht unten, Raumschiffe greifen von oben an. Wenn sie fällt, gibt es Kristalle für dauerhafte Upgrades im Labor.
 
+Langzeit-Ziele: Alle 50 Wellen beginnt ein neuer Sektor mit eigenem Biom, neuem Gegnertyp und neuer Boss-Fähigkeit. Mutterschiffe lassen Module fallen (je Sektor eigene Typen). Ab Bestwelle 50 setzt die Kernfusion Labor und Kristalle zurück und bringt Kernfragmente für dauerhafte Technik, darunter Raketen- und Kryowerfer.
+
 Kein Shop, keine Werbung, keine Premiumwährung. Die Kurven sind auf faires Tempo ohne Kaufdruck ausgelegt.
 
 **Spielen:** https://lycidas42.github.io/kernwacht/
@@ -28,6 +30,9 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `tools/sim.js` | Simuliert Läufe mit einem Kauf-Bot und gibt die erreichten Wellen aus |
 | `tools/check.js` | Fortschritt über viele Läufe, dazu Sprungtor, Mutterschiff und Schaden pro Quelle |
 | `tools/strategies.js` | Vergleicht Kaufstrategien (nur Angriff, ausgewogen, Abwehr); Varianten per `KW_P='{...}'` |
+| `tools/fusion.js` | Mehrere Fusionszyklen mit Bot: Läufe pro Zyklus, Fragmente, wie schnell die alte Bestwelle wieder erreicht wird |
+| `tools/curve.js` | Schnelle Fortschrittskurve des ersten Zyklus, Varianten per `KW_P` |
+| `tools/diag_boss.js` | Protokolliert einen Mutterschiff-Kampf bei einer Welle |
 | `tools/tune.js` | Zufallssuche über die Balancing-Parameter gegen eine Zielkurve |
 | `tools/build-single.js` | Baut `dist/kernwacht.html` als eigenständige Einzeldatei |
 
@@ -44,6 +49,7 @@ Wer das Spiel offen hat, sieht beim nächsten Laden einen Hinweis „Neue Versio
 ```bash
 node tools/check.js 30            # 30 Läufe mit Labor-Käufen, danach Sprungtor- und Boss-Test
 node tools/strategies.js 20       # lohnt sich Abwehr? drei Kaufstrategien im Vergleich
+node tools/fusion.js 120          # Fusionszyklen: kommt man nach jeder Fusion schnell zurück?
 node tools/sim.js 30              # einfache Simulation
 node tools/tune.js 300 240        # bis zu 300 Varianten, max. 240 s
 ```

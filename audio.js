@@ -78,6 +78,10 @@
       const a = o && o.act;
       if (a === 'shield') { osc('sine', 300, 600, 0.5, 0.12); osc('sine', 450, 900, 0.5, 0.06); }
       else if (a === 'bomb') { osc('square', 180, 90, 0.35, 0.1); }
+      else if (a === 'laser') { osc('sawtooth', 200, 1400, 2, 0.08); osc('sine', 100, 700, 2, 0.08); }
+      else if (a === 'broken') { osc('square', 900, 120, 0.3, 0.1); noise(0.3, 0.2, 4000, 500, 1); }
+      else if (a === 'cloak') { osc('sine', 1200, 200, 0.6, 0.08); }
+      else if (a === 'nova' || a === 'bulwarks' || a === 'mend') { osc('triangle', 300, 600, 0.4, 0.1); }
       else if (a === 'spawn') { [0, 0.07, 0.14].forEach(d => osc('square', 520, 260, 0.08, 0.05, ac.currentTime + d)); }
       else { [0, 0.08, 0.16].forEach(d => osc('sawtooth', 700, 300, 0.1, 0.06, ac.currentTime + d)); }
     },
@@ -85,6 +89,12 @@
     click() { osc('triangle', 900, 700, 0.04, 0.05); },
     mark() { osc('sine', 1300, 1800, 0.08, 0.06); },
     over_end() {},
+    loot() { const t = ac.currentTime; [784, 988, 1175, 1568].forEach((f, i) => osc('triangle', f, f, 0.25, 0.07, t + i * 0.07)); },
+    fusion() { const t = ac.currentTime; osc('sawtooth', 55, 880, 1.6, 0.18, t); osc('sine', 110, 1760, 1.6, 0.12, t); noise(1.8, 0.25, 200, 8000, 1, t, 'bandpass'); osc('sine', 60, 30, 1.2, 0.5, t + 1.5); },
+    rlaunch() { if (throttle('rl', 120)) return; noise(0.35, 0.12, 900, 2500, 2, null, 'bandpass'); osc('sawtooth', 120, 260, 0.3, 0.05); },
+    cryo() { if (throttle('cryo', 90)) return; osc('triangle', 2400, 1200, 0.12, 0.05); noise(0.15, 0.06, 9000, 4000, 1, null, 'highpass'); },
+    laserhit() { const t = ac.currentTime; osc('sawtooth', 90, 40, 0.6, 0.3, t); noise(0.5, 0.4, 3000, 100, 1, t); },
+    nova() { const t = ac.currentTime; osc('sine', 400, 50, 0.7, 0.35, t); noise(0.7, 0.3, 5000, 200, 1, t); },
     gameover() { const t = ac.currentTime; [392, 330, 262, 196].forEach((f, i) => osc('triangle', f, f * 0.97, 0.35, 0.1, t + i * 0.16)); },
   };
   function play(name, o) { if (!ac || !sfxOn || ac.state !== 'running') return; const f = SFX[name]; if (f) f(o); }

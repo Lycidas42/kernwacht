@@ -16,11 +16,24 @@
       core: col('--core'), hostile: col('--hostile'), energy: col('--energy'), crystal: col('--crystal'), heal: col('--heal'),
       line: col('--line'), dim: col('--ink-dim'), range: col('--range'), void: col('--void'), sky: col('--sky-top'), frost: col('--frost'), heat: col('--heat'),
     };
-    const SHIP = { grunt: '#ff4f9a', runner: '#ff9447', brute: '#ff5a5a', shooter: '#c9ff4f', boss: '#ff4ff0', bomb: '#ffdd55' };
+    const SHIP = { grunt: '#ff4f9a', runner: '#ff9447', brute: '#ff5a5a', shooter: '#c9ff4f', boss: '#ff4ff0', bomb: '#ffdd55',
+      phantom: '#7dffcf', bulwark: '#ffb347', splitter: '#ff6b6b', shard: '#ff8f8f', mender: '#8dff7d' };
+    const BOSS_COL = ['#ff4ff0', '#4fffc8', '#ff9a3c', '#ff4040', '#9fb6ff'];
+    const RAR_COL = ['#a39ed0', '#3ef0ff', '#c3a6ff', '#ffc04d'];
+    // Biome je Sektor: Himmel, Boden, Raster, Sterne
+    const BIOME = [
+      { sky: '#1e1a4a', void: '#12102c', grid: '#3a3474', star: '#d9d4ff' },
+      { sky: '#0e3b3a', void: '#071a1c', grid: '#1d5753', star: '#c9fff3' },
+      { sky: '#3d2010', void: '#170b06', grid: '#5e3a22', star: '#ffe1c4' },
+      { sky: '#4a0f22', void: '#18050c', grid: '#6b2236', star: '#ffd0d6' },
+      { sky: '#07070f', void: '#000000', grid: '#26314d', star: '#a8c0ff' },
+    ];
+    const clouds = Array.from({ length: 7 }, () => ({ x: Math.random(), y: Math.random() * 0.7, r: 0.18 + Math.random() * 0.22, v: 0.004 + Math.random() * 0.006 }));
+    const rocks = Array.from({ length: 14 }, () => ({ x: Math.random(), y: Math.random() * 0.75, r: 4 + Math.random() * 12, v: 0.006 + Math.random() * 0.012, rot: Math.random() * 6, n: 6 + (Math.random() * 3 | 0), seed: Math.random() }));
     const HULL = '#0d0b22';
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
-    const LIFE = { emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { cryo: 0.35, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -53,7 +66,7 @@
 
     // ---------- Raumschiffe (lokale Achse +x = Flugrichtung) ----------
     function drawShip(e, t, frozen) {
-      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : SHIP[e.type], r = e.r, sd = e.seed;
+      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : e.type === 'boss' ? BOSS_COL[(e.sector || 1) - 1] : SHIP[e.type], r = e.r, sd = e.seed;
       const fl = frozen ? 0.25 : 1;
       ctx.lineJoin = 'round';
       if (e.type === 'grunt') {
@@ -92,6 +105,27 @@
         ctx.restore();
         ctx.beginPath(); ctx.arc(0, 0, r * 0.35, 0, 7);
         ctx.fillStyle = Math.sin(t * 0.02) > 0 ? '#ff3030' : '#ffdd55'; ctx.fill();
+      } else if (e.type === 'phantom') {
+        // Tarnjäger: flacher Rochen
+        flame(-r * 0.6, 0, r * 1.2 * fl, r * 0.2, '#b5ffe6', t, sd);
+        ctx.beginPath(); ctx.moveTo(r * 1.4, 0); ctx.quadraticCurveTo(r * 0.2, -r * 1.5, -r * 0.8, -r * 1.2); ctx.lineTo(-r * 0.4, 0); ctx.lineTo(-r * 0.8, r * 1.2); ctx.quadraticCurveTo(r * 0.2, r * 1.5, r * 1.4, 0); ctx.closePath();
+        fillHull(); glow(c, 1.3);
+      } else if (e.type === 'bulwark') {
+        // Schildträger: schwerer Sechskant mit Frontschild
+        flame(-r * 0.9, 0, r * 1.2 * fl, r * 0.3, '#ffd08a', t, sd);
+        ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r * 0.85); } ctx.closePath();
+        fillHull(); glow(c, 2);
+        if (e.guard > 0) { ctx.beginPath(); ctx.arc(r * 0.2, 0, r * 1.5, -1.1, 1.1); glow('#ffe2a8', 1.5 + 2 * e.guard / e.guardMax, 0.4 + 0.6 * e.guard / e.guardMax); }
+      } else if (e.type === 'splitter' || e.type === 'shard') {
+        // Teiler: Raute mit Bruchkante; Splitter klein
+        flame(-r * 0.9, 0, r * 1.4 * fl, r * 0.25, '#ffb0b0', t, sd);
+        ctx.beginPath(); ctx.moveTo(r * 1.3, 0); ctx.lineTo(0, -r); ctx.lineTo(-r * 0.9, 0); ctx.lineTo(0, r); ctx.closePath();
+        fillHull(); glow(c, e.type === 'shard' ? 1.1 : 1.6);
+        if (e.type === 'splitter') { ctx.beginPath(); ctx.moveTo(r * 0.5, -r * 0.5); ctx.lineTo(0, 0); ctx.lineTo(r * 0.3, r * 0.6); glow(c, 1, 0.7); }
+      } else if (e.type === 'mender') {
+        // Heiler: Ring mit Kreuz
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); fillHull(); glow(c, 1.6);
+        ctx.beginPath(); ctx.moveTo(-r * 0.5, 0); ctx.lineTo(r * 0.5, 0); ctx.moveTo(0, -r * 0.5); ctx.lineTo(0, r * 0.5); glow(c, 1.8);
       } else {
         // Mutterschiff
         for (const o of [-0.55, 0, 0.55]) flame(-r * 0.9, r * o, r * 1.2 * fl, r * 0.14, '#ff9af7', t, sd + o * 3);
@@ -208,6 +242,7 @@
     function pushFx(f) {
       f.life = LIFE[f.k] || 0.5;
       if (f.k === 'dmg') f.dx = (Math.random() - 0.5) * 16;
+      if (f.k === 'wave' && f.sector) f.life = 3.2;
       if (f.k === 'boom') boom(f);
       if (f.k === 'mine') mineBoom(f);
       if (f.k === 'strike') shake = Math.max(shake, 0.35);
@@ -246,10 +281,12 @@
     // ---------- Szene ----------
     function draw(t, dt, run, ui) {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      const sec = run ? C.sectorOf(run.wave).n : 1, B = BIOME[sec - 1];
       const bg = ctx.createLinearGradient(0, 0, 0, H);
-      bg.addColorStop(0, PAL.sky); bg.addColorStop(1, PAL.void);
+      bg.addColorStop(0, B.sky); bg.addColorStop(1, B.void);
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-      for (const st of stars) { ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 0.001 + st.p); ctx.fillStyle = '#d9d4ff'; ctx.fillRect(st.x * W, st.y * H, st.r, st.r); }
+      drawBiome(sec, t, B);
+      for (let i = 0; i < stars.length; i += sec === 5 ? 3 : 1) { const st = stars[i]; ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 0.001 + st.p); ctx.fillStyle = B.star; ctx.fillRect(st.x * W, st.y * H, st.r, st.r); }
       ctx.globalAlpha = 1;
 
       let sx = 0, sy = 0;
@@ -257,11 +294,11 @@
       ctx.save(); ctx.translate(view.cx + sx, view.cy + sy); ctx.scale(view.s, view.s);
 
       // Peilraster und Boden
-      ctx.lineWidth = 1 / view.s; ctx.strokeStyle = PAL.line; ctx.globalAlpha = 0.6;
+      ctx.lineWidth = 1 / view.s; ctx.strokeStyle = B.grid; ctx.globalAlpha = 0.6;
       for (let r = 100; r <= 500; r += 100) { ctx.beginPath(); ctx.arc(0, 0, r, Math.PI, 0); ctx.stroke(); }
       for (let i = 1; i < 6; i++) { const a = Math.PI + i * Math.PI / 6; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 50, Math.sin(a) * 50); ctx.lineTo(Math.cos(a) * 520, Math.sin(a) * 520); ctx.stroke(); }
       ctx.globalAlpha = 1;
-      ctx.beginPath(); ctx.moveTo(-600, 31); ctx.lineTo(600, 31); ctx.strokeStyle = PAL.line; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-600, 31); ctx.lineTo(600, 31); ctx.strokeStyle = B.grid; ctx.lineWidth = 1.5; ctx.stroke();
       if (!run) { ctx.restore(); return; }
       const s = run.s, frozen = run.frozen;
 
@@ -294,8 +331,23 @@
         const p = run.pos(e);
         // Schiffe zeigen in Flugrichtung; Mutterschiff und haltende Schützen zur Kanone
         const facing = e.type === 'boss' || e.hd == null || (e.stop && e.dist <= e.stop) ? e.a + Math.PI : e.hd;
+        const cloak = run.cloaked(e);
+        if (e.type === 'mender') { ctx.beginPath(); ctx.arc(p.x, p.y, 90, 0, 7); ctx.fillStyle = 'rgba(141,255,125,0.04)'; ctx.fill(); ctx.setLineDash([4, 6]); ctx.strokeStyle = SHIP.mender; ctx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 0.004 + e.seed); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
+        if (e.type === 'boss' && e.laser > 0) {
+          // Laser lädt: Zielstrahl zur Kanone, Balken zeigt, wie viel Schaden ihn abbricht
+          const k = 1 - e.laser / 2;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(0, -8);
+          ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 0.05; glow('#ff3030', 1 + k * 4, 0.4 + 0.5 * Math.abs(Math.sin(t * 0.02 * (1 + k * 3)))); ctx.setLineDash([]);
+          const w = 60, need = e.maxHp * 0.06, prog = Math.min(1, (e.laserDmg || 0) / need);
+          ctx.fillStyle = '#2a2560'; ctx.fillRect(p.x - w / 2, p.y + e.r * 1.8 + 8, w, 4);
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(p.x - w / 2, p.y + e.r * 1.8 + 8, w * prog, 4);
+          ctx.fillStyle = '#ff6060'; ctx.font = `700 11px ${FONT_UI()}`; ctx.textAlign = 'center';
+          ctx.fillText('LASER · SCHADEN BRICHT AB', p.x, p.y + e.r * 1.8 + 24);
+        }
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(facing); ctx.scale(1.5, 1.5);
-        drawShip(e, t, frozen); ctx.restore();
+        if (cloak) ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.01 + e.seed);
+        drawShip(e, t, frozen); ctx.restore(); ctx.globalAlpha = 1;
+        if (e.slowUntil > run.time && !frozen) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.7, 0, 7); ctx.strokeStyle = PAL.frost; ctx.globalAlpha = 0.5; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; }
         if (e.type === 'boss' && e.shieldUntil > run.time) {
           const left = e.shieldUntil - run.time;
           ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 2.3, 0, 7);
@@ -333,6 +385,19 @@
           ctx.restore();
         }
       }
+      for (const m of run.rockets) {
+        const an = Math.atan2(m.vy, m.vx);
+        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(an);
+        flame(-5, 0, 12, 2.5, '#ffb066', t, m.x);
+        ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-5, -3); ctx.lineTo(-5, 3); ctx.closePath(); fillHull(); glow(PAL.heat, 1.4);
+        ctx.restore();
+        if (Math.random() < 0.6) parts.push({ x: m.x, y: m.y, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, life: 0.6, t: 0, c: '#8a7aa8', k: 'smoke', sz: 3 + Math.random() * 3 });
+      }
+      for (const b of run.bolts) {
+        const tp = run.pos(b.tgt), d = Math.hypot(tp.x - b.x, tp.y - b.y) || 1;
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 10, b.y - (tp.y - b.y) / d * 10); glow(PAL.frost, 2.2);
+      }
+      drawSideGuns(run, t);
       drawCannon(run, t);
 
       // Partikel
@@ -352,6 +417,24 @@
           g.addColorStop(0, `rgba(255,250,220,${a})`); g.addColorStop(0.35, `rgba(255,170,80,${a * 0.7})`); g.addColorStop(1, 'rgba(255,80,140,0)');
           ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, R * (0.4 + k), 0, 7); ctx.fill();
           ctx.beginPath(); ctx.arc(f.x, f.y, R * (0.6 + k * 1.4), 0, 7); glow(SHIP[f.type] || PAL.energy, 1.4, a * 0.8);
+        } else if (f.k === 'cryo') {
+          ctx.beginPath(); ctx.arc(f.x, f.y, (f.r || 40) * (0.3 + 0.7 * k), 0, 7); ctx.fillStyle = `rgba(159,232,255,${0.18 * a})`; ctx.fill(); glow(PAL.frost, 1.5, a);
+        } else if (f.k === 'chain') {
+          ctx.beginPath(); ctx.moveTo(f.x1, f.y1);
+          for (let j = 1; j <= 5; j++) { const q = j / 5; ctx.lineTo(f.x1 + (f.x2 - f.x1) * q + (j < 5 ? (Math.random() - 0.5) * 16 : 0), f.y1 + (f.y2 - f.y1) * q + (j < 5 ? (Math.random() - 0.5) * 16 : 0)); }
+          glow('#d6f7ff', 1.4, a);
+        } else if (f.k === 'splinter') {
+          ctx.beginPath(); ctx.arc(f.x, f.y, 45 * (0.3 + k), 0, 7); glow('#ffb0b0', 1.2, a * 0.8);
+        } else if (f.k === 'nova') {
+          ctx.beginPath(); ctx.arc(0, -8, (f.r || 200) * Math.min(1, k * 1.5), Math.PI, 0); glow('#ffffff', 4 * a + 1, a);
+        } else if (f.k === 'laserhit') {
+          const bx = Math.cos(f.a) * f.d, by = Math.sin(f.a) * f.d;
+          ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(0, -8); glow('#ff4040', 10 * a + 2, a);
+        } else if (f.k === 'loot') {
+          const col = RAR_COL[f.drop.rar];
+          ctx.globalAlpha = Math.min(1, a * 1.6); ctx.fillStyle = col; ctx.font = `700 14px ${FONT_UI()}`; ctx.textAlign = 'center';
+          ctx.fillText('MODUL: ' + C.MODULES[f.drop.type].name.toUpperCase(), f.x, f.y - 40 - k * 30);
+          ctx.beginPath(); ctx.arc(f.x, f.y, 10 + k * 40, 0, 7); glow(col, 2, a); ctx.globalAlpha = 1;
         } else if (f.k === 'mine') {
           const R = f.r || 45;
           const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, R);
@@ -391,7 +474,7 @@
           ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
-          const label = { salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD' }[f.act];
+          const label = { salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
           ctx.globalAlpha = a; ctx.fillStyle = SHIP.boss; ctx.font = `700 13px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }
@@ -428,6 +511,7 @@
           ctx.fillStyle = f.boss ? SHIP.boss : PAL.core; ctx.textAlign = 'center';
           ctx.font = `700 ${Math.round(Math.min(W, H) * 0.08)}px ${FONT_UI()}`;
           ctx.fillText(f.boss ? 'MUTTERSCHIFF' : 'WELLE ' + f.w, W / 2, H * 0.32 - k * 10);
+          if (f.sector) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`; ctx.fillStyle = BIOME[f.sector.n - 1].star; ctx.fillText('SEKTOR ' + f.sector.n + ' · ' + f.sector.name.toUpperCase(), W / 2, H * 0.32 + Math.min(W, H) * 0.06 - k * 10); }
           ctx.globalAlpha = 1;
         }
       }
@@ -437,6 +521,54 @@
         ctx.font = `700 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`;
         ctx.fillText('MUTTERSCHIFF BESIEGEN', W / 2, H * 0.2);
         ctx.globalAlpha = 1;
+      }
+    }
+
+    // Biom-Hintergrund: Nebel, Asteroiden, roter Riese, Leere
+    function drawBiome(sec, t, B) {
+      if (sec === 2) {
+        for (const c of clouds) {
+          const x = ((c.x + t * 0.00001 * c.v * 100) % 1.4 - 0.2) * W, y = c.y * H, r = c.r * Math.max(W, H);
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, 'rgba(60,220,170,0.10)'); g.addColorStop(1, 'rgba(60,220,170,0)');
+          ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+        }
+      } else if (sec === 3) {
+        for (const a of rocks) {
+          const x = ((a.x + t * 0.00001 * a.v * 60) % 1.2 - 0.1) * W, y = a.y * H;
+          ctx.save(); ctx.translate(x, y); ctx.rotate(a.rot + t * 0.0002 * a.v * 40);
+          ctx.beginPath(); for (let i = 0; i < a.n; i++) { const an = i / a.n * 6.28, rr = a.r * (0.7 + 0.3 * Math.sin(a.seed * 10 + i * 2.3)); ctx[i ? 'lineTo' : 'moveTo'](Math.cos(an) * rr, Math.sin(an) * rr); } ctx.closePath();
+          ctx.fillStyle = '#2a1a12'; ctx.fill(); ctx.strokeStyle = 'rgba(255,150,80,0.45)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+        }
+      } else if (sec === 4) {
+        const x = W * 0.18, y = H * 0.16, r = Math.min(W, H) * 0.22;
+        const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2.2);
+        g.addColorStop(0, 'rgba(255,90,60,0.55)'); g.addColorStop(0.35, 'rgba(255,60,60,0.18)'); g.addColorStop(1, 'rgba(255,40,60,0)');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+        ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, 7); ctx.fillStyle = 'rgba(255,120,80,0.35)'; ctx.fill();
+      } else if (sec === 5) {
+        for (let i = 0; i < 3; i++) {
+          const r = ((t * 0.00004 + i / 3) % 1) * Math.max(W, H);
+          ctx.beginPath(); ctx.arc(W / 2, H * 0.3, r, 0, 7); ctx.strokeStyle = `rgba(150,180,255,${0.08 * (1 - r / Math.max(W, H))})`; ctx.lineWidth = 2; ctx.stroke();
+        }
+      }
+    }
+    // Nebenkanonen links (Raketen) und rechts (Kryo)
+    function drawSideGuns(run, t) {
+      const L = id => run.L(id);
+      if (L('rocket') > 0) {
+        ctx.save(); ctx.translate(-40, 4);
+        ctx.beginPath(); ctx.rect(-9, -10, 18, 18); fillHull(); glow(PAL.heat, 1.4);
+        for (const dx of [-4, 4]) { ctx.beginPath(); ctx.rect(dx - 2.5, -20, 5, 11); fillHull(); glow(PAL.heat, 1.1); }
+        ctx.beginPath(); ctx.arc(0, -1, 2, 0, 7); ctx.fillStyle = PAL.heat; ctx.globalAlpha = 0.5 + 0.5 * Math.min(1, run.rocketT / (run.s.rocketCd || 1)); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+      if (L('cryo') > 0) {
+        ctx.save(); ctx.translate(40, 4);
+        ctx.beginPath(); ctx.arc(0, 0, 9, 0, 7); fillHull(); glow(PAL.frost, 1.4);
+        ctx.beginPath(); ctx.rect(-2.5, -22, 5, 14); fillHull(); glow(PAL.frost, 1.2);
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-5, -10 - i * 4); ctx.lineTo(5, -12 - i * 4); glow(PAL.frost, 0.8, 0.7); }
+        ctx.restore();
       }
     }
 

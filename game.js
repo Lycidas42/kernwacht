@@ -21,6 +21,8 @@
     if (meta.startPref === undefined) meta.startPref = null; // null = immer die höchste erlaubte Startwelle
     delete meta.startWave;
     meta.name = meta.name || '';
+    meta.flv = meta.flv || {}; meta.frag = meta.frag || 0; meta.modules = meta.modules || {}; meta.equip = meta.equip || [];
+    meta.bestEver = Math.max(meta.bestEver || 0, meta.best || 0);
   }
   normMeta();
   let run = null;
@@ -37,7 +39,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -47,6 +49,9 @@
     if (name === 'board') renderBoard();
     if (name === 'admin') renderAdmin();
     if (name === 'pause') syncSoundBtns();
+    if (name === 'fusion') renderFusion();
+    if (name === 'modules') renderModules();
+    syncMetaBtns();
   }
   const runAlive = () => run && !run.dead;
   function home() { show(runAlive() ? 'pause' : 'menu'); }
@@ -69,6 +74,14 @@
     $('oBest').textContent = res.newBest ? 'Neue Bestwelle!' : 'Bestwelle: ' + meta.best;
     $('oBest').style.color = res.newBest ? '' : 'var(--ink-dim)';
     renderJump();
+    const ex = [];
+    for (const m of res.milestones || []) ex.push(`<div class="ms">Meilenstein Welle ${m.w}: +${fmt(m.k)} Kristalle</div>`);
+    for (const d of res.loot || []) {
+      const M = C.MODULES[d.type], txt = { neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund' }[d.result];
+      ex.push(`<div class="loot r${d.rar}">Beute: <b>${M.name}</b> (${C.RARITY[d.rar].name}) · ${txt}</div>`);
+    }
+    $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
+    if ((res.loot || []).length) A.play('loot');
     submitScore();
     setTimeout(() => show('over'), early ? 0 : 900);
   }
@@ -107,6 +120,7 @@
     mine: s => s.mineCd ? fmt(s.mineDmg) : '–', hp: s => fmt(s.maxHp), regen: s => fmt(s.regen) + '/s', armor: s => pct(s.armor),
     knock: s => s.knock ? dec(s.knock, 1) : '–', shock: s => s.shockCd ? fmt(s.shockDmg) : '–',
     blade: s => s.blades ? s.blades + '× ' + fmt(s.bladeDmg) : '–', loot: s => '×' + dec(s.loot, 2),
+    rocket: s => s.rocketCd ? fmt(s.rocketDmg) : '–', cryo: s => s.cryoCd ? '−' + Math.round(s.cryoSlow * 100) + ' %' : '–',
     interest: (s, r) => s.waveBonus ? '+' + fmt(r.waveBonusAmount()) + '/Welle' : '–', crys: s => '×' + dec(s.crysMult, 2),
   };
   let rows = [];
@@ -171,10 +185,13 @@
   }
   const SRC = [
     { k: 'gun', name: 'Kanone', hit: s => s.dmg, rate: (s, r) => dec(r.rateNow, 2) + '/s' + (s.multi ? ' ×' + (1 + s.multi) : ''), on: () => true },
+    { k: 'rocket', name: 'Raketen', hit: s => s.rocketDmg, rate: s => 'alle ' + dec(s.rocketCd, 1) + ' s', on: s => s.rocketCd > 0 },
+    { k: 'cryo', name: 'Kryowerfer', hit: s => s.cryoDmg, rate: s => 'alle ' + dec(s.cryoCd, 1) + ' s', on: s => s.cryoCd > 0 },
     { k: 'mine', name: 'Minen', hit: s => s.mineDmg, rate: s => 'alle ' + dec(s.mineCd, 1) + ' s', on: s => s.mineCd > 0 },
     { k: 'shock', name: 'Schockwelle', hit: s => s.shockDmg, rate: s => 'alle ' + dec(s.shockCd, 1) + ' s', on: s => s.shockCd > 0 },
     { k: 'blade', name: 'Orbitklingen', hit: s => s.bladeDmg, rate: s => s.blades + ' Klingen', on: s => s.blades > 0 },
     { k: 'strike', name: 'Orbitalschlag', hit: s => s.strikeDmg, rate: () => 'manuell', on: () => true },
+    { k: 'mod', name: 'Module', hit: () => 0, rate: () => 'passiv', on: s => Object.keys(s.mod || {}).length > 0 },
   ];
   let statEls = null;
   function buildStats() {
@@ -280,10 +297,19 @@
     $('labK').textContent = fmt(meta.crystals);
     const list = $('labList'); list.innerHTML = '';
     renderJump();
+    // Empfehlung: zeigt, was sich gerade am meisten lohnt, und warum
+    const rec = C.recommend(meta), ch = C.cheapest(meta);
+    if (rec) {
+      const can = meta.crystals >= rec.cost;
+      $('recTxt').innerHTML = `Empfehlung: <b>${rec.u.name}</b> (${fmt(rec.cost)} Kristalle). ${rec.why}${can ? '' : ` Spare noch ${fmt(rec.cost - meta.crystals)} Kristalle.`}`;
+      $('recBuy').disabled = !can; $('recBuy').textContent = can ? 'Empfohlen kaufen' : 'Spare für ' + rec.u.name;
+    } else { $('recTxt').textContent = 'Alles ausgebaut.'; $('recBuy').disabled = true; }
+    $('cheapBuy').disabled = !ch || meta.crystals < ch.cost;
+    $('cheapBuy').textContent = ch ? 'Günstigstes: ' + ch.u.name : 'Günstigstes kaufen';
     for (const u of C.META_UPG) {
       if (u.req && !C.mlv(meta, u.req)) continue;
       const l = C.mlv(meta, u.id), mx = u.max != null && l >= u.max, c = C.metaCost(u, l), ok = !mx && meta.crystals >= c;
-      const el = document.createElement('div'); el.className = 'row';
+      const el = document.createElement('div'); el.className = 'row' + (rec && rec.u === u ? ' recd' : '');
       el.style.gridTemplateColumns = '1fr auto';
       let extra = '';
       const fx = LAB_FX[u.id];
@@ -294,7 +320,7 @@
         const nextMax = u.id === 'u_jump' && !mx ? (w => w % 10 === 0 ? w - 1 : w)(Math.max(1, Math.floor(meta.best * C.jumpShare(0)))) : nextLvl != null ? C.maxStartWave(meta, nextLvl) : null;
         extra = ` <b style="color:var(--core)">Start bis Welle ${now}${nextMax != null && nextMax !== now ? ' → ' + nextMax : ''}</b>`;
       }
-      el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
+      el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small>${rec && rec.u === u ? '<span class="tag">Empfohlen</span>' : ''}</div><div class="ds">${u.desc}${extra}</div></div>
         <button class="buy num ${mx ? 'max' : 'k-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? (u.unlock ? 'OK' : 'MAX') : fmt(c)}</button>`;
       el.querySelector('button').addEventListener('click', () => { if (C.metaBuy(meta, u)) { A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab(); } });
       list.appendChild(el);
@@ -302,11 +328,21 @@
     $('labStart').textContent = runAlive() ? 'Zurück zum Lauf' : 'Lauf starten';
   }
 
+  function labBuy(pick) {
+    const o = pick(meta); if (!o || !C.metaBuy(meta, o.u)) return;
+    A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab();
+  }
+  $('recBuy').addEventListener('click', () => labBuy(C.recommend));
+  $('cheapBuy').addEventListener('click', () => labBuy(C.cheapest));
+
   // ---------- Menü, Sprungtor ----------
   function renderMenu() {
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
     const max = C.maxStartWave(meta);
     renderJump();
+    const fl = $('fragLine');
+    fl.hidden = !(meta.fusions || meta.frag);
+    if (!fl.hidden) fl.innerHTML = `Kernfragmente <b>${fmt(meta.frag)}</b> · Fusionen <b>${meta.fusions || 0}</b> · Rekord <b>${meta.bestEver || 0}</b>`;
     syncSoundBtns();
   }
   // Sprungtor-Wahl: im Startmenü, im Labor und nach dem Lauf
@@ -343,6 +379,96 @@
   }
   $('title').addEventListener('click', adminTap);
   $('pauseTitle').addEventListener('click', adminTap);
+
+  // ---------- Kernfusion ----------
+  function syncMetaBtns() {
+    const canFuse = C.fragmentsFor(meta) > 0;
+    const showFus = canFuse || meta.fusions > 0 || meta.frag > 0 || meta.best >= 40;
+    $$('.fus-btn').forEach(b => { b.hidden = !showFus; b.classList.toggle('ready', canFuse); });
+    const showMod = Object.keys(meta.modules || {}).length > 0;
+    $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
+    // Leere Zweierreihen ausblenden
+    $$('.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
+  }
+  const F_FX = {
+    f_core: l => '×' + dec(Math.pow(C.P.fCore, l), 2),
+    f_crys: l => '+' + Math.round(C.P.fCrys * 100 * l) + ' %',
+    f_frag: l => '+' + 20 * l + ' %',
+    f_keep: l => 10 * l + ' %',
+  };
+  let fuseArmed = 0;
+  function renderFusion() {
+    const gain = C.fragmentsFor(meta);
+    $('fusFrag').textContent = fmt(meta.frag || 0);
+    $('fusBest').textContent = meta.best;
+    $('fusGain').textContent = gain ? '+' + fmt(gain) : '–';
+    $('fusStats').textContent = (meta.fusions || 0) + ' · ' + (meta.bestEver || 0);
+    const btn = $('fuseBtn'), note = $('fusNote');
+    btn.classList.remove('armed'); btn.textContent = 'Fusion auslösen'; fuseArmed = 0;
+    if (runAlive()) { btn.disabled = true; note.textContent = 'Beende zuerst den laufenden Lauf.'; note.className = 'note err'; }
+    else if (!gain) { btn.disabled = true; note.textContent = `Möglich ab Bestwelle ${C.FUSION_MIN}. Je weiter du kommst, desto mehr Fragmente.`; note.className = 'note'; note.style.color = 'var(--ink-dim)'; }
+    else { btn.disabled = false; note.style.color = ''; note.className = 'note'; const fr = w => fmt(Math.floor(C.P.fragK * Math.pow(w / 10, C.P.fragExp) * (1 + 0.2 * C.flv(meta, 'f_frag'))));
+      const w1 = Math.ceil((meta.best + 1) / 10) * 10, w2 = w1 + 20;
+      note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
+    const list = $('fusList'); list.innerHTML = '';
+    for (const u of C.FUSION_UPG) {
+      const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), ok = !mx && meta.frag >= c;
+      const fx = F_FX[u.id], extra = fx ? ` <b style="color:var(--core)">${fx(l)}${mx ? '' : ' → ' + fx(l + 1)}</b>` : '';
+      const el = document.createElement('div'); el.className = 'row'; el.style.gridTemplateColumns = '1fr auto';
+      el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'aktiv' : 'Technik') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
+        <button class="buy num ${mx ? 'max' : 'f-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? 'OK' : fmt(c)}</button>`;
+      el.querySelector('button').addEventListener('click', () => { if (C.fusionBuy(meta, u)) { A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderFusion(); } });
+      list.appendChild(el);
+    }
+  }
+  $('fuseBtn').addEventListener('click', () => {
+    if (runAlive() || !C.fragmentsFor(meta)) return;
+    const btn = $('fuseBtn');
+    if (!fuseArmed) { fuseArmed = setTimeout(() => { fuseArmed = 0; btn.classList.remove('armed'); btn.textContent = 'Fusion auslösen'; }, 3500); btn.classList.add('armed'); btn.textContent = 'Wirklich? Labor wird zurückgesetzt'; return; }
+    clearTimeout(fuseArmed); fuseArmed = 0;
+    const gain = C.fuse(meta);
+    run = null; put(RKEY, null); save(); A.play('fusion');
+    renderFusion();
+    $('fusNote').className = 'note'; $('fusNote').style.color = ''; $('fusNote').textContent = `Fusion abgeschlossen: +${fmt(gain)} Kernfragmente. Investiere sie unten und starte neu.`;
+  });
+  $$('.fus-btn').forEach(b => b.addEventListener('click', () => show('fusion')));
+  $('fusClose').addEventListener('click', home);
+
+  // ---------- Module ----------
+  function renderModules() {
+    const eq = meta.equip, mods = meta.modules;
+    const slots = $('modSlots'); slots.innerHTML = '';
+    for (let i = 0; i < C.MODULE_SLOTS; i++) {
+      const t = eq[i], m = t && mods[t];
+      const d = document.createElement('div');
+      d.className = 'slot' + (m ? ' on r' + m.rar : '');
+      d.innerHTML = m ? `<b>${C.MODULES[t].name}</b>${C.RARITY[m.rar].name}` : 'freier Platz';
+      slots.appendChild(d);
+    }
+    const list = $('modList'); list.innerHTML = '';
+    for (const sec of C.SECTORS) {
+      const types = Object.keys(C.MODULES).filter(t => C.MODULES[t].sector === sec.n);
+      const h = document.createElement('div'); h.className = 'modsec'; h.textContent = `Sektor ${sec.n} · ${sec.name}`; list.appendChild(h);
+      for (const t of types) {
+        const M = C.MODULES[t], m = mods[t], on = eq.includes(t);
+        const el = document.createElement('div');
+        el.className = 'row modrow' + (m ? ' r' + m.rar : ' unknown') + (on ? ' eq' : '');
+        el.style.gridTemplateColumns = '1fr auto';
+        el.innerHTML = m
+          ? `<div><div class="nm">${M.name}<span class="rar">${C.RARITY[m.rar].name}</span><small>Fund ${m.copies}/10</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
+          : `<div><div class="nm">Unbekanntes Modul</div><div class="ds">Fällt bei Mutterschiffen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
+        if (m) el.addEventListener('click', () => {
+          if (on) meta.equip = eq.filter(x => x !== t);
+          else if (eq.length < C.MODULE_SLOTS) meta.equip = eq.concat(t);
+          else { el.animate && el.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 200 }); return; }
+          A.play('click'); if (runAlive()) run.recalc(); save(); renderModules();
+        });
+        list.appendChild(el);
+      }
+    }
+  }
+  $$('.mod-btn').forEach(b => b.addEventListener('click', () => show('modules')));
+  $('modClose').addEventListener('click', home);
 
   // ---------- Ton ----------
   function syncSoundBtns() {
@@ -409,6 +535,8 @@
     k1m: () => { meta.crystals += 1e6; meta.adminTainted = true; },
     labmax: () => { for (const u of C.META_UPG) meta.lv[u.id] = u.max != null ? u.max : Math.max(C.mlv(meta, u.id), 40); meta.adminTainted = true; if (runAlive()) run.recalc(); },
     labreset: () => { meta.lv = {}; if (runAlive()) run.recalc(); },
+    frag: () => { meta.frag = (meta.frag || 0) + 100; meta.adminTainted = true; },
+    loot: () => { const d = C.rollModule(Math.max(10, meta.best || 10) + Math.floor(Math.random() * 250)); C.addModule(meta, d); meta.adminTainted = true; if (runAlive()) run.recalc(); },
     best50: () => { meta.best = 50; meta.adminTainted = true; },
     best0: () => { meta.best = 0; },
     e1m: () => { if (runAlive()) { run.energy += 1e6; run.admin = true; } },
@@ -475,7 +603,7 @@
   });
 
   // ---------- Schleife ----------
-  const SOUND_OF = { eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
+  const SOUND_OF = { loot: 'loot', rlaunch: 'rlaunch', cryo: 'cryo', laserhit: 'laserhit', nova: 'nova', eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
   let last = performance.now(), uiT = 0, saveT = 0, autoT = 0, dpsT = 0, lastShots = 0;
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;
