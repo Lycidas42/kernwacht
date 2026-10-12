@@ -465,7 +465,6 @@
       ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0); glow(PAL.range, 2, 0.9);
       ctx.setLineDash([]);
 
-      if (s.cryoCd) { ctx.setLineDash([3, 9]); ctx.beginPath(); ctx.arc(0, 0, s.cryoRange, Math.PI, 0); ctx.strokeStyle = PAL.frost; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1; ctx.setLineDash([]); }
       drawScanner(run, t);
       // Klingenbahn
       if (s.blades) {
