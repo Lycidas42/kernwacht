@@ -1,7 +1,7 @@
 // Kernwacht – Spielsteuerung: Zustand, Bedienung, Speichern, Schleife
 (function () {
   'use strict';
-  const C = window.Core, A = window.KWAudio, O = window.KWOnline, fmt = window.KWRender.fmt;
+  const C = window.Core, A = window.KWAudio, O = window.KWOnline, R_ = window.KWRender, fmt = R_.fmt;
   const KEY = 'kernwacht.v1', RKEY = 'kernwacht.run.v2';
   // SHA-256 von "kernwacht:" + Passwort. Neues Passwort: siehe README, Abschnitt "Admin-Modus".
   const ADMIN_HASH = 'e157170b6268a0306b388f775d4cd2cae352e63f0ca05b40984b9028368f2758';
@@ -65,6 +65,7 @@
   function endRun(early) {
     if (!run || run.finished) return;
     run.finished = true;
+    const recBefore = C.record(meta);
     const res = run.finish();
     if (run.admin) meta.adminTainted = true;
     put(RKEY, null); save();
@@ -80,7 +81,9 @@
       const M = C.MODULES[d.type], txt = { neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund' }[d.result];
       ex.push(`<div class="loot r${d.rar}">Beute: <b>${M.name}</b> (${C.RARITY[d.rar].name}) · ${txt}</div>`);
     }
+    for (const u of C.ROADMAP) if (u.w > recBefore && u.w <= C.record(meta)) ex.unshift(`<div class="unl">Freigeschaltet: ${u.label}</div>`);
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
+    renderRoadmap();
     if ((res.loot || []).length) A.play('loot');
     submitScore();
     setTimeout(() => show('over'), early ? 0 : 900);
@@ -196,7 +199,7 @@
   let statEls = null;
   function buildStats() {
     const list = $('list');
-    list.innerHTML = `<table class="stbl"><thead><tr><th>Quelle</th><th>Treffer</th><th>Takt</th><th>DPS</th><th>Anteil</th></tr></thead><tbody id="stBody"></tbody></table><div class="kv" id="kv"></div>`;
+    list.innerHTML = `<table class="stbl"><thead><tr><th>Quelle</th><th>Treffer</th><th>Takt</th><th>DPS</th><th>Anteil</th></tr></thead><tbody id="stBody"></tbody></table><div class="kv" id="kv"></div><div class="stmods" id="stMods"></div>`;
     const body = $('stBody'); statEls = {};
     for (const src of SRC) {
       const tr = document.createElement('tr');
@@ -228,6 +231,10 @@
       ['Energie-Faktor', '×' + dec(s.loot, 2)], ['Wellenprämie', s.waveBonus ? '+' + fmt(run.waveBonusAmount()) : '–'], ['Kristalle (Lauf)', fmt(Math.floor(run.crystals))], ['Abschüsse', fmt(run.kills)],
     ];
     $('kv').innerHTML = kv.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+    const eq = (meta.equip || []).filter(t => meta.modules[t]);
+    $('stMods').innerHTML = eq.length
+      ? '<h4>Ausgerüstete Module</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}</span><br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
+      : (C.record(meta) >= C.MODULES_AT ? '<h4>Module</h4><p>Keine Module ausgerüstet. Mutterschiffe lassen sie fallen.</p>' : `<h4>Module</h4><p>Ab Rekordwelle ${C.MODULES_AT} lassen Mutterschiffe Module fallen.</p>`);
   }
 
   // ---------- Fähigkeiten ----------
@@ -307,6 +314,12 @@
     $('cheapBuy').disabled = !ch || meta.crystals < ch.cost;
     $('cheapBuy').textContent = ch ? 'Günstigstes: ' + ch.u.name : 'Günstigstes kaufen';
     for (const u of C.META_UPG) {
+      if (!C.gateOk(meta, u.id)) {
+        if (u.req) continue;
+        const el = document.createElement('div'); el.className = 'row locked'; el.style.gridTemplateColumns = '1fr auto';
+        el.innerHTML = `<div><div class="nm">${u.name}<small>ab Rekordwelle ${C.GATES[u.id]}</small></div><div class="ds">${u.desc}</div></div><button class="buy num" disabled>gesperrt</button>`;
+        list.appendChild(el); continue;
+      }
       if (u.req && !C.mlv(meta, u.req)) continue;
       const l = C.mlv(meta, u.id), mx = u.max != null && l >= u.max, c = C.metaCost(u, l), ok = !mx && meta.crystals >= c;
       const el = document.createElement('div'); el.className = 'row' + (rec && rec.u === u ? ' recd' : '');
@@ -340,6 +353,7 @@
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
     const max = C.maxStartWave(meta);
     renderJump();
+    renderRoadmap();
     const fl = $('fragLine');
     fl.hidden = !(meta.fusions || meta.frag);
     if (!fl.hidden) fl.innerHTML = `Kernfragmente <b>${fmt(meta.frag)}</b> · Fusionen <b>${meta.fusions || 0}</b> · Rekord <b>${meta.bestEver || 0}</b>`;
@@ -380,12 +394,24 @@
   $('title').addEventListener('click', adminTap);
   $('pauseTitle').addEventListener('click', adminTap);
 
+  // ---------- Nächste Freischaltung (Fortschritt sichtbar machen) ----------
+  function renderRoadmap() {
+    const nx = C.nextUnlock(meta), rec = C.record(meta);
+    $$('.roadmap').forEach(el => {
+      if (!nx) { el.hidden = true; return; }
+      const prev = [...C.ROADMAP].reverse().find(x => x.w <= rec), from = prev ? prev.w : 0;
+      const k = Math.max(0, Math.min(1, (rec - from) / (nx.w - from)));
+      el.hidden = false;
+      el.innerHTML = `<div class="rmhead"><span>Nächste Freischaltung</span><b>Welle ${nx.w}</b></div><div class="rmlabel">${nx.label}</div><div class="bar rmbar"><i style="width:${Math.round(k * 100)}%"></i></div><div class="rmsub">Rekord ${rec}</div>`;
+    });
+  }
+
   // ---------- Kernfusion ----------
   function syncMetaBtns() {
     const canFuse = C.fragmentsFor(meta) > 0;
-    const showFus = canFuse || meta.fusions > 0 || meta.frag > 0 || meta.best >= 40;
+    const showFus = C.record(meta) >= C.FUSION_AT || meta.fusions > 0;
     $$('.fus-btn').forEach(b => { b.hidden = !showFus; b.classList.toggle('ready', canFuse); });
-    const showMod = Object.keys(meta.modules || {}).length > 0;
+    const showMod = C.record(meta) >= C.MODULES_AT || Object.keys(meta.modules || {}).length > 0;
     $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
     // Leere Zweierreihen ausblenden
     $$('.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
@@ -442,9 +468,11 @@
       const t = eq[i], m = t && mods[t];
       const d = document.createElement('div');
       d.className = 'slot' + (m ? ' on r' + m.rar : '');
-      d.innerHTML = m ? `<b>${C.MODULES[t].name}</b>${C.RARITY[m.rar].name}` : 'freier Platz';
+      d.innerHTML = m ? `${R_.iconSvg(t, m.rar, 26)}<b>${C.MODULES[t].name}</b>${C.RARITY[m.rar].name}` : 'freier Platz';
       slots.appendChild(d);
     }
+    const bw = Math.max(30, Math.floor(Math.max(meta.best, 30) / 10) * 10);
+    $('dropLine').innerHTML = `Beutechance je Mutterschiff: <b>${Math.round(C.dropChance(30) * 100)} %</b> bei Welle 30 · <b>${Math.round(C.dropChance(bw) * 100)} %</b> bei Welle ${bw} · bis <b>85 %</b>. Höhere Wellen bringen auch seltenere Module.`;
     const list = $('modList'); list.innerHTML = '';
     for (const sec of C.SECTORS) {
       const types = Object.keys(C.MODULES).filter(t => C.MODULES[t].sector === sec.n);
@@ -455,8 +483,8 @@
         el.className = 'row modrow' + (m ? ' r' + m.rar : ' unknown') + (on ? ' eq' : '');
         el.style.gridTemplateColumns = '1fr auto';
         el.innerHTML = m
-          ? `<div><div class="nm">${M.name}<span class="rar">${C.RARITY[m.rar].name}</span><small>Fund ${m.copies}/10</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
-          : `<div><div class="nm">Unbekanntes Modul</div><div class="ds">Fällt bei Mutterschiffen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
+          ? `<div><div class="nm">${R_.iconSvg(t, m.rar, 20)}${M.name}<span class="rar">${C.RARITY[m.rar].name}</span><small>Fund ${m.copies}/10</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
+          : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Mutterschiffen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
         if (m) el.addEventListener('click', () => {
           if (on) meta.equip = eq.filter(x => x !== t);
           else if (eq.length < C.MODULE_SLOTS) meta.equip = eq.concat(t);
@@ -630,7 +658,7 @@
       $('bestNo').classList.toggle('rec', rec);
       $('runK').textContent = fmt(Math.floor(run.crystals));
       $('myDmg').textContent = fmt(run.s.dmg);
-      $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave));
+      $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));
       $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
       $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';

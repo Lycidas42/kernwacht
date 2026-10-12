@@ -153,7 +153,8 @@
     return 'kopie';
   }
   const MODULE_SLOTS = 3;
-  const DROP_CHANCE = 0.6;
+  // Beutechance steigt mit der Welle des Mutterschiffs: 20 % bei Welle 30 bis max. 85 %
+  const dropChance = w => Math.max(0, Math.min(0.85, 0.2 + (w - 30) * 0.005));
 
   // Meilensteine: einmalige Kristalle für neue Bestwellen (25, 50, 75 …), je Fusionszyklus
   const milestoneReward = w => Math.round(30 * Math.pow(w / 10, 2));
@@ -178,7 +179,7 @@
     bomb:    { hp: 1,   spd: 34, dmg: 0,   rw: 0.5, r: 8,  col: 'bomb' },
   };
 
-  const FIELD_W = 240, FIELD_H = 430, BASE_R = 22, WAVE_LEN = 20, SPAWN_LEN = 15;
+  const FIELD_W = 240, FIELD_H = 430, BASE_R = 22, WALL_R = 58, WAVE_LEN = 20, SPAWN_LEN = 15;
   const STRIKE_KILLS = 30, STRIKE_R = 80;
 
   function newMeta() {
@@ -216,7 +217,46 @@
     p.grunt = 1 - used;
     return p;
   };
+  // Rechnerische Gegnerzahl (bestimmt Energie und Gesamt-LP einer Welle)
   const waveCount = w => Math.min(70, 5 + Math.floor(P.nGrow * w));
+  // Tatsächlich gespawnte Schiffe: weniger, dafür entsprechend kräftiger
+  const shipCount = w => Math.min(36, 4 + Math.floor(0.75 * w));
+
+  // ---------- Wellentypen: Abwechslung statt immer gleicher Masse ----------
+  const WAVE_TYPES = {
+    normal:    { name: '',               n: 1,    hp: 1,    spd: 1 },
+    swarm:     { name: 'Schwarm',        n: 1.8,  hp: 0.45, spd: 1.15, mix: { runner: 0.75 } },
+    heavy:     { name: 'Panzerverband',  n: 0.4,  hp: 2.7,  spd: 0.75, mix: { brute: 0.7 }, big: 1.25 },
+    artillery: { name: 'Artillerie',     n: 0.85, hp: 1.15, spd: 1,    mix: { shooter: 0.45 } },
+  };
+  function pickWaveType(w) {
+    if (w < 12 || w % 10 === 0) return 'normal';
+    const r = Math.random();
+    if (r < 0.2) return 'swarm';
+    if (r < 0.38) return 'heavy';
+    if (r < 0.52 && w >= 15) return 'artillery';
+    return 'normal';
+  }
+
+  // ---------- Freischaltungen nach Rekordwelle (aller Zeiten) ----------
+  const GATES = { u_freeze: 15, m_freeze: 15, u_blade: 20, u_over: 25, m_over: 25, u_jump: 25, m_jump: 25, u_mine: 35 };
+  const MODULES_AT = 30, FUSION_AT = 50;
+  const ROADMAP = [
+    { w: 10, label: 'Erstes Mutterschiff' },
+    { w: 15, label: 'Stasisfeld im Labor' },
+    { w: 20, label: 'Orbitklingen im Labor' },
+    { w: 25, label: 'Überladung und Sprungtor im Labor' },
+    { w: 30, label: 'Boss-Module: Mutterschiffe lassen Beute fallen' },
+    { w: 35, label: 'Minenwerfer im Labor' },
+    { w: 50, label: 'Kernfusion' },
+    { w: 51, label: 'Sektor 2: Smaragdnebel' },
+    { w: 101, label: 'Sektor 3: Glutgürtel' },
+    { w: 151, label: 'Sektor 4: Roter Riese' },
+    { w: 201, label: 'Sektor 5: Die Leere' },
+  ];
+  const record = m => Math.max(m.bestEver || 0, m.best || 0);
+  const gateOk = (m, id) => record(m) >= (GATES[id] || 0);
+  function nextUnlock(m) { const r = record(m); return ROADMAP.find(x => x.w > r) || null; }
   // Erwartete Energie aus Abschüssen einer Welle (ohne Upgrades im Lauf)
   function waveEnergy(w) {
     const p = MIX(w); let avg = 0;
@@ -344,7 +384,7 @@
       // Orbitklingen: pendeln über der Kanone, Radius folgt der Reichweite
       const bl = L('blade');
       s.blades = bl ? Math.min(6, 1 + Math.floor(bl / 5)) : 0;
-      s.bladeR = s.range * 0.55;
+      s.bladeR = Math.max(WALL_R + 28, s.range * 0.55);
       s.bladeDmg = s.dmg * 0.5 * (1 + 0.1 * bl);
       s.bladeSize = 9 + Math.min(7, bl * 0.25);
       s.bladeHz = 1 / 0.35;
@@ -358,13 +398,13 @@
       s.strikeDmg = s.dmg * 25;
       // Raketenwerfer (links): langsam, zielsuchend, großer Explosionsradius
       const ro = L('rocket');
-      s.rocketCd = ro ? Math.max(2.5, 5 - 0.08 * ro) : 0;
-      s.rocketDmg = s.dmg * (2 + 0.15 * ro);
+      s.rocketCd = ro ? Math.max(3, 5 - 0.07 * ro) : 0;
+      s.rocketDmg = s.dmg * (1.2 + 0.1 * ro);
       s.rocketR = 60 + 2 * ro;
       // Kryowerfer (rechts): schneller Frostbolzen, verlangsamt im kleinen Umkreis
       const cr = L('cryo');
-      s.cryoCd = cr ? Math.max(0.6, 1.6 - 0.035 * cr) : 0;
-      s.cryoDmg = s.dmg * (0.4 + 0.04 * cr);
+      s.cryoCd = cr ? Math.max(0.8, 1.6 - 0.03 * cr) : 0;
+      s.cryoDmg = s.dmg * (0.25 + 0.015 * cr);
       s.cryoSlow = Math.min(0.6, 0.3 + 0.01 * cr);
       s.cryoR = 40 + cr;
       // Ausgerüstete Module
@@ -409,7 +449,12 @@
       this.holding = false;
       const w = this.wave;
       const boss = w % 10 === 0;
-      const n = waveCount(w);
+      const wt = boss ? 'normal' : pickWaveType(w), WT = WAVE_TYPES[wt];
+      const n = Math.max(3, Math.round(shipCount(w) * WT.n));
+      // Gesamt-LP und Energie der Welle bleiben gleich, verteilt auf weniger bzw. mehr Schiffe
+      const comp = waveCount(w) / n;
+      this.waveType = wt;
+      this.waveMod = { hp: comp * (wt === 'swarm' ? 0.8 : wt === 'heavy' ? 1.1 : 1), rw: comp, dmg: Math.sqrt(comp), spd: WT.spd, big: WT.big || 1 };
       const list = [];
       const sec = sectorOf(w).n;
       // Sektor-Gegner: der neue Typ des Sektors häufig, frühere Typen seltener
@@ -421,25 +466,27 @@
         else if (w >= 6 && r < 0.22) t = 'brute';
         else if (w >= 3 && r < 0.45) t = 'runner';
         else { let q = Math.random(); for (const sp of special) { if (q < sp.p) { t = sp.t; break; } q -= sp.p; } }
+        if (WT.mix) { let q = Math.random(); for (const k in WT.mix) { if (q < WT.mix[k]) { t = k; break; } q -= WT.mix[k]; } }
         list.push(t);
       }
       if (boss) list.splice(Math.floor(n / 3), 0, 'boss');
       this.queue = list;
       this.spawnGap = SPAWN_LEN / list.length;
       this.spawnT = 0;
-      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
+      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, kind: WT.name, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
     }
 
     // Neues Schiff an Weltposition (x, y) erzeugen
     spawnAt(type, x0, y0, o) {
       const d = ENEMY[type], w = this.wave;
       // Frühe Mutterschiffe schwächer, volle Stärke ab etwa Welle 60
-      const hp = d.hp * hpScale(w) * (type === 'boss' ? Math.min(1, 0.4 + w / 100) : 1);
+      const wm = type === 'boss' || type === 'bomb' || !this.waveMod ? { hp: 1, rw: 1, dmg: 1, spd: 1, big: 1 } : this.waveMod;
+      const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1);
       const e = {
         id: ++this.uid, type, a: Math.atan2(y0, x0), dist: Math.hypot(x0, y0), hp, maxHp: hp,
-        spd: d.spd * (1 + Math.min(0.6, w * 0.006)),
-        dmg: d.dmg * dmgScale(w), rw: d.rw * rwScale(w), r: d.r, stop: d.stop || 0,
-        atkT: 0.5, shotT: 1 + Math.random(), bladeHit: 0, kbT: 0, flash: 0, seed: Math.random() * 6.28,
+        spd: d.spd * (1 + Math.min(0.6, w * 0.006)) * wm.spd,
+        dmg: d.dmg * dmgScale(w) * wm.dmg, rw: d.rw * rwScale(w) * wm.rw, r: d.r * (wm.big > 1 && type === 'brute' ? wm.big : 1) * (type !== 'boss' && wm.hp > 1.6 ? 1.1 : 1), stop: d.stop || 0,
+        atkT: 0.5, shotT: 1 + Math.random(), bladeHit: 0, kbT: 0, flash: 0, seed: Math.random() * 6.28, fac: sectorOf(w).n,
       };
       if (type === 'boss') {
         e.stop = Math.max(115, Math.min(210, this.s.range - 20));
@@ -474,6 +521,7 @@
       if (e.hp <= 0) {
         this.energy += e.rw * this.s.loot;
         this.kills++;
+        if (this.fxOn && this.s.mod && (this.s.mod.leech || this.s.mod.crysmod) && Math.random() < 0.5) { const p = this.pos(e); this.fx.push({ k: this.s.mod.leech ? 'leech' : 'crysfx', x: p.x, y: p.y, t: 0 }); }
         this.charge = Math.min(1, this.charge + (e.type === 'boss' ? 0.35 : e.type === 'bomb' ? 0 : 1 / STRIKE_KILLS));
         if (this.s.mod.splinter && src !== 'mod') {
           const p = this.pos(e), dmg = e.maxHp * this.s.mod.splinter;
@@ -482,7 +530,9 @@
         }
         if (e.type === 'boss') {
           this.crystals += P.cBoss * waveCrystals(this.wave) * this.s.crysMult;
-          if (!this.admin && Math.random() < DROP_CHANCE) {
+          const modOk = Math.max(record(this.meta), this.wave) >= MODULES_AT;
+          const first = !this.meta.modules || !Object.keys(this.meta.modules).length;
+          if (!this.admin && modOk && (first && !this.loot.length || Math.random() < dropChance(this.wave))) {
             const drop = rollModule(this.wave); this.loot.push(drop);
             if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'loot', x: p.x, y: p.y, t: 0, drop }); }
           }
@@ -615,7 +665,7 @@
       if (!frozen) for (const e of this.enemies) {
         if (e.hp <= 0) continue;
         e.flash = Math.max(0, e.flash - dt);
-        const contact = BASE_R + e.r;
+        const contact = WALL_R + e.r * 0.6;
         if (e.type === 'boss') {
           if (e.dist > e.stop && !e.enraged) { e.dist = Math.max(e.stop, e.dist - e.spd * dt); }
           else {
@@ -676,7 +726,7 @@
 
       if (!frozen) for (const b of this.ebullets) {
         const d = Math.hypot(b.x, b.y), v = (b.big ? 120 : 150) * dt;
-        if (d <= BASE_R + v) { b.done = true; this.hitBase(b.dmg); }
+        if (d <= WALL_R + v) { b.done = true; this.hitBase(b.dmg); if (this.fxOn) this.fx.push({ k: 'wallhit', a: Math.atan2(b.y, b.x), t: 0 }); }
         else { b.x -= (b.x / d) * v; b.y -= (b.y / d) * v; }
       }
       this.ebullets = this.ebullets.filter(b => !b.done);
@@ -808,7 +858,7 @@
         if (this.mineT >= s.mineCd && this.mines.length < s.mineMax) {
           this.mineT = 0;
           const x0 = (Math.random() * 2 - 1) * FIELD_W, y0 = -FIELD_H;
-          const a = Math.atan2(y0, x0), r = 55 + Math.random() * (s.range - 55);
+          const a = Math.atan2(y0, x0), r = WALL_R + 25 + Math.random() * Math.max(10, s.range - WALL_R - 25);
           this.mines.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, arm: 0.6, age: 0 });
         }
         for (const m of this.mines) {
@@ -889,7 +939,7 @@
     u_mine:  { w: 1.1,  why: 'Minen räumen Gruppen auf ihrem Weg zur Kanone ab.' },
   };
   function labOptions(meta) {
-    return META_UPG.filter(u => (!u.req || mlv(meta, u.req)) && (u.max == null || mlv(meta, u.id) < u.max)).map(u => {
+    return META_UPG.filter(u => gateOk(meta, u.id) && (!u.req || mlv(meta, u.req)) && (u.max == null || mlv(meta, u.id) < u.max)).map(u => {
       const r = REC[u.id] || { w: 0.3, why: '' }, w = typeof r.w === 'function' ? r.w(meta) : r.w, c = metaCost(u, mlv(meta, u.id));
       return { u, cost: c, score: w / c, why: r.why };
     });
@@ -907,5 +957,5 @@
   }
   const enemyHp = (type, w) => ENEMY[type].hp * hpScale(w);
 
-  root.Core = { recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  root.Core = { dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

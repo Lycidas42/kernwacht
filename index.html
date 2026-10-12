@@ -219,6 +219,22 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .sec:disabled { opacity: .4; cursor: default; }
 .row.recd { border-left-color: var(--heal); background: color-mix(in srgb, var(--heal) 7%, transparent); }
 .row .tag { font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: var(--void); background: var(--heal); padding: 1px 5px; border-radius: 2px; font-weight: 700; }
+.roadmap { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; display: grid; gap: 4px; }
+.rmhead { display: flex; justify-content: space-between; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.rmhead b { color: var(--energy); font-family: var(--font-num); }
+.rmlabel { font-weight: 600; font-size: .92rem; }
+.rmbar i { background: linear-gradient(90deg, var(--energy), var(--heat)); }
+.rmsub { font-size: .72rem; color: var(--ink-dim); font-family: var(--font-num); }
+.extra .unl { color: var(--energy); font-weight: 600; }
+.mi { flex: none; vertical-align: middle; }
+.row .nm .mi { margin-right: 2px; align-self: center; }
+.slot .mi { display: block; margin: 0 auto 4px; }
+.stmods { margin-top: 12px; display: grid; gap: 6px; }
+.stmods h4 { margin: 0; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.stmods p { margin: 0; font-size: .78rem; color: var(--ink-dim); }
+.stmod { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; font-size: .78rem; border-left: 2px solid var(--rc); padding-left: 8px; }
+.stmod span { color: var(--ink-dim); }
+.stmod .rar { color: var(--rc); font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; }
 .extra { display: grid; gap: 6px; font-size: .84rem; }
 .extra .loot { border-left: 2px solid var(--rc); padding-left: 8px; }
 .extra .loot b { color: var(--rc); }
@@ -298,6 +314,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
       <div class="stat"><div class="l">Läufe</div><div class="v num" id="mRuns">0</div></div>
       <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="mK">0</div></div>
     </div>
+    <div class="roadmap" hidden></div>
     <p class="metaline" id="fragLine" hidden></p>
     <div class="note" id="offlineNote" hidden></div>
     <div class="jumpbox" hidden>
@@ -377,6 +394,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
     </div>
     <div class="note" id="oBest">Neue Bestwelle.</div>
     <div class="extra" id="oExtra" hidden></div>
+    <div class="roadmap" hidden></div>
     <div class="jumpbox" hidden>
       <h3>Startwelle (Sprungtor)</h3>
       <div class="stepper">
@@ -462,6 +480,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
   <div class="card">
     <h2>Module</h2>
     <p>Mutterschiffe lassen Module fallen. Jeder Sektor hat eigene Typen, und jeder weitere Fund macht ein Modul stärker. Tippe ein Modul an, um es auszurüsten.</p>
+    <p class="metaline" id="dropLine"></p>
     <div class="slots" id="modSlots"></div>
     <div id="modList"></div>
     <div class="actions"><button class="sec" id="modClose">Zurück</button></div>
