@@ -27,7 +27,9 @@
   normMeta();
   let run = null;
   function save() {
-    meta.lastSeen = Date.now(); put(KEY, meta);
+    meta.lastSeen = Date.now();
+    if (!catching) meta.idleOk = !!(runAlive() && !paused && !current); // lief der Lauf gerade sichtbar weiter?
+    put(KEY, meta);
     put(RKEY, run && !run.dead ? run.snapshot() : null);
   }
   window.__kwSave = save;
@@ -36,6 +38,7 @@
   const dec = (x, d) => x.toFixed(d).replace('.', ',');
 
   // ---------- Zustand ----------
+  let catching = false;
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
@@ -100,6 +103,7 @@
     if (res.noLoot === 'admin') ex.push('<div>Lauf mit Admin-Eingriffen: Mutterschiffe lassen keine Module fallen.</div>');
     else if (res.bossKills && !(res.loot || []).length) ex.push(`<div>${res.bossKills} Mutterschiff${res.bossKills === 1 ? '' : 'e'} besiegt, diesmal ohne Beute. Beim nächsten steigt die Chance um ${10 * (meta.dry || 0)} Prozentpunkte.</div>`);
     else if (!res.bossKills && C.record(meta) >= C.MODULES_AT && res.wave < 30) ex.push('<div>Module gibt es erst von Mutterschiffen ab Welle 30.</div>');
+    if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderRoadmap();
     if ((res.loot || []).length) A.play('loot');
@@ -129,6 +133,7 @@
       ex.push(`<div>Heute: ${twistOf(res.mode.day).name}. Morgen gibt es neue Wellen.</div>`);
       if (res.newBest) submitDaily();
     }
+    if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderJump(); $$('#over .jumpbox').forEach(b => (b.hidden = true));
     submitScore(); cloudAuto();
@@ -191,17 +196,70 @@
   $('dClose').addEventListener('click', home);
 
   // ---------- Offline / Rückkehr ----------
-  function offlineCrystals() {
-    const now = Date.now(), away = Math.min(24 * 3600e3, now - (meta.lastSeen || now));
-    meta.lastSeen = now;
-    if (away < 60e3) return null;
-    const k = Math.floor(C.offlinePerHour(meta) * away / 3600e3);
+  const dur = ms => { const h = Math.floor(ms / 3600e3), m = Math.floor(ms / 60e3) % 60; return h ? h + ' h ' + m + ' min' : Math.max(1, m) + ' min'; };
+  // Labor-Ertrag für eine Abwesenheit (ms), höchstens 24 h
+  function offlineCrystals(ms) {
+    ms = Math.min(24 * 3600e3, ms);
+    if (ms < 60e3) return null;
+    const k = Math.floor(C.offlinePerHour(meta) * ms / 3600e3);
     meta.crystals += k;
-    const h = Math.floor(away / 3600e3), m = Math.floor(away / 60e3) % 60;
-    return { k, txt: (h ? h + ' h ' : '') + m + ' min' };
+    return { k, txt: dur(ms) };
+  }
+  // ---------- Nachrechnen: der Lauf läuft während der Abwesenheit weiter (Autopilot, max. 30 min) ----------
+  const CATCH_MAX = 30 * 60e3, CATCH_MIN = 20e3;
+  let catchNote = null;
+  function autopilot() {
+    autoBuy();
+    if (run.charge >= 1) {
+      const alive = run.enemies.filter(e => e.hp > 0 && !run.cloaked(e));
+      const t = alive.find(e => e.type === 'boss') || alive.sort((a, b) => a.dist - b.dist)[0];
+      if (t) { const p = run.pos(t); run.strike(p.x, p.y); }
+    }
+    if (run.abilityReady('freeze') && run.hp < run.s.maxHp * 0.35 && run.enemies.length > 3) run.useAbility('freeze');
+    if (run.abilityReady('over') && (run.bossAlive() || run.enemies.length > 12)) run.useAbility('over');
+  }
+  function catchUp(ms, extra) {
+    const k = Math.max(1, Math.min(4, meta.speed || speed || 1)), total = ms / 1000 * k;
+    const start = { wave: run.wave, crystals: run.crystals, buys: Object.values(run.lv).reduce((a, b) => a + b, 0), kills: run.kills };
+    let done = 0, autoT = 0;
+    catching = true; setPaused(true);
+    $('backTxt').textContent = `Du warst ${dur(ms)} weg. Dein Lauf wird nachgerechnet …`;
+    $('backK').hidden = true; $('resumeBtn').disabled = true; $('backBar').hidden = false;
+    show('back');
+    const step = () => {
+      const t0 = performance.now();
+      while (done < total && !run.dead && performance.now() - t0 < 30) {
+        run.update(0.1); done += 0.1; autoT += 0.1;
+        if (autoT >= 0.5) { autoT = 0; autopilot(); }
+        run.fx.length = 0;
+      }
+      $('backBar').firstElementChild.style.width = Math.min(100, done / total * 100) + '%';
+      if (done < total && !run.dead) { setTimeout(step, 0); return; }
+      catching = false; $('backBar').hidden = true; $('resumeBtn').disabled = false;
+      lastShots = run.shots; R.clear(); buildList();
+      const buys = Object.values(run.lv).reduce((a, b) => a + b, 0) - start.buys;
+      const sum = `Welle ${start.wave} → ${run.wave}, ${fmt(run.kills - start.kills)} Abschüsse, +${fmt(Math.floor(run.crystals - start.crystals))} Kristalle im Lauf${buys > 0 ? `, ${buys} Upgrades gekauft` : ''}.`;
+      const lab = extra && extra.k > 0 ? ` Das Labor hat zusätzlich ${fmt(extra.k)} Kristalle für die übrige Zeit (${extra.txt}) gesammelt.` : '';
+      if (run.dead) {
+        catchNote = `Während deiner Abwesenheit lief der Lauf ${dur(done / k * 1000)} weiter: ${sum} Dann ist die Kanone gefallen.${lab}`;
+        endRun(false); return;
+      }
+      $('backTxt').textContent = `Dein Lauf lief ${dur(ms)} mit Autopilot weiter${k > 1 ? ` (Tempo ${k}×)` : ''}.`;
+      $('backK').hidden = false; $('backK').textContent = sum + lab;
+      save();
+    };
+    setTimeout(step, 30);
   }
   function welcomeBack(fromLoad) {
-    const o = offlineCrystals();
+    if (catching) return;
+    const now = Date.now(), away = Math.max(0, now - (meta.lastSeen || now));
+    meta.lastSeen = now;
+    if (runAlive() && meta.catchup !== false && meta.idleOk && away >= CATCH_MIN) {
+      const sim = Math.min(away, CATCH_MAX);
+      catchUp(sim, offlineCrystals(away - sim));
+      return;
+    }
+    const o = offlineCrystals(away);
     if (runAlive()) {
       if (!o && !fromLoad) return;
       setPaused(true);
@@ -954,7 +1012,7 @@
   });
   $('pauseBtn').addEventListener('click', () => { if (runAlive()) setPaused(!paused); });
   $$('#ctrl [data-speed]').forEach(b => b.addEventListener('click', () => {
-    speed = +b.dataset.speed;
+    speed = +b.dataset.speed; meta.speed = speed;
     $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
   }));
   $$('#tabs [data-tab]').forEach(b => b.addEventListener('click', () => {
@@ -962,6 +1020,12 @@
     $$('#tabs [data-tab]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false'));
     buildList();
   }));
+  // Tempo vom letzten Mal übernehmen
+  if ([1, 2, 4].includes(meta.speed)) { speed = meta.speed; $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.speed === speed ? 'true' : 'false')); }
+  // Nachrechnen an/aus
+  function syncCatchBtn() { const on = meta.catchup !== false; $('catchBtn').setAttribute('aria-pressed', on ? 'true' : 'false'); $('catchBtn').textContent = on ? 'Weiterlaufen im Hintergrund: an' : 'Weiterlaufen im Hintergrund: aus'; }
+  $('catchBtn').addEventListener('click', () => { meta.catchup = meta.catchup === false; save(); syncCatchBtn(); A.play('click'); });
+  syncCatchBtn();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { save(); A.suspend(); cloudAuto(); }
     else { A.resume(); welcomeBack(false); }
