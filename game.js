@@ -112,8 +112,13 @@
     const ex = [];
     for (const m of res.milestones || []) ex.push(`<div class="ms">Meilenstein Welle ${m.w}: +${fmt(m.k)} Kristalle</div>`);
     for (const d of res.loot || []) {
-      const M = C.MODULES[d.type], txt = { neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund' }[d.result];
-      ex.push(`<div class="loot r${d.rar}">Beute: <b>${M.name}</b> (${C.RARITY[d.rar].name}) · ${txt}</div>`);
+      // Fund und Ergebnis getrennt: ein gewöhnlicher Fund kann ein legendäres Modul verstärken
+      const M = C.MODULES[d.type], R = C.RARITY, now = d.nowRar != null ? d.nowRar : d.rar;
+      const txt = d.result === 'neu' ? `neues Modul (${R[d.rar].name})`
+        : d.result === 'besser' ? `Seltenheit steigt auf ${R[now].name} · Fund ${d.copies}/10`
+        : d.result === 'voll' ? `dein Modul (${R[now].name}) hat schon alle 10 Funde`
+        : `zählt als weiterer Fund für dein Modul (${R[now].name}) · jetzt ${d.copies}/10`;
+      ex.push(`<div class="loot r${now}">Beute: <b>${M.name}</b> <span class="dim">(Fund ${R[d.rar].name})</span> → ${txt}</div>`);
     }
     for (const u of C.ROADMAP) if (u.w > recBefore && u.w <= C.record(meta)) ex.unshift(`<div class="unl">Freigeschaltet: ${u.label}</div>`);
     // Beute-Übersicht: wie viele Mutterschiffe, warum ggf. keine Module
@@ -1062,7 +1067,7 @@
     }
     $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
     $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
-    $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); mineNote(`Hergestellt: ${C.MODULES[d.type].name} (${C.RARITY[d.rar].name}) · ${{ neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund' }[d.result]}`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); mineNote(`Hergestellt: ${C.MODULES[d.type].name} (${C.RARITY[d.rar].name}) · ${{ neu: 'neues Modul', besser: 'Seltenheit verbessert', kopie: 'stärker durch weiteren Fund', voll: 'schon alle 10 Funde' }[d.result]}`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { if (C.modImprove(meta, b.dataset.imp, b.dataset.w)) { A.play('loot'); mineNote(`${C.MODULES[b.dataset.imp].name} verbessert.`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     syncMineBadge();
   }
