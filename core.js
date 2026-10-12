@@ -217,6 +217,7 @@
     return meta.cph ? Math.max(OFFLINE_SHARE * meta.cph, est * 0.5) : est;
   }
 
+  const MINE_FUSE = 10; // Sekunden, bis eine unberührte Mine von selbst losfliegt
   const SOURCES = ['gun', 'rocket', 'cryo', 'mine', 'shock', 'blade', 'strike', 'mod'];
   const UPG_BY_ID = {}; RUN_UPG.forEach(u => (UPG_BY_ID[u.id] = u));
   const MIX = w => {
@@ -389,7 +390,7 @@
       this.aim = -Math.PI / 2; this.shots = 0; this.charge = 0;
       this.focus = null; this.focusUntil = 0; this.uid = 0;
       this.cd = { freeze: 0, over: 0 }; this.freezeUntil = 0; this.overUntil = 0;
-      this.dealt = {}; SOURCES.forEach(k => (this.dealt[k] = 0));
+      this.dealt = {}; SOURCES.forEach(k => (this.dealt[k] = 0)); this.modDealt = {};
       this.holding = false; this.god = false; this.ring = null;
       this.rockets = []; this.bolts = []; this.rocketT = 0; this.cryoT = 0; this.reinfT = 0; this.loot = []; this.novaT = 0;
       this.startWave = 1;
@@ -407,7 +408,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
       const o = {}; keep.forEach(k => (o[k] = this[k]));
       o.enemies = this.enemies.map(e => Object.assign({}, e));
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -420,7 +421,7 @@
       r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.focus = null; r.dead = false; r.ring = null;
       r.cd = Object.assign({ freeze: 0, over: 0 }, o.cd || {});
       r.dealt = Object.assign({}, r.dealt, o.dealt || {});
-      SOURCES.forEach(k => { if (r.dealt[k] == null) r.dealt[k] = 0; });
+      SOURCES.forEach(k => { if (r.dealt[k] == null) r.dealt[k] = 0; }); r.modDealt = Object.assign({}, o.modDealt || {});
       r.recalc();
       return r;
     }
@@ -617,18 +618,21 @@
 
 
 
-    hurt(e, d, crit, src) {
-      if (e.hp <= 0) return;
+    // Schadensanteil eines Moduls mitschreiben (für den Werte-Tab)
+    credit(tag, v) { if (v > 0) this.modDealt[tag] = (this.modDealt[tag] || 0) + v; }
+    hurt(e, d, crit, src, tag) {
+      if (e.hp <= 0) return 0;
       if (e.shieldUntil && e.shieldUntil > this.time) { d *= 0.15; if (this.fxOn && Math.random() < 0.25) { const p = this.pos(e); this.fx.push({ k: 'shieldhit', x: p.x, y: p.y, t: 0 }); } }
       if (e.type === 'bulwark' && e.guard > 0) {
         // Frontschild fängt Schaden ab, bis es bricht
         const ab = Math.min(e.guard, d); e.guard -= ab; d -= ab; e.guardHit = this.time;
         if (this.fxOn && e.guard <= 0) { const p = this.pos(e); this.fx.push({ k: 'shieldhit', x: p.x, y: p.y, t: 0 }); }
-        if (d <= 0) return;
+        if (d <= 0) return 0;
       }
       if (e.laser) e.laserDmg = (e.laserDmg || 0) + d;
       const eff = Math.min(d, e.hp);
       this.dealt[src || 'gun'] += eff;
+      if (tag) this.credit(tag, eff);
       e.hp -= d; e.flash = 0.08;
       if (this.fxOn && (crit || e.type === 'boss' || e.type === 'brute')) { const p = this.pos(e); this.fx.push({ k: 'dmg', x: p.x, y: p.y, t: 0, v: d, crit }); }
       if (e.hp <= 0) {
@@ -638,7 +642,7 @@
         if (!this.s.noGun) this.charge = Math.min(1, this.charge + (e.type === 'boss' ? 0.35 : e.type === 'bomb' ? 0 : 1 / STRIKE_KILLS) * (1 + ((this.s.mod && this.s.mod.leech) || 0) / 2));
         if (this.s.mod.splinter && src !== 'mod') {
           const p = this.pos(e), dmg = this.s.gunDmg * this.s.mod.splinter * P.splK;
-          for (const o of this.enemies) if (o !== e && o.hp > 0) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 45 + o.r) this.hurt(o, dmg, false, 'mod'); }
+          for (const o of this.enemies) if (o !== e && o.hp > 0) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < 45 + o.r) this.hurt(o, dmg, false, 'mod', 'splinter'); }
           if (this.fxOn) this.fx.push({ k: 'splinter', x: p.x, y: p.y, t: 0 });
         }
         if (e.type === 'boss') {
@@ -665,6 +669,7 @@
         if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'boom', x: p.x, y: p.y, t: 0, type: e.type, r: e.r, a: e.a }); }
         if (this.focus === e) this.focus = null;
       }
+      return eff;
     }
 
     hitBase(d) {
@@ -681,7 +686,7 @@
     fireNova() {
       this.novaT = this.time + 12;
       const d = this.s.gunDmg * this.s.mod.nova;
-      for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, d, false, 'mod'); if (e.hp > 0 && e.type !== 'boss') e.dist += 30; }
+      for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, d, false, 'mod', 'nova'); if (e.hp > 0 && e.type !== 'boss') e.dist += 30; }
       if (this.fxOn) this.fx.push({ k: 'nova', t: 0, r: this.s.range });
     }
 
@@ -793,7 +798,7 @@
         if (this.thornT >= 0.5) {
           this.thornT = 0;
           const pts = [];
-          for (const e of this.enemies) if (e.hp > 0 && e.dist <= WALL_R + e.r * 0.3 + 12) { const p = this.pos(e); this.hurt(e, s.gunDmg * s.mod.plating * 0.5, false, 'mod'); pts.push(p); }
+          for (const e of this.enemies) if (e.hp > 0 && e.dist <= WALL_R + e.r * 0.3 + 12) { const p = this.pos(e); this.hurt(e, s.gunDmg * s.mod.plating * 0.5, false, 'mod', 'plating'); pts.push(p); }
           if (pts.length && this.fxOn) this.fx.push({ k: 'thorn', t: 0, pts: pts.slice(0, 8) });
         }
       }
@@ -887,7 +892,7 @@
               const crit = Math.random() < s.crit;
               const mx = Math.cos(this.aim) * BASE_R * 2.4, my = -8 + Math.sin(this.aim) * BASE_R * 2.4;
               const oc = s.mod.overcharge && i === 0 && this.shots % 12 === 0 ? s.mod.overcharge : 1;
-              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1 });
+              this.bullets.push({ x: mx, y: my, tgt: inRange[i], dmg: s.gunDmg * (i ? s.multiDmg : 1) * (crit ? s.critx : 1) * oc, crit: crit || oc > 1, oc: oc > 1, rc: crit });
             }
           }
         } else this.fireT = 1;
@@ -899,12 +904,18 @@
         if (d <= v + t.r) {
           b.done = true;
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
-          this.hurt(t, b.dmg * brittle, b.crit, 'gun');
+          const eff = this.hurt(t, b.dmg * brittle, b.crit, 'gun');
+          if (eff > 0) {
+            // Zusatzschaden den Modulen zurechnen: Anteil, der ohne das Modul fehlen würde
+            if (brittle > 1) this.credit('cryoammo', eff * (1 - 1 / brittle));
+            if (b.oc) this.credit('overcharge', eff * (1 - 1 / s.mod.overcharge));
+            if (b.rc && s.mod.scanner && s.crit > 0) this.credit('scanner', eff * (1 - 1 / s.critx) * Math.min(1, s.mod.scanner / s.crit));
+          }
           if (brittle > 1 && this.fxOn && Math.random() < 0.35) this.fx.push({ k: 'brittle', x: p.x, y: p.y, t: 0 });
           if (s.mod.cryoammo && t.hp > 0) { t.slow = Math.max(t.slowUntil > this.time ? t.slow : 0, 0.1 * (t.type === 'boss' ? 0.4 : 1)); t.slowUntil = this.time + 1.5; }
           if (s.mod.chain && Math.random() < s.mod.chain) {
             const others = this.enemies.filter(o => o !== t && o.hp > 0).map(o => ({ o, d: Math.hypot(this.pos(o).x - p.x, this.pos(o).y - p.y) })).filter(x => x.d < 110).sort((a, b) => a.d - b.d).slice(0, 2);
-            for (const x of others) { this.hurt(x.o, b.dmg * 0.5, false, 'gun'); if (this.fxOn) { const q = this.pos(x.o); this.fx.push({ k: 'chain', x1: p.x, y1: p.y, x2: q.x, y2: q.y, t: 0 }); } }
+            for (const x of others) { this.hurt(x.o, b.dmg * 0.5, false, 'gun', 'chain'); if (this.fxOn) { const q = this.pos(x.o); this.fx.push({ k: 'chain', x1: p.x, y1: p.y, x2: q.x, y2: q.y, t: 0 }); } }
           }
           if (s.knock && t.hp > 0 && t.kbT <= this.time && t.type !== 'boss') { t.kbT = this.time + 0.8; t.dist += s.knock * (t.type === 'brute' ? 0.4 : 1); }
         } else { b.x += dx / d * v; b.y += dy / d * v; }
@@ -1018,7 +1029,21 @@
         }
         for (const m of this.mines) {
           m.arm -= dt; m.age += dt; if (m.arm > 0) continue;
-          for (const e of this.enemies) {
+          // Zündzeit abgelaufen: Mine fliegt auf ein Mutterschiff (sonst auf das Schiff, das der Hülle am nächsten ist)
+          if (!m.fly && m.age >= MINE_FUSE && this.enemies.some(e => e.hp > 0)) m.fly = true;
+          if (m.fly) {
+            let tg = m.tid && this.enemies.find(e => e.id === m.tid && e.hp > 0);
+            if (!tg) {
+              for (const e of this.enemies) if (e.hp > 0 && (!tg || (e.type === 'boss') > (tg.type === 'boss') || ((e.type === 'boss') === (tg.type === 'boss') && e.dist < tg.dist))) tg = e;
+              m.tid = tg ? tg.id : 0;
+            }
+            if (tg) {
+              const p = this.pos(tg), dx = p.x - m.x, dy = p.y - m.y, d = Math.hypot(dx, dy), v = 320 * dt;
+              if (d <= v + tg.r * 0.6) { m.x = p.x; m.y = p.y; m.done = true; }
+              else { m.x += dx / d * v; m.y += dy / d * v; }
+            }
+          }
+          if (!m.done) for (const e of this.enemies) {
             if (e.hp <= 0) continue;
             const p = this.pos(e);
             if (Math.hypot(p.x - m.x, p.y - m.y) < e.r + s.mineTrig) { m.done = true; break; }
@@ -1312,6 +1337,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = 'kw-39'; // gleich halten mit VERSION in sw.js
+  const VERSION = 'kw-41'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

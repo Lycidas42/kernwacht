@@ -373,13 +373,14 @@
   const dpsHist = [];
   function sampleDps() {
     if (!runAlive()) return;
-    dpsHist.push({ t: run.time, d: Object.assign({ taken: run.taken || 0, blocked: run.blocked || 0 }, run.dealt) });
+    const md = {}; for (const k in run.modDealt || {}) md['m:' + k] = run.modDealt[k];
+    dpsHist.push({ t: run.time, d: Object.assign({ taken: run.taken || 0, blocked: run.blocked || 0 }, run.dealt, md) });
     while (dpsHist.length > 2 && run.time - dpsHist[0].t > 10) dpsHist.shift();
   }
   function measured(k) {
     if (dpsHist.length < 2) return 0;
     const a = dpsHist[0], b = dpsHist[dpsHist.length - 1], dt = b.t - a.t;
-    return dt > 0 ? (b.d[k] - a.d[k]) / dt : 0;
+    return dt > 0 ? ((b.d[k] || 0) - (a.d[k] || 0)) / dt : 0;
   }
   const SRC = [
     { k: 'gun', name: 'Kanone', hit: s => s.gunDmg, rate: (s, r) => dec(r.rateNow, 2) + '/s' + (s.multi ? ' ×' + (1 + s.multi) : ''), on: () => true },
@@ -389,9 +390,16 @@
     { k: 'shock', name: 'Schockwelle', hit: s => s.shockDmg, rate: s => 'alle ' + dec(s.shockCd, 1) + ' s', on: s => s.shockCd > 0 },
     { k: 'blade', name: 'Orbitklingen', hit: s => s.bladeDmg, rate: s => s.blades + ' Klingen', on: s => s.blades > 0 },
     { k: 'strike', name: 'Orbitalschlag', hit: s => s.strikeDmg, rate: () => 'manuell', on: () => true },
-    { k: 'mod', name: 'Module', hit: () => 0, rate: () => 'passiv', on: s => Object.keys(s.mod || {}).length > 0 },
+    { k: 'mod', name: 'Module (direkt)', hit: () => 0, rate: () => 'passiv', on: s => Object.keys(s.mod || {}).length > 0 },
   ];
   let statEls = null;
+  // Schadensbeitrag eines Moduls: gemessene DPS (10 s) und Anteil am Gesamtschaden des Laufs
+  const NO_DMG = { leech: 'mehr Energie', echo: 'kürzere Abklingzeiten', crysmod: 'mehr Kristalle' };
+  function modShare(t, total) {
+    if (NO_DMG[t]) return `<em class="mshare off">kein Schaden · ${NO_DMG[t]}</em>`;
+    const v = (run.modDealt && run.modDealt[t]) || 0, share = total ? v / total : 0;
+    return `<em class="mshare"><i class="share" style="width:${Math.round(share * 36)}px"></i>${fmt(measured('m:' + t))} DPS · ${share >= 0.1 || !share ? Math.round(share * 100) : (share * 100).toFixed(1).replace('.', ',')} %</em>`;
+  }
   function buildStats() {
     const list = $('list');
     list.innerHTML = `<table class="stbl"><thead><tr><th>Quelle</th><th>Treffer</th><th>Takt</th><th>DPS</th><th>Anteil</th></tr></thead><tbody id="stBody"></tbody></table><div class="kv" id="kv"></div><div class="stmods" id="stMods"></div>`;
@@ -428,7 +436,8 @@
     $('kv').innerHTML = kv.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
     const eq = (meta.equip || []).filter(t => meta.modules[t]);
     $('stMods').innerHTML = eq.length
-      ? '<h4>Ausgerüstete Module</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}</span><br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
+      ? '<h4>Ausgerüstete Module · Beitrag zum Schaden</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}</span>${modShare(t, total)}<br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
+        + '<p class="stnote">Kettenblitz, Kältebruch, Überspannung und Zielerfassung verstärken die Kanone; ihr Anteil steckt dort mit drin. Splitter, Dornenwall und Nova stehen unter „Module (direkt)“.</p>'
       : (C.record(meta) >= C.MODULES_AT ? '<h4>Module</h4><p>Keine Module ausgerüstet. Mutterschiffe lassen sie fallen.</p>' : `<h4>Module</h4><p>Ab Rekordwelle ${C.MODULES_AT} lassen Mutterschiffe Module fallen.</p>`);
   }
 

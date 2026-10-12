@@ -475,7 +475,7 @@
       }
 
       // Minen
-      for (const m of run.mines) drawMine(m, t, s);
+      for (const m of run.mines) drawMine(m, t, s, run);
 
       // Schockwellen-Ring
       if (run.ring) {
@@ -881,9 +881,20 @@
       }
     }
 
-    function drawMine(m, t, s) {
+    function drawMine(m, t, s, run) {
       const armed = m.arm <= 0;
+      if (m.fly) {
+        // fliegende Mine: kleiner Glutkern mit Schweif
+        const tg = run.enemies.find(e => e.id === m.tid);
+        const a = tg ? Math.atan2(run.pos(tg).y - m.y, run.pos(tg).x - m.x) : 0;
+        ctx.save(); ctx.translate(m.x, m.y);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-Math.cos(a) * 26, -Math.sin(a) * 26); glow(PAL.energy, 3, 0.5);
+        ctx.rotate(t * 0.02); hexPath(7, 0); fillHull(); glow('#ffffff', 1.6);
+        ctx.restore(); return;
+      }
+      const warn = armed && m.age > 8 && Math.floor(t / 120) % 2 === 0;
       ctx.save(); ctx.translate(m.x, m.y);
+      if (warn) { ctx.beginPath(); ctx.arc(0, 0, 13, 0, 7); glow('#ffffff', 1.5, 0.7); }
       // Auslöseradius (gestrichelt) und Wirkradius (sehr dezent)
       if (armed) { ctx.beginPath(); ctx.arc(0, 0, s.mineBlast, 0, 7); ctx.strokeStyle = PAL.energy; ctx.globalAlpha = 0.08; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1; }
       ctx.setLineDash([2, 5]);
