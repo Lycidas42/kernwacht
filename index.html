@@ -61,9 +61,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #modeFrame { position: absolute; inset: 0; pointer-events: none; z-index: 2; --mc: var(--hostile); box-shadow: inset 0 0 0 3px var(--mc), inset 0 0 46px color-mix(in srgb, var(--mc) 35%, transparent); animation: mframe 2.4s ease-in-out infinite; }
 #modeFrame.daily { --mc: var(--heal); }
 @keyframes mframe { 50% { box-shadow: inset 0 0 0 3px var(--mc), inset 0 0 70px color-mix(in srgb, var(--mc) 50%, transparent); } }
-.mchip { position: absolute; left: 50%; top: 100px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px); display: grid; justify-items: center; gap: 1px; padding: 5px 12px; border: 1px solid var(--mc); border-radius: 4px; background: color-mix(in srgb, var(--void) 82%, transparent); text-align: center; }
+.mchip { --mc: var(--hostile); justify-self: center; max-width: 100%; display: flex; align-items: baseline; gap: 8px; padding: 3px 10px; border: 1px solid var(--mc); border-radius: 4px; background: color-mix(in srgb, var(--void) 82%, transparent); white-space: nowrap; overflow: hidden; }
+.mchip.daily { --mc: var(--heal); }
 .mchip b { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--mc); }
-.mchip span { font-size: .68rem; color: var(--ink-dim); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mchip span { font-size: .68rem; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; }
 #hud { position: absolute; left: 0; right: 0; top: 0; padding: 8px 16px 0; display: grid; gap: 5px; pointer-events: none; }
 .hudrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .wave { font-weight: 700; font-size: 1rem; letter-spacing: .08em; text-transform: uppercase; }
@@ -471,7 +472,7 @@ textarea { resize: vertical; min-height: 70px; }
 <div id="app">
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="modeFrame" hidden><div class="mchip"><b id="mfName"></b><span id="mfRule"></span></div></div>
+    <div id="modeFrame" hidden></div>
     <div id="hud">
       <div class="hudrow">
         <div class="wave">Welle <b id="waveNo">1</b><small id="bestNo"></small></div>
@@ -485,6 +486,7 @@ textarea { resize: vertical; min-height: 70px; }
       <div class="bar" id="wavebar"><i></i></div>
       <div class="hpline"><span>Kanone</span><span class="num" id="hpTxt">0 / 0</span></div>
       <div class="bar" id="hpbar"><i></i></div>
+      <div class="mchip" id="mChip" hidden><b id="mfName"></b><span id="mfRule"></span></div>
       <div id="bossBar" hidden><div class="bossline"><span id="bossName">Mutterschiff</span><b class="num" id="bossPct">100 %</b></div><div class="bar"><i></i></div></div>
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>

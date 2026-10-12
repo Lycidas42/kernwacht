@@ -85,16 +85,19 @@
   // Sonderlauf deutlich kennzeichnen: farbiger Rahmen ums Feld und Hinweis mit der Regel
   function syncModeFrame(intro) {
     const m = run && !run.dead && run.mode, el = $('modeFrame');
-    if (!m) { el.hidden = true; return; }
+    if (!m) { el.hidden = true; $('mChip').hidden = true; return; }
     let name, rule;
     if (m.kind === 'chal') { const c = chalOf(m.id), t = c.goals.filter(g => run.wave >= g).length, nx = c.goals[t]; name = 'Herausforderung: ' + c.name; rule = c.rule + (nx ? ` Nächste Stufe: Welle ${nx}.` : ' Alle Stufen geschafft.'); }
     else { const tw = twistOf(m.day); name = 'Tageslauf: ' + tw.name; rule = tw.desc + ' Standard-Ausrüstung, gleiche Wellen für alle.'; }
     el.hidden = false; el.classList.toggle('daily', m.kind === 'daily');
-    $('mfName').textContent = name; $('mfRule').textContent = rule;
+    // Kurzform oben im HUD (stapelt sich unter Lebensleisten), die volle Regel kommt als Meldung
+    const ch = $('mChip'); ch.hidden = true; // Name und Ziel stehen bereits in der Kopfzeile neben der Welle
+    $('mfName').textContent = m.kind === 'chal' ? 'Challenge · ' + chalOf(m.id).name : 'Tageslauf · ' + twistOf(m.day).name;
+    $('mfRule').textContent = m.kind === 'chal' ? (() => { const c = chalOf(m.id), t = c.goals.filter(g => run.wave >= g).length; return c.goals[t] ? 'Ziel Welle ' + c.goals[t] : 'alle Stufen'; })() : 'gleiche Wellen für alle';
     if (intro) toast(`<b>${name}</b><br>${rule}`);
   }
   function endRun(early) {
-    $('modeFrame').hidden = true;
+    $('modeFrame').hidden = true; $('mChip').hidden = true;
     if (!run || run.finished) return;
     run.finished = true;
     const recBefore = C.record(meta);
