@@ -850,6 +850,7 @@
   // Wirkung eines Labor-Upgrades auf Stufe l (für "aktuell → nächste Stufe")
   const plus = (x, d) => '+' + dec(x, d || 0) + ' %';
   const LAB_FX = {
+    m_rdmg: l => '×' + mult(Math.pow(1 + C.record(meta) / C.P.resK, l)), m_rhp: l => '×' + mult(Math.pow(1 + C.record(meta) / C.P.resK, l)),
     m_dmg: l => '×' + mult(Math.pow(1.08, l)),
     m_hp: l => '×' + mult(Math.pow(1.08, l)),
     m_rate: l => plus(3 * l),

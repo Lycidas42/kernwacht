@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.02, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.02, resK: 2000, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -57,6 +57,9 @@
     { id: 'm_over',   name: 'Überladungsspulen',  desc: '+0,5 s Dauer, +5 % Feuerrate, −1 s Abklingzeit', base: 20, g: 1.3, max: 15, req: 'u_over' },
     { id: 'u_jump',   name: 'Sprungtor',          desc: 'Startet Läufe später, bis 30 % der Bestwelle.', base: 50, g: 1, max: 1, unlock: true },
     { id: 'm_jump',   name: 'Sprungweite',        desc: '+5 % der Bestwelle als Startwelle.', base: 30, g: 1.4, max: 8, req: 'u_jump' },
+    // Resonanz: wächst mit dem Rekord aller Zeiten (je Stufe ×(1 + Rekord/2000)), damit Kristalle auch spät zählen
+    { id: 'm_rdmg',   name: 'Resonanzläufe',      desc: 'Schaden ×(1 + Rekord/2000) je Stufe', base: 2000, g: 1.35, res: 'dmg' },
+    { id: 'm_rhp',    name: 'Resonanzpanzer',     desc: 'Strukturpunkte ×(1 + Rekord/2000) je Stufe', base: 2000, g: 1.35, res: 'hp' },
   ];
 
   // ---------- Kernfusion (Kernfragmente, überdauern jede Fusion) ----------
@@ -325,7 +328,7 @@
   }
 
   // ---------- Freischaltungen nach Rekordwelle (aller Zeiten) ----------
-  const GATES = { u_freeze: 15, m_freeze: 15, u_blade: 20, u_over: 25, m_over: 25, u_jump: 25, m_jump: 25, u_mine: 35 };
+  const GATES = { m_rdmg: 250, m_rhp: 250, u_freeze: 15, m_freeze: 15, u_blade: 20, u_over: 25, m_over: 25, u_jump: 25, m_jump: 25, u_mine: 35 };
   const MODULES_AT = 30, FUSION_AT = 50;
   const ROADMAP = [
     { w: 10, label: 'Erster Boss' },
@@ -689,7 +692,8 @@
       const F = id => flv(this.meta, id);
       s.fusion = Math.pow(P.fCore, Math.min(2500, F('f_core'))); // Obergrenze gegen Zahlenüberlauf
       const cb = permBonus(this.meta); s.chal = cb;
-      s.dmg = P.pDmg * Math.pow(P.lvDmg, L('dmg')) * Math.pow(1.08, M('m_dmg')) * s.fusion * cb.dmg;
+      const rz = 1 + record(this.meta) / P.resK; s.res = rz; // Resonanz-Faktor je Stufe
+      s.dmg = P.pDmg * Math.pow(P.lvDmg, L('dmg')) * Math.pow(1.08, M('m_dmg')) * Math.pow(rz, M('m_rdmg')) * s.fusion * cb.dmg;
       s.rate = 1.2 * (1 + 0.05 * L('rate')) * (1 + 0.03 * M('m_rate')) * cb.rate;
       s.range = 150 + 5 * L('range');
       s.crit = 0.025 * L('crit');
@@ -698,7 +702,7 @@
       s.multi = L('multi');
       s.multiDmg = P.multiDmg; // Nebenrohre treffen schwächer als das Hauptrohr
       s.pierce = L('pierce');
-      s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp')) * s.fusion * cb.hp * (this.rule === 'glass' ? 0.25 : 1);
+      s.maxHp = P.pHp * Math.pow(P.lvHp, L('hp')) * Math.pow(1.08, M('m_hp')) * Math.pow(rz, M('m_rhp')) * s.fusion * cb.hp * (this.rule === 'glass' ? 0.25 : 1);
       const rg = L('regen');
       s.regen = s.maxHp * P.rgMax * (rg / (rg + P.rgK)) * (1 + 0.1 * M('m_regen'));
       const ar = L('armor');
@@ -896,7 +900,8 @@
         // mühelos: kaum Schaden, und kein Schiff hält sich in Reichweite (noch anfliegende Schiffe zählen nicht), Boss schnell besiegt
         // Schaden zählt netto: Hülle am Wellenende noch fast voll (Reparatur gleicht Streifschüsse aus)
         const hurtOk = this.hp >= this.s.maxHp * (1 - P.rushHit) || hit <= this.s.maxHp * 0.03;
-        const fieldOk = !this.enemies.some(e => e.hp > 0 && e.dist <= this.s.range * 0.9);
+        // Feld: höchstens zwei Nachzügler in Reichweite; getarnte Schiffe zählen nicht (sie sind ohnehin nicht anvisierbar)
+        const fieldOk = this.enemies.filter(e => e.hp > 0 && e.dist <= this.s.range * 0.9 && !this.cloaked(e)).length <= 2;
         const timeOk = dur <= (bossW ? ((BOSS_KINDS[bossKind(this.wave)] || {}).lord ? P.rushLordT : P.rushBossT) : WAVE_LEN + 5); // Herrscher (alle 50 Wellen) dürfen länger dauern
         const easy = hurtOk && fieldOk && timeOk;
         this.easyRun = easy ? (this.easyRun || 0) + 1 : 0;
@@ -1514,7 +1519,7 @@
       // Aufholen: Feld leer und alles gestartet → nächste Welle sofort
       if (this.catchUp() && !this.queue.length && !this.enemies.some(e => e.hp > 0) && this.wave % 10 && this.waveT > 1) this.waveT = WAVE_LEN;
       // Durchmarsch: sobald alles gestartet und das Feld leer ist, kommt die nächste Welle (auch der Boss) sofort
-      if (this.rush && !this.queue.length && this.waveT > 0.4 && !this.enemies.some(e => e.hp > 0)) this.waveT = Math.max(this.waveT, WAVE_LEN);
+      if (this.rush && !this.queue.length && this.waveT > 0.4 && !this.enemies.some(e => e.hp > 0 && (e.type === 'boss' || !this.cloaked(e)))) this.waveT = Math.max(this.waveT, WAVE_LEN);
       for (const k in this.cd) this.cd[k] = Math.max(0, this.cd[k] - dt);
       this.spawnT += dt;
       while (this.queue.length && this.spawnT >= this.spawnGap) { if (this.enemies.length >= P.aliveCap) { this.spawnT = this.spawnGap; break; } this.spawnT -= this.spawnGap; this.spawn(this.queue.shift()); } // volles Feld: Nachschub wartet
@@ -2024,7 +2029,7 @@
     const l = mlv(meta, u.id);
     if (u.max != null && l >= u.max) return false;
     const c = metaCost(u, l);
-    if (meta.crystals < c) return false;
+    if (meta.crystals < c || !gateOk(meta, u.id)) return false;
     meta.crystals -= c; meta.lv[u.id] = l + 1;
     return true;
   }
@@ -2203,6 +2208,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.25.6'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.26.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, fusionCostOld, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
