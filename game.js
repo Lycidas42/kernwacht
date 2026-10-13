@@ -2240,7 +2240,8 @@
       const bb = $('bossBar');
       if (bb.hidden !== !boss) { bb.hidden = !boss; $('bossInfo').hidden = !boss; }
       // Unbesiegter Boss: Tempo auf 1×, bis er fällt (danach zurück auf das gewählte Tempo)
-      if (boss && boss.kind && !boss.child && !(meta.bossBeat || {})[boss.kind] && run.slowFor !== boss.id) {
+      // Beim Aufholen unter dem Rekord (Boss schon einmal geschafft, nur nach der Fusion zurückgesetzt) keine Bremse
+      if (boss && boss.kind && !boss.child && !(meta.bossBeat || {})[boss.kind] && run.slowFor !== boss.id && !run.rush && run.wave >= C.record(meta)) {
         run.slowFor = boss.id;
         if (speed > 1) { slowPrev = speed; setSpeedUI(1); toast(`<b>Neuer Boss: ${C.BOSS_KINDS[boss.kind].name}</b><br>Tempo 1×, bis du ihn zum ersten Mal besiegt hast.`, 4000); }
       }
