@@ -223,6 +223,11 @@
   }));
   $$('.set-btn').forEach(b => b.addEventListener('click', () => show('settings')));
   $('guideBtn').addEventListener('click', () => show('guide'));
+  // Installation als App: Browser-Angebot merken und in der Anleitung als Knopf anbieten
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('installBtn').hidden = false; });
+  window.addEventListener('appinstalled', () => { installEvt = null; $('installBtn').hidden = true; toast('<b>Installiert</b><br>Kernwacht liegt jetzt auf deinem Startbildschirm.'); });
+  $('installBtn').addEventListener('click', async () => { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; $('installBtn').hidden = true; });
   $('guideClose').addEventListener('click', home);
 
   // ---------- Tipps beim ersten Kontakt ----------
