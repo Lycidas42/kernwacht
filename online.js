@@ -90,21 +90,22 @@
   const profile = (name, avatar, color) => rpc('kw_profile', { p_name: name || '', p_avatar: avatar | 0, p_color: color | 0 });
   // Neuere Felder (p_card, p_lvl) kennt der Server erst nach der jeweiligen Migration:
   // schlägt der Aufruf fehl, ohne das neueste Feld wiederholen
-  const NEWER = ['p_card', 'p_lvl'];
+  const NEWER = ['p_frag', 'p_card', 'p_lvl'];
   let drop = 0;
   async function stats(s) {
-    const a = { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0, p_lvl: s.lvl | 0, p_card: s.card || null };
+    const a = { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0, p_lvl: s.lvl | 0, p_card: s.card || null, p_frag: Math.floor(s.frag || 0) };
     for (;;) {
       const b = Object.assign({}, a); NEWER.slice(0, drop).forEach(k => delete b[k]);
       try { return await rpc('kw_stats', b); }
-      catch (e) { if (drop < NEWER.length && /function|schema|p_card|p_lvl/i.test(e.message)) { drop++; continue; } throw e; }
+      catch (e) { if (drop < NEWER.length && /function|schema|p_frag|p_card|p_lvl/i.test(e.message)) { drop++; continue; } throw e; }
     }
   }
   // Öffentliches Profil eines Spielers (nur lesbare Spalten)
   async function player(id) {
     if (!(await start())) return null;
     const q = f => client.from('players').select('id,name,avatar,color,best,best_ever,runs,kills,fusions,chal,ach,updated_at' + f).eq('id', id).maybeSingle();
-    let { data, error } = await q(',lvl,card');
+    let { data, error } = await q(',lvl,card,frag');
+    if (error) ({ data, error } = await q(',lvl,card'));
     if (error) ({ data, error } = await q(''));
     return error || !data ? null : Object.assign(data, { name: data.name || anon(data.id), anon: !data.name });
   }

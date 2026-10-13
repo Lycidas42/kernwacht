@@ -346,6 +346,7 @@ button.buy { -webkit-user-select: none; user-select: none; -webkit-touch-callout
 .lb td:first-child { width: 2em; color: var(--ink-dim); font-family: var(--font-num); }
 .lb td:last-child { text-align: right; font-family: var(--font-num); color: var(--core); white-space: nowrap; }
 .lb tr.me td { color: var(--energy); }
+.lb .lbsub { display: block; font-size: .66rem; color: var(--ink-dim); }
 .adm { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .adm button { height: 40px; border: 1px solid var(--energy); color: var(--energy); border-radius: 4px; font-size: .8rem; font-weight: 600; }
 .adm button[aria-pressed="true"] { background: var(--energy); color: var(--void); }
@@ -1067,7 +1068,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <button data-lb="lvl" aria-selected="false">Rang</button>
       <button data-lb="day" aria-selected="false">Tageslauf</button>
       <button data-lb="kills" aria-selected="false">Abschüsse</button>
-      <button data-lb="fus" aria-selected="false">Fusionen</button>
+      <button data-lb="fus" aria-selected="false">Fragmente</button>
       <button data-lb="chal" aria-selected="false">Challenge</button>
       <button data-lb="ach" aria-selected="false">Erfolge</button>
     </div>

@@ -1284,18 +1284,23 @@
   const chalSum = () => C.CHALLENGES.reduce((a, c) => a + C.chalTier(meta, c.id), 0);
   function submitScore() {
     if (!O.configured || meta.adminTainted) return;
-    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank, card: publicCard() }).catch(() => {});
+    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank, card: publicCard(), frag: fragTotal() }).catch(() => {});
   }
   const BOARDS = {
     rec:   { col: 'best_ever', name: 'Rekord',            fmt: r => 'Welle ' + r.best_ever },
     day:   { name: 'Tageslauf' },
     kills: { col: 'kills',     name: 'Abschüsse',         fmt: r => fmt(r.kills) },
-    fus:   { col: 'fusions',   name: 'Fusionen',          fmt: r => r.fusions + '×' },
+    fus:   { col: 'frag',      name: 'Fragmente',         fmt: r => `${fmt(r.frag || 0)}<small class="lbsub">${r.fusions || 0} Fusion${r.fusions === 1 ? '' : 'en'}</small>` },
     chal:  { col: 'chal',      name: 'Challenge',         fmt: r => r.chal + ' Stufen' },
     ach:   { col: 'ach',       name: 'Erfolge',           fmt: r => r.ach + ' Stufen' },
     lvl:   { col: 'lvl',       name: 'Rang',              fmt: r => 'Rang ' + r.lvl },
   };
   // Öffentliche Profilkarte: kompakter, nur lesbarer Auszug für andere Spieler
+  // Kernfragmente insgesamt: gezählt seit es fragTotal gibt; ältere Spielstände aus Bestand und Ausgaben nachrechnen
+  function fragTotal() {
+    let spent = 0; for (const u of C.FUSION_UPG) for (let l = 0; l < C.flv(meta, u.id); l++) spent += C.fusionCost(u, l);
+    return Math.max(meta.fragTotal || 0, Math.floor((meta.frag || 0) + spent));
+  }
   function publicCard() {
     const eq = (meta.equip || []).filter(t => meta.modules && meta.modules[t] && C.MODULES[t]).map(t => [t, meta.modules[t].rar | 0, meta.modules[t].mast | 0]);
     const lab = C.META_UPG.reduce((a, u) => a + C.mlv(meta, u.id), 0);
@@ -1325,7 +1330,7 @@
     if (!id) return;
     pcBack = current || 'board'; show('pcard');
     const b = $('pcBody'); b.innerHTML = '<p class="pcst">Wird geladen …</p>';
-    const p = id === O.myId() ? Object.assign({ id, name: meta.name || 'Ohne Namen', avatar: meta.avatar, color: meta.color, best_ever: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank, card: publicCard() }) : await O.player(id);
+    const p = id === O.myId() ? Object.assign({ id, name: meta.name || 'Ohne Namen', avatar: meta.avatar, color: meta.color, best_ever: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank, card: publicCard(), frag: fragTotal() }) : await O.player(id);
     if (current !== 'pcard') return;
     if (!p) { b.innerHTML = '<p class="pcst">Das Profil ist gerade nicht erreichbar.</p>'; return; }
     renderPlayer(p);
@@ -1334,7 +1339,7 @@
     const c = p.card && typeof p.card === 'object' ? p.card : null, rk = c ? c.rk : p.lvl;
     const stat = (k, v) => `<div><small>${k}</small><b>${v}</b></div>`;
     let h = `<div class="pchead">${avatarSvg(p.avatar, p.color, 52)}<div><b>${esc(p.name)}</b><small><span>${rk ? 'Rang ' + rk : 'Rang unbekannt'}</span>${p.updated_at ? ' · <span>' + ago(p.updated_at) + '</span>' : ''}</small></div></div>`;
-    h += `<div class="pcstats">${stat('Rekord', 'Welle ' + (p.best_ever || 0))}${stat('Fusionen', p.fusions || 0)}${stat('Abschüsse', fmt(p.kills || 0))}${stat('Läufe', fmt(p.runs || 0))}${stat('Challenge', (p.chal || 0) + ' Stufen')}${stat('Erfolge', (p.ach || 0) + ' Stufen')}${c ? stat('Laborstufen', fmt(c.lab || 0)) + stat('Bosse besiegt', c.bb || 0) : ''}</div>`;
+    h += `<div class="pcstats">${stat('Rekord', 'Welle ' + (p.best_ever || 0))}${stat('Fusionen', p.fusions || 0)}${p.frag ? stat('Kernfragmente', fmt(p.frag)) : ''}${stat('Abschüsse', fmt(p.kills || 0))}${stat('Läufe', fmt(p.runs || 0))}${stat('Challenge', (p.chal || 0) + ' Stufen')}${stat('Erfolge', (p.ach || 0) + ' Stufen')}${c ? stat('Laborstufen', fmt(c.lab || 0)) + stat('Bosse besiegt', c.bb || 0) : ''}</div>`;
     if (!c) { h += '<p class="pcst">Mehr Details erscheinen, sobald dieser Spieler mit einer aktuellen Version gespielt hat.</p>'; $('pcBody').innerHTML = h; return; }
     // Fusion
     const fl = C.FUSION_UPG.filter(u => c.fl && c.fl[u.id]);
