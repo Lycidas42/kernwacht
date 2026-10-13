@@ -141,6 +141,25 @@
         // Tentakelspitze: Saugnapf-Klaue (der Arm selbst wird vorab gezeichnet)
         poly([[r * 1.6, 0], [r * 0.2, -r * 0.9], [-r * 0.6, -r * 0.5], [-r * 0.6, r * 0.5], [r * 0.2, r * 0.9]]); fillHull(); glow(c, 1.6);
         ctx.beginPath(); ctx.arc(r * 0.1, 0, r * 0.32, 0, 7); ctx.fillStyle = e.tst === 2 ? '#ffffff' : c; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+      } else if (e.type === 'part' && e.pk === 'armor') {
+        // Panzerplatte: dicke Schuppe, solange sie hält, nimmt der Rumpf weniger Schaden
+        poly([[r * 1.1, -r * 1.2], [r * 1.1, r * 1.2], [-r * 0.6, r * 0.8], [-r * 0.6, -r * 0.8]]); fillHull(); glow(e.flash > 0 ? '#ffffff' : c, 2);
+        ctx.beginPath(); ctx.moveTo(r * 0.6, -r * 0.9); ctx.lineTo(r * 0.6, r * 0.9); ctx.moveTo(r * 0.1, -r * 0.75); ctx.lineTo(r * 0.1, r * 0.75); glow('#ffd23f', 1, 0.6);
+      } else if (e.type === 'part' && e.pk === 'lance') {
+        // Lanzenspitze: Quelle des Lasers
+        poly([[r * 2.0, 0], [-r * 0.6, -r * 0.6], [-r * 0.2, 0], [-r * 0.6, r * 0.6]]); fillHull(); glow(c, 1.8);
+        ctx.beginPath(); ctx.arc(r * 0.4, 0, r * 0.3, 0, 7); ctx.fillStyle = '#ff3030'; ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(t * 0.008)); ctx.fill(); ctx.globalAlpha = 1;
+      } else if (e.type === 'part' && e.pk === 'rack') {
+        // Minenschacht: Kasten mit blinkender Mine
+        ctx.beginPath(); ctx.roundRect(-r, -r * 0.8, r * 2, r * 1.6, r * 0.25); fillHull(); glow(c, 1.6);
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.4, 0, 7); ctx.fillStyle = Math.sin(t * 0.008 + sd) > 0 ? '#ffdd55' : '#6a5a20'; ctx.fill();
+      } else if (e.type === 'part' && e.pk === 'seal') {
+        // Siegel des Heilerschreins: speist die Reparatur
+        hexPath(r * 1.1, t * 0.002); fillHull(); glow(c, 1.6);
+        ctx.beginPath(); ctx.moveTo(-r * 0.5, 0); ctx.lineTo(r * 0.5, 0); ctx.moveTo(0, -r * 0.5); ctx.lineTo(0, r * 0.5); glow('#5dffb0', 2, 0.8);
+      } else if (e.type === 'part' && e.pk === 'prism') {
+        // Prisma des Spieglers: speist den Spiegel
+        poly([[r * 1.4, 0], [0, -r * 1.1], [-r * 1.4, 0], [0, r * 1.1]]); ctx.fillStyle = 'rgba(220,230,255,0.25)'; ctx.fill(); glow(e.host && e.host.mirrorUntil > (e._now || 0) ? '#ffffff' : c, 1.8);
       } else if (e.type === 'part' && e.pk === 'gate') {
         // Hangartor: dunkle Öffnung mit Lauflicht
         ctx.beginPath(); ctx.roundRect(-r * 0.9, -r * 1.2, r * 1.8, r * 2.4, r * 0.2); ctx.fillStyle = '#05050f'; ctx.fill(); glow(c, 1.6);
@@ -482,7 +501,6 @@
         // Heilerschrein: schwebender Tempel mit Heilkreuz und kreisenden Siegeln
         hexPath(r * 1.0, Math.PI / 6); fillHull(); glow(c, 2.2);
         ctx.beginPath(); ctx.moveTo(-r * 0.45, 0); ctx.lineTo(r * 0.45, 0); ctx.moveTo(0, -r * 0.45); ctx.lineTo(0, r * 0.45); glow('#5dffb0', 3, 0.6 + 0.3 * Math.sin(t * 0.006));
-        for (let i = 0; i < 4; i++) { const a = t * 0.0015 + i * Math.PI / 2; ctx.save(); ctx.translate(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5); hexPath(r * 0.18, a); fillHull(); glow(c, 1.2); ctx.restore(); }
         return true;
       }
       if (k === 'mirror') {
@@ -1164,7 +1182,7 @@
           ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
-          const label = { core: 'KERN GETROFFEN', gwing: 'SCHWINGE ZERSTÖRT', gate: 'HANGARTOR ZERSTÖRT', vent: 'SCHLOT VERSIEGELT', head: 'KOPF GETROFFEN', ink: 'TINTENWOLKE', grab: 'GREIFT DIE KANONE', grabwarn: 'GREIFARM', sweep: 'FEGT', eye: 'AUGE ZERSTÖRT', storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
+          const label = { armor: 'PANZERPLATTE AB', lance: 'LANZE ZERSTÖRT', rack: 'MINENSCHACHT ZERSTÖRT', seal: 'SIEGEL GEBROCHEN', prism: 'PRISMA ZERSPLITTERT', core: 'KERN GETROFFEN', gwing: 'SCHWINGE ZERSTÖRT', gate: 'HANGARTOR ZERSTÖRT', vent: 'SCHLOT VERSIEGELT', head: 'KOPF GETROFFEN', ink: 'TINTENWOLKE', grab: 'GREIFT DIE KANONE', grabwarn: 'GREIFARM', sweep: 'FEGT', eye: 'AUGE ZERSTÖRT', storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
           ctx.globalAlpha = a; ctx.fillStyle = SHIP.boss; ctx.font = `700 13px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }

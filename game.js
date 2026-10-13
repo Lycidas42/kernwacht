@@ -1765,7 +1765,7 @@
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
-      { const mp = $('markPill'), f = run.focus && run.focus.hp > 0 ? run.focus : null; mp.hidden = !f; if (f) { const PKN = { arm: 'Tentakel', tentacle: 'Tentakel', eye: 'Auge', turret: 'Geschütz', gate: 'Hangartor', vent: 'Schlot', gwing: 'Schwinge', head: 'Kopf', core: 'Kern', segment: 'Wurmglied', wing: 'Schwinge' };
+      { const mp = $('markPill'), f = run.focus && run.focus.hp > 0 ? run.focus : null; mp.hidden = !f; if (f) { const PKN = { arm: 'Tentakel', tentacle: 'Tentakel', eye: 'Auge', turret: 'Geschütz', gate: 'Hangartor', vent: 'Schlot', gwing: 'Schwinge', head: 'Kopf', core: 'Kern', segment: 'Wurmglied', wing: 'Schwinge', armor: 'Panzerplatte', lance: 'Lanze', rack: 'Minenschacht', seal: 'Siegel', prism: 'Prisma' };
         const nm = f.type === 'part' ? (PKN[f.pk] || 'Bauteil') : f.type === 'boss' && f.kind ? C.BOSS_KINDS[f.kind].name : (MARK_NAME[f.type] || 'Ziel'); const tx = '◎ ' + nm; if (mp.textContent !== tx) mp.textContent = tx; } }
       $('myDmg').textContent = fmt(run.s.gunDmg);
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));
@@ -1804,9 +1804,9 @@
           : c === 'sustain' ? ['Glutstrahlung', false]
           : [boss.plate > 0 ? `Panzerschild ${Math.ceil(boss.plate / boss.plateMax * 100)} % · ${Math.max(0, boss.plateEnd - run.time).toFixed(0)} s` : 'Panzerschild', boss.plate > 0];
         let ch = CK.map(c => { const [t2, hot] = chip(c); return `<span class="${hot ? 'hot' : ''}">${t2}</span>`; }).join('');
-        if (boss.giant) {
+        if (boss.kind && (C.BOSS_KINDS[boss.kind].parts || []).length) {
           const pa = run.enemies.filter(o => o.host === boss && o.hp > 0), all = (C.BOSS_KINDS[boss.kind].parts || []);
-          const PN = { arm: 'Tentakel', eye: 'Augen', turret: 'Geschütze', gate: 'Hangartore', vent: 'Schlote', gwing: 'Schwingen', head: 'Kopf', core: 'Kern' };
+          const PN = { arm: 'Tentakel', tentacle: 'Tentakel', eye: 'Augen', turret: 'Geschütze', gate: boss.kind === 'queen' ? 'Brutsäcke' : 'Hangartore', vent: 'Schlote', gwing: 'Schwingen', head: 'Kopf', core: 'Kern', armor: 'Panzerplatten', lance: 'Lanze', rack: 'Minenschächte', seal: 'Siegel', prism: 'Prismen', segment: 'Glieder' };
           const lean = boss.kind === 'leviathan' || boss.kind === 'devourer';
           ch = Object.keys(PN).filter(k2 => all.some(q => q.k === k2)).map(k2 => `<span>${PN[k2]} ${pa.filter(o => o.pk === k2).length}/${all.filter(q => q.k === k2).length}${lean && !boss.phase && (k2 === 'eye' || k2 === 'core') ? ' · außer Reichweite' : ''}</span>`).join('')
             + (pa.some(o => o.act === 'grab' && o.stage === 'hold') ? '<span class="hot">Greift die Kanone: Arm abtrennen!</span>' : '') + ch;
