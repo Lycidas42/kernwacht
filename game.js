@@ -2216,8 +2216,8 @@
         $('bestNo').textContent = txt; $('bestNo').classList.toggle('rec', !!hit);
       } else {
         const rec = run.wave > meta.best && meta.best > 0;
-        const allRec = C.record(meta), tag = run.rush ? ' · Durchmarsch' : run.catchUp() ? ' · Aufholen ×2' : '';
-        $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : (rec ? 'Neue Bestwelle · Rekord ' : 'Rekord ') + allRec + tag;
+        const allRec = C.record(meta);
+        $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : run.rush ? 'Durchmarsch' : run.catchUp() ? 'Aufholen ×2' : rec ? 'Neue Bestwelle' : 'Rekord ' + allRec;
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
