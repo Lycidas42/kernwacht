@@ -165,6 +165,8 @@
   const BOSS_ROSTER = { 1: ['gunboat', 'layer', 'frigate', 'lancer', 'bastion'], 2: ['ray', 'jelly', 'squid', 'queen', 'leviathan'], 3: ['emberorb', 'worm', 'bulwarkcr', 'forge', 'titan'],
     4: ['sunwing', 'splitcore', 'flameorb', 'corona', 'phoenix'], 5: ['eye', 'shrine', 'mirror', 'shade', 'devourer'] };
   // nach Welle 250 kommen alle 25 Bosse in fester Reihenfolge wieder
+  // Wellen, in denen ein Boss vorkommt (bis zur Grenze)
+  function bossWaves(kind, upTo) { const out = []; for (let w = 10; w <= upTo; w += 10) if (bossKind(w) === kind) out.push(w); return out; }
   function bossKind(w) {
     if (w % 10) return null;
     const i = (w / 10 - 1) % 25, ro = BOSS_ROSTER[Math.floor(i / 5) + 1];
@@ -623,7 +625,8 @@
       this.fires = []; this.chargeShotT = 0; this.droneT = 0; this.barrageT = 0; this.holeT = 0; this.hole = null; this.aegis = 0; this.aegisT = 0; this.phoenixUsed = false; this.emergWave = 0; this.invulnUntil = 0; this.reflT = 0;
       this.startWave = 1;
       const chalS = this.mode && this.mode.kind === 'chal' ? (opts.chalStart != null ? Math.min(opts.chalStart, chalStart(meta, this.mode.id)) : chalStart(meta, this.mode.id)) : 1;
-      const S = this.mode ? chalS : Math.min(opts.startWave || 1, maxStartWave(meta));
+      // Bosskampf: direkt in die Welle des gewählten Bosses
+      const S = this.mode ? (this.mode.kind === 'boss' ? this.mode.w : chalS) : Math.min(opts.startWave || 1, maxStartWave(meta));
       if (S > 1) {
         const jb = jumpBonus(meta, S);
         // Challenge-Einstieg: Startenergie wie beim Wellensprung, aber keine Kristalle
@@ -794,12 +797,14 @@
     bossAlive() { return this.enemies.some(e => e.type === 'boss' && e.hp > 0) || (this.queue || []).includes('boss'); }
 
     nextWave() {
+      // Bosskampf: nach der Bosswelle ist Schluss (gewonnen)
+      if (this.mode && this.mode.kind === 'boss' && this.wave >= this.startWave) { this.won = true; this.dead = true; return; }
       if (this.wave > 0 && !this.skipCrystalsOnce) {
         this.crystals += waveCrystals(this.wave) * this.s.crysMult;
         const bonus = this.waveBonusAmount();
         if (bonus > 0) { this.energy += bonus; if (this.fxOn) this.fx.push({ k: 'bonus', t: 0, v: bonus }); }
       }
-      if (this.wave > 0 && !this.admin) { statOf(this.home).waves++; cmdState(this.home).xp += xpFor(this.wave) * (this.wave < record(this.home) * P.xpLowAt ? P.xpLow : 1); } // Wellen weit unter dem Rekord bringen kaum Erfahrung (kein Farmen)
+      if (this.wave > 0 && !this.admin && !(this.mode && this.mode.kind === 'boss')) { statOf(this.home).waves++; cmdState(this.home).xp += xpFor(this.wave) * (this.wave < record(this.home) * P.xpLowAt ? P.xpLow : 1); } // Wellen weit unter dem Rekord bringen kaum Erfahrung (kein Farmen)
       this.skipCrystalsOnce = false;
       this.wave++;
       this.waveT = 0;
@@ -1793,6 +1798,12 @@
     finishMode() {
       const m = this.home, w = this.wave, res = { wave: w, kills: this.kills, time: this.time, crystals: 0, mode: this.mode, milestones: [], loot: [] };
       m.runs++; m.kills += this.kills;
+      if (this.mode.kind === 'boss') {
+        // Bosskampf: Übung ohne Belohnung, aber mit Bestzeit
+        res.won = !!this.won; res.boss = this.mode.boss; res.bw = this.mode.w;
+        if (this.won && !this.admin) { m.bossTime = m.bossTime || {}; const k = this.mode.boss + '@' + this.mode.w, prev = m.bossTime[k]; res.prevTime = prev; if (!prev || this.time < prev) { m.bossTime[k] = this.time; res.newTime = true; } }
+        return res;
+      }
       if (this.mode.kind === 'chal') {
         const C = CHAL_BY_ID[this.mode.id];
         // Halbe Kristalle: der Lauf ist nicht verschenkt, lohnt sich aber vor allem wegen der Stufen
@@ -2028,6 +2039,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.12.1'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, P };
+  const VERSION = '0.13.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

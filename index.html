@@ -233,6 +233,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .skdet small.req { color: #ff8a8a; }
 .skdet button { justify-self: start; height: 34px; padding: 0 16px; border: 1px solid var(--c, #ffd23f); border-radius: 4px; color: var(--c, #ffd23f); font-weight: 700; margin-top: 4px; }
 .skdet button:disabled { opacity: .35; }
+.bzone { margin-top: 10px; } .bzone h3 { margin: 6px 0; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+.bitem { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-left: 3px solid var(--c, #ff4ff0); border-radius: 4px; padding: 7px 10px; margin-bottom: 6px; }
+.bitem.off { opacity: .45; border-left-color: var(--line); }
+.bitem b { font-size: .9rem; } .bitem small { display: block; font-size: .74rem; color: var(--ink-dim); margin-top: 2px; }
+.bitem .bgo { display: flex; gap: 6px; align-items: center; }
+.bitem select { background: var(--deck-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; height: 32px; font-family: var(--font-num); }
+.bitem button { height: 32px; padding: 0 12px; border: 1px solid var(--c, #ff4ff0); border-radius: 4px; color: var(--c, #ff4ff0); font-weight: 700; }
 .skdet .skbtns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .skdet .skbtns button.ref { border-color: var(--line); color: var(--ink-dim); }
 .skdet .skbtns small { font-size: .72rem; }
@@ -635,9 +642,10 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <button class="sec" id="labBtn">Labor</button>
         <button class="sec" id="lbBtn">Highscores</button>
       </div>
-      <div class="actions two">
+      <div class="actions three">
         <button class="sec mod-btn" id="modBtn">Module</button>
         <button class="sec fus-btn" id="fusBtn">Kernfusion</button>
+        <button class="sec boss-btn" id="bossBtn">Bosse</button>
       </div>
       <div class="actions three">
         <button class="sec daily-btn" id="dailyBtn">Tageslauf</button>
@@ -902,6 +910,14 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <h3>Sprache</h3>
     <div class="setrow"><div>Sprache des Spiels<small>Englisch und Deutsch, jederzeit umschaltbar.</small></div><div class="seg" data-set="lang"><button data-v="de">Deutsch</button><button data-v="en">English</button></div></div>
     <div class="actions"><button class="sec" id="setClose">Zurück</button></div>
+  </div>
+</div>
+<div class="ov" id="bosses" hidden>
+  <div class="card">
+    <h2>Bosse</h2>
+    <p>Jeden Boss, den du einmal besiegt hast, kannst du hier direkt herausfordern, in jeder Welle bis zu deinem Rekord. Ein Bosskampf ist Übung: Du startest mit Energie wie beim Sprungtor, es gibt keine Kristalle, keine Module und keine Erfahrung, aber eine Bestzeit.</p>
+    <div id="bossList"></div>
+    <div class="actions"><button class="sec" id="bossClose">Zurück</button></div>
   </div>
 </div>
 <div class="ov" id="ach" hidden>

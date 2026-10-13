@@ -47,7 +47,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -62,6 +62,7 @@
     if (name === 'modules') renderModules();
     if (name === 'chal') renderChal();
     if (name === 'ach') renderAch();
+    if (name === 'bosses') renderBosses();
     if (name === 'skills') renderSkills();
     if (name === 'settings') renderSettings();
     if (name === 'daily') renderDaily();
@@ -93,12 +94,13 @@
     if (!m) { el.hidden = true; $('mChip').hidden = true; return; }
     let name, rule;
     if (m.kind === 'chal') { const c = chalOf(m.id), t = c.goals.filter(g => run.wave >= g).length, nx = c.goals[t]; name = 'Herausforderung: ' + c.name; rule = c.rule + (nx ? ` Nächste Stufe: Welle ${nx}.` : ' Alle Stufen geschafft.'); }
+    else if (m.kind === 'boss') { name = 'Bosskampf: ' + C.BOSS_KINDS[m.boss].name; rule = `Welle ${m.w}. Übung ohne Belohnung, die Zeit läuft.`; }
     else { const tw = twistOf(m.day); name = 'Tageslauf: ' + tw.name; rule = tw.desc + ' Standard-Ausrüstung, gleiche Wellen für alle.'; }
     el.hidden = false; el.classList.toggle('daily', m.kind === 'daily');
     // Kurzform oben im HUD (stapelt sich unter Lebensleisten), die volle Regel kommt als Meldung
     const ch = $('mChip'); ch.hidden = true; // Name und Ziel stehen bereits in der Kopfzeile neben der Welle
-    $('mfName').textContent = m.kind === 'chal' ? 'Challenge · ' + chalOf(m.id).name : 'Tageslauf · ' + twistOf(m.day).name;
-    $('mfRule').textContent = m.kind === 'chal' ? (() => { const c = chalOf(m.id), t = c.goals.filter(g => run.wave >= g).length; return c.goals[t] ? 'Ziel Welle ' + c.goals[t] : 'alle Stufen'; })() : 'gleiche Wellen für alle';
+    $('mfName').textContent = m.kind === 'boss' ? 'Bosskampf · ' + C.BOSS_KINDS[m.boss].name : m.kind === 'chal' ? 'Challenge · ' + chalOf(m.id).name : 'Tageslauf · ' + twistOf(m.day).name;
+    $('mfRule').textContent = m.kind === 'boss' ? 'Welle ' + m.w : m.kind === 'chal' ? (() => { const c = chalOf(m.id), t = c.goals.filter(g => run.wave >= g).length; return c.goals[t] ? 'Ziel Welle ' + c.goals[t] : 'alle Stufen'; })() : 'gleiche Wellen für alle';
     if (intro) toast(`<b>${name}</b><br>${rule}`);
   }
   function endRun(early) {
@@ -111,7 +113,7 @@
     put(RKEY, null); save();
     if (!early) A.play('gameover');
     lastMode = run.mode;
-    $('againBtn').textContent = res.mode ? (res.mode.kind === 'daily' ? 'Tageslauf nochmal' : 'Nochmal: ' + chalOf(res.mode.id).name) : 'Sofort neu starten';
+    $('againBtn').textContent = res.mode ? (res.mode.kind === 'daily' ? 'Tageslauf nochmal' : res.mode.kind === 'boss' ? 'Nochmal: ' + C.BOSS_KINDS[res.mode.boss].name : 'Nochmal: ' + chalOf(res.mode.id).name) : 'Sofort neu starten';
     if (res.mode) { endMode(res, early, recBefore); return; }
     $('overTitle').textContent = early ? 'Lauf beendet' : 'Kanone gefallen';
     $('oWave').textContent = res.wave; $('oKills').textContent = fmt(res.kills); $('oK').textContent = '+' + fmt(res.crystals);
@@ -147,7 +149,14 @@
   function endMode(res, early) {
     const ex = [];
     $('oWave').textContent = res.wave; $('oKills').textContent = fmt(res.kills); $('oK').textContent = '+' + fmt(res.crystals);
-    if (res.mode.kind === 'chal') {
+    if (res.mode.kind === 'boss') {
+      const B = C.BOSS_KINDS[res.boss];
+      $('overTitle').textContent = res.won ? B.name + ' besiegt!' : early ? 'Bosskampf beendet' : 'Kanone gefallen';
+      $('oBest').textContent = res.won ? `Zeit ${fmtTime(res.time)}${res.newTime ? (res.prevTime ? ' · neue Bestzeit (vorher ' + fmtTime(res.prevTime) + ')' : ' · erste Bestzeit') : ' · Bestzeit ' + fmtTime(res.prevTime)}` : `Welle ${res.bw} · ${B.name}`;
+      $('oBest').style.color = res.won && res.newTime ? '' : 'var(--ink-dim)';
+      ex.push('<div>Bosskämpfe sind Übung: keine Kristalle, keine Module, keine Erfahrung.</div>');
+      if (res.won) A.play('loot');
+    } else if (res.mode.kind === 'chal') {
       const c = chalOf(res.mode.id);
       $('overTitle').textContent = c.name + (early ? ' beendet' : ' gescheitert');
       if (res.newTier) { $('overTitle').textContent = c.name + ': Stufe ' + res.tier + '!'; }
@@ -415,6 +424,37 @@
   }
   $$('.ach-btn').forEach(b => b.addEventListener('click', () => show('ach')));
   $('achClose').addEventListener('click', home);
+
+  // ---------- Bosse: besiegte Bosse direkt herausfordern ----------
+  const BOSS_COL = ['#ff4ff0', '#4fffc8', '#ff9a3c', '#ff4040', '#9fb6ff'];
+  const fmtTime = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+  function renderBosses() {
+    const rec = C.record(meta), beat = meta.bossBeat || {}, times = meta.bossTime || {};
+    meta.bossSel = meta.bossSel || {};
+    let html = '';
+    for (let z = 1; z <= 5; z++) {
+      const ro = C.BOSS_ROSTER[z]; if (!ro) continue;
+      html += `<div class="bzone"><h3 style="color:${BOSS_COL[z - 1]}">Zone ${z} · ${C.SECTORS[z - 1].name}</h3>`;
+      for (const k of ro) {
+        const B = C.BOSS_KINDS[k], ws = C.bossWaves(k, Math.max(rec, 10)), ok = beat[k] && ws.length;
+        const sel = ws.includes(meta.bossSel[k]) ? meta.bossSel[k] : ws[ws.length - 1];
+        const bt = sel && times[k + '@' + sel];
+        const chk = (B.chk || []).map(c => C.BOSS_CHECK[c]).join(', ');
+        html += `<div class="bitem ${ok ? '' : 'off'}" style="--c:${BOSS_COL[z - 1]}"><div><b>${ok || ws.length ? B.name : '???'}</b>${B.lord ? ' <span class="dim">· Herrscher</span>' : ''}
+          <small>${ok ? `Welle ${ws.join(', ')}${chk ? ' · prüft: ' + chk : ''}${bt ? ' · Bestzeit ' + fmtTime(bt) : ''}` : ws.length ? 'Noch nicht besiegt' : `Erscheint in Welle ${C.bossWaves(k, 260)[0]}`}</small></div>
+          ${ok ? `<div class="bgo">${ws.length > 1 ? `<select data-bsel="${k}">${ws.map(w => `<option value="${w}" ${w === sel ? 'selected' : ''}>Welle ${w}</option>`).join('')}</select>` : ''}<button data-bgo="${k}">Kämpfen</button></div>` : ''}</div>`;
+      }
+      html += '</div>';
+    }
+    $('bossList').innerHTML = html;
+    $$('#bossList [data-bsel]').forEach(el => el.addEventListener('change', () => { meta.bossSel[el.dataset.bsel] = +el.value; save(); renderBosses(); }));
+    $$('#bossList [data-bgo]').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.bgo, ws = C.bossWaves(k, Math.max(C.record(meta), 10)), w = ws.includes(meta.bossSel[k]) ? meta.bossSel[k] : ws[ws.length - 1];
+      if (runAlive()) return; A.play('click'); startRun({ kind: 'boss', boss: k, w });
+    }));
+  }
+  $('bossBtn').addEventListener('click', () => show('bosses'));
+  $('bossClose').addEventListener('click', home);
   // Neue Erfolgsstufen melden (alle paar Sekunden geprüft)
   function checkAch(silent) {
     const seen = meta.achSeen = meta.achSeen || {}, news = [];
@@ -933,6 +973,7 @@
     $$('.fus-btn').forEach(b => { b.hidden = !showFus; b.classList.toggle('ready', canFuse); });
     const showMod = C.record(meta) >= C.MODULES_AT || Object.keys(meta.modules || {}).length > 0;
     $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
+    $$('.boss-btn').forEach(b => { b.hidden = !Object.keys(meta.bossBeat || {}).length; });
     const rec = C.record(meta), d = dailyToday();
     if (typeof syncMineBadge === 'function') try { syncMineBadge(); syncNewBadges(); } catch (e) {}
     try { syncDots(); } catch (e) {}
@@ -1714,7 +1755,8 @@
       if (run.mode) {
         if (run.wave !== window.__mfW) { window.__mfW = run.wave; syncModeFrame(false); }
         let txt, hit;
-        if (run.mode.kind === 'chal') { const c = chalOf(run.mode.id), t = c.goals.filter(g => run.wave >= g).length, nx = c.goals[t]; txt = c.name + (nx ? ' · Ziel ' + nx : ' · alle Stufen'); hit = t > C.chalTier(meta, c.id); }
+        if (run.mode.kind === 'boss') { txt = 'Bosskampf · ' + fmtTime(run.time); hit = false; }
+        else if (run.mode.kind === 'chal') { const c = chalOf(run.mode.id), t = c.goals.filter(g => run.wave >= g).length, nx = c.goals[t]; txt = c.name + (nx ? ' · Ziel ' + nx : ' · alle Stufen'); hit = t > C.chalTier(meta, c.id); }
         else { const d = dailyToday(), b = d ? d.best : 0; txt = 'Tageslauf' + (b ? ' · heute ' + b : ''); hit = b > 0 && run.wave > b; }
         $('bestNo').textContent = txt; $('bestNo').classList.toggle('rec', !!hit);
       } else {
