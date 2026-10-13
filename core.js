@@ -258,6 +258,7 @@
 
   const FIELD_W = 240, FIELD_H = 430, BASE_R = 22, WALL_R = 50, WAVE_LEN = 20, SPAWN_LEN = 15;
   const STRIKE_KILLS = 30, STRIKE_R = 80;
+  const AUTO_W = { atk: 50, def: 35, eco: 15 }; // Standardverteilung der Energie beim Auto-Kauf (Prozent)
 
   function newMeta() {
     return { v: 1, crystals: 0, best: 0, runs: 0, kills: 0, lv: {}, lastSeen: Date.now(), totalCrystals: 0 };
@@ -649,7 +650,7 @@
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
         'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
-      const o = {}; keep.forEach(k => (o[k] = this[k]));
+      const o = {}; keep.forEach(k => (o[k] = this[k])); o.spent = this.spent;
       o.enemies = this.enemies.map(e => { const c = Object.assign({}, e); if (e.host) { c.hostId = e.host.id; delete c.host; } return c; });
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
       o.mines = this.mines.map(m => Object.assign({}, m));
@@ -775,12 +776,64 @@
     canBuy(u) { return this.available(u) && !this.maxed(u) && this.energy >= this.cost(u); }
     buy(u) {
       if (!this.canBuy(u)) return false;
-      this.energy -= this.cost(u);
+      const c = this.cost(u); this.energy -= c;
+      this.spent = this.spent || { atk: 0, def: 0, eco: 0 }; this.spent[u.tab] = (this.spent[u.tab] || 0) + c;
       const before = this.s.maxHp;
       this.lv[u.id]++;
       this.recalc();
       if (this.s.maxHp > before) this.hp += this.s.maxHp - before;
       return true;
+    }
+
+    // ---------- Auto-Kauf ----------
+    // Geschätzter relativer Zugewinn einer Stufe für den Bereich des Upgrades (Angriff: Schaden pro Sekunde,
+    // Abwehr: effektive Lebenspunkte und Reparatur, Ertrag: Einnahmen). Nebenwaffen zählen nach ihrem gemessenen Schadensanteil.
+    upgGain(u) {
+      const s = this.s, l = this.L(u.id), D = this.dealt || {}, tot = Object.values(D).reduce((a, b) => a + b, 0);
+      const sh = k => tot > 0 ? (D[k] || 0) / tot : 0, gun = tot > 0 ? Math.max(0.25, sh('gun') + sh('skill')) : 1;
+      const side = (k, rel) => l === 0 ? 0.05 : Math.max(0.004, sh(k) * rel);
+      const critF = 1 + s.crit * (s.critx - 1);
+      switch (u.id) {
+        case 'dmg': return P.lvDmg - 1;
+        case 'rate': return 0.05 / (1 + 0.05 * l) * gun;
+        case 'range': return 5 / s.range * 0.8;
+        case 'crit': return 0.025 * (s.critx - 1) / critF * gun;
+        case 'critx': return 0.1 * s.crit / critF * gun;
+        case 'multi': return s.multiDmg / (1 + s.multi * s.multiDmg) * gun;
+        case 'pierce': return 0.18 / (1 + 0.18 * s.pierce) * gun;
+        case 'rocket': return side('rocket', P.rockLv / (1.6 + P.rockLv * l) + 0.016);
+        case 'cryo': return side('cryo', 0.03) + 0.004;
+        case 'mine': return side('mine', P.mineLv / (2 + P.mineLv * l) + 0.025);
+        case 'shock': return side('shock', P.shockLv / (1 + P.shockLv * l) + 0.02);
+        case 'blade': return side('blade', 0.1 / (1 + 0.1 * l) + (l % 5 === 4 && s.blades < 6 ? 1 / s.blades : 0));
+        case 'hp': return P.lvHp - 1;
+        case 'armor': { const a0 = s.armor, a1 = Math.min(P.arCap, P.arMax * (l + 1) / (l + 1 + P.arK) + (a0 - P.arMax * l / (l + P.arK))); return Math.max(0, (1 - a0) / (1 - a1) - 1); }
+        case 'regen': return l === 0 ? 0.12 : 0.6 * (((l + 1) / (l + 1 + P.rgK)) / (l / (l + P.rgK)) - 1);
+        case 'knock': return 0.008;
+        case 'loot': return P.lootK / (1 + P.lootK * l);
+        case 'interest': return P.bonusK / (1 + P.bonusK * l) * 0.8;
+        case 'crys': return 0.06 / (1 + 0.06 * l) * 0.6;
+      }
+      return 0.01;
+    }
+    // Nächstes Auto-Upgrade: Energie wird nach Gewichten auf Angriff/Abwehr/Ertrag verteilt (eigenes Budget je Bereich),
+    // im Bereich entscheidet „smart“ nach Zugewinn je Energie, „cheap“ nach dem niedrigsten Preis. null = warten.
+    autoPick(on, cfg) {
+      cfg = cfg || {}; const W = cfg.w || AUTO_W, smart = cfg.mode !== 'cheap';
+      const sp = this.spent || { atk: 0, def: 0, eco: 0 }, total = this.energy + (sp.atk || 0) + (sp.def || 0) + (sp.eco || 0);
+      const cand = {};
+      for (const u of RUN_UPG) if (on(u) && this.available(u) && !this.maxed(u) && (W[u.tab] || 0) > 0) (cand[u.tab] = cand[u.tab] || []).push(u);
+      const tabs = Object.keys(cand); if (!tabs.length) return null;
+      const wSum = tabs.reduce((a, t) => a + W[t], 0);
+      const pick = [];
+      for (const t of tabs) {
+        const best = cand[t].map(u => ({ u, c: this.cost(u), g: smart ? this.upgGain(u) : 1 })).sort((a, b) => smart ? b.g / b.c - a.g / a.c : a.c - b.c)[0];
+        const budget = W[t] / wSum * total - (sp[t] || 0);
+        pick.push({ t, best, room: budget - best.c });
+      }
+      pick.sort((a, b) => b.room - a.room);
+      const p = pick[0];
+      return p.room >= 0 && p.best.c <= this.energy ? p.best.u : null;
     }
 
     waveBonusAmount(w) { return this.s.waveBonus ? waveEnergy(w || this.wave) * this.s.loot * this.s.waveBonus : 0; }
@@ -2090,6 +2143,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.21.2'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.22.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

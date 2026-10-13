@@ -46,7 +46,7 @@
           count = Object.keys(channel.presenceState()).length;
           listeners.forEach(f => f(count));
         });
-        channel.subscribe(status => { if (status === 'SUBSCRIBED') channel.track({ name: me.name, wave: me.wave }); });
+        channel.subscribe(status => { if (status === 'SUBSCRIBED') channel.track(Object.assign({}, me)); });
         const { data } = await client.rpc('kw_register', { code: code() });
         if (data) setStored(ID_KEY, data);
         return true;
@@ -61,11 +61,21 @@
     return data;
   }
   let lastTrack = 0;
-  function setStatus(name, wave) {
-    me.name = name || me.name; me.wave = wave || 0;
+  // Präsenz: Name, aktuelle Welle (0 = im Menü) und Profilangaben für die Liste „Gerade online“
+  let lastWave = -1;
+  function setStatus(name, wave, extra) {
+    me.name = name || me.name; me.wave = wave || 0; if (extra) Object.assign(me, extra);
     if (!channel) return;
-    const n = Date.now(); if (n - lastTrack < 15000) return; lastTrack = n;
-    channel.track({ name: me.name, wave: me.wave });
+    const n = Date.now(), switched = (me.wave > 0) !== (lastWave > 0);
+    if (!switched && n - lastTrack < 15000) return; lastTrack = n; lastWave = me.wave;
+    channel.track(Object.assign({}, me));
+  }
+  // Wer ist gerade online? Je Gerät ein Eintrag, nach Spieler-ID zusammengefasst
+  function who() {
+    if (!channel) return [];
+    const seen = new Map();
+    for (const arr of Object.values(channel.presenceState())) for (const p of arr) { const k = p.pid || p.presence_ref; if (!seen.has(k) || (p.wave || 0) > (seen.get(k).wave || 0)) seen.set(k, p); }
+    return [...seen.values()];
   }
 
   // ---------- Profil und Werte ----------
@@ -159,6 +169,6 @@
   root.KWOnline = {
     configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
     profile, stats, player, place, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, polls, vote, pollResults,
-    onCount: f => listeners.push(f), get count() { return count; },
+    who, onCount: f => listeners.push(f), get count() { return count; },
   };
 })(window);

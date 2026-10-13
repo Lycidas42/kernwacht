@@ -165,6 +165,16 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #energyTotal { font-size: .92rem; margin-right: 6px; white-space: nowrap; }
 #autoAll { height: 26px; padding: 0 7px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: .68rem; color: var(--ink-dim); white-space: nowrap; }
 #autoAll[aria-pressed="true"] { color: var(--void); background: var(--heal); border-color: var(--heal); }
+#autoCfgBtn { height: 26px; width: 28px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-dim); font-size: .85rem; margin-left: 4px; }
+#autoCfgBtn[aria-expanded="true"] { color: var(--heal); border-color: var(--heal); }
+#autoCfgBox { display: grid; gap: 8px; padding: 10px 12px; margin: 0 10px 8px; border: 1px solid color-mix(in srgb, var(--heal) 40%, var(--line)); border-radius: 6px; background: #ffffff05; }
+#autoCfgBox[hidden] { display: none; }
+#autoCfgBox .acrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: .78rem; }
+#autoCfgBox .acrow span { color: var(--ink-dim); }
+#autoCfgBox .seg button { height: 28px; font-size: .72rem; padding: 0 8px; }
+#autoCfgBox .acnote { font-size: .7rem; color: var(--ink-dim); line-height: 1.35; }
+#autoCfgBox .acsl { display: grid; grid-template-columns: 64px 1fr 42px; gap: 10px; align-items: center; font-size: .78rem; }
+#autoCfgBox .acsl b { font-family: var(--font-num); text-align: right; color: var(--heal); font-weight: 500; }
 #list { flex: 1; overflow-y: auto; padding: 4px 16px 12px; display: grid; gap: 2px; align-content: start; }
 .row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 5px 0 5px 9px; border-left: 2px solid var(--line); }
 .row.locked { opacity: .45; }
@@ -277,7 +287,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .setrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
 .seg button { padding: 7px 10px; font-size: .74rem; font-weight: 600; color: var(--ink-dim); }
-.seg button.on { background: var(--core); color: var(--void); }
+.seg button.on, .seg button[aria-pressed="true"] { background: var(--core); color: var(--void); }
 .seg button:disabled { opacity: .35; }
 #settings .card > .actions.two, #settings .vols, #settings .trackbtn { margin-bottom: 8px; }
 .ach-btn { border-color: color-mix(in srgb, var(--energy) 55%, var(--line)); color: var(--energy); }
@@ -451,6 +461,13 @@ textarea { resize: vertical; min-height: 70px; }
 .lbteaser .me { font-size: .95rem; } .lbteaser .me b { color: var(--energy); font-family: var(--font-num); }
 .lbteaser .gap { font-size: .76rem; color: var(--ink-dim); }
 .lbteaser .row { display: grid; grid-template-columns: 1.6em auto 1fr auto; gap: 8px; align-items: center; font-size: .82rem; }
+.monline { display: flex; align-items: center; gap: 8px; margin-top: 8px; width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: .8rem; color: var(--heal); text-align: left; }
+.monline::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--heal); box-shadow: 0 0 8px var(--heal); }
+.monline::after { content: "›"; margin-left: auto; color: var(--ink-dim); }
+#onList td:first-child { width: 1.4em; }
+.onlive, .onidle { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.onlive { background: var(--heal); box-shadow: 0 0 8px var(--heal); } .onidle { background: var(--ink-dim); opacity: .5; }
+#onlinePill { cursor: pointer; }
 .lbteaser .row { border: 0; padding: 0; margin: 0; }
 .lbteaser .row i { font-style: normal; color: var(--ink-dim); font-family: var(--font-num); }
 .lbteaser .row em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -709,7 +726,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <div class="wave">Welle <b id="waveNo">1</b><small id="bestNo"></small></div>
         <div class="spacer"></div>
         <div class="pill admin" id="adminPill" hidden>ADMIN</div>
-        <div class="pill online num" id="onlinePill" hidden>0</div>
+        <button class="pill online num" id="onlinePill" hidden>0</button>
       </div>
       <div class="bar" id="wavebar"><i></i></div>
       <div class="mchip" id="mChip" hidden><b id="mfName"></b><span id="mfRule"></span></div>
@@ -761,6 +778,16 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <span class="spacer"></span>
       <span id="energyTotal" class="num e">0</span>
       <button id="autoAll" aria-pressed="true" title="Alle Auto-Käufe an- oder ausschalten">AUTO AN</button>
+      <button id="autoCfgBtn" aria-expanded="false" aria-label="Auto-Kauf einstellen" title="Auto-Kauf einstellen">⚙</button>
+    </div>
+    <div id="autoCfgBox" hidden>
+      <div class="acrow"><span>Kaufweise</span><div class="seg" id="acMode"><button data-v="smart">Klug</button><button data-v="cheap">Günstigstes</button></div></div>
+      <small class="acnote" id="acModeTxt"></small>
+      <div class="acrow"><span>Energie verteilen</span><div class="seg" id="acPre"><button data-p="40,45,15">Ausgewogen</button><button data-p="60,30,10">Angriff</button><button data-p="30,60,10">Abwehr</button></div></div>
+      <div class="acsl"><label>Angriff</label><input type="range" min="0" max="100" step="5" data-w="atk"><b data-wv="atk"></b></div>
+      <div class="acsl"><label>Abwehr</label><input type="range" min="0" max="100" step="5" data-w="def"><b data-wv="def"></b></div>
+      <div class="acsl"><label>Ertrag</label><input type="range" min="0" max="100" step="5" data-w="eco"><b data-wv="eco"></b></div>
+      <small class="acnote">Jeder Bereich bekommt seinen Anteil der Energie und kauft davon nur Upgrades mit AUTO. Manuelle Käufe zählen mit.</small>
     </div>
     <div id="list"></div>
   </div>
@@ -799,6 +826,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
           <button class="cta" id="startBtn">Lauf starten</button>
         </div>
         <button class="lbteaser" id="mLb" hidden></button>
+        <button class="monline" id="mOnline" hidden></button>
         <div class="roadmap" hidden></div>
         <div class="todo" id="mTodo"></div>
       </section>
@@ -936,6 +964,16 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="actions">
       <button class="sec" id="labClose">Zurück</button>
     </div>
+  </div>
+</div>
+
+<div class="ov" id="online" hidden>
+  <div class="card">
+    <h2>Gerade online</h2>
+    <p class="pcst" id="onSum"></p>
+    <table class="lb"><tbody id="onList"></tbody></table>
+    <p class="pcst">Grün: gerade im Lauf. Tippe einen Spieler an, um sein Profil zu sehen.</p>
+    <div class="actions"><button class="sec" id="onClose">Zurück</button></div>
   </div>
 </div>
 

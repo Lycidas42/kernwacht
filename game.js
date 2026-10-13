@@ -49,7 +49,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['codex', 'pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['online', 'codex', 'pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -60,6 +60,7 @@
     if (name === 'menu') renderMenu();
     if (name === 'board') renderBoard();
     if (name === 'codex') renderCodex();
+    if (name === 'online') renderOnline();
     if (name === 'admin') renderAdmin();
     if (name === 'pause') { syncSoundBtns(); if (run) $('pauseSub').textContent = `Welle ${run.wave} · Rekord ${C.record(meta)}`; }
     if (name === 'fusion') renderFusion();
@@ -648,14 +649,25 @@
     }
   }
   $('autoAll').addEventListener('click', () => { meta.autoAll = !meta.autoAll; A.play('click'); save(); refresh(); });
+  // Auto-Kauf: Energie nach Anteilen auf die Bereiche verteilen, im Bereich klug (Zugewinn je Energie) oder günstigstes zuerst
+  const acfg = () => (meta.autoCfg = meta.autoCfg || { mode: 'smart', w: Object.assign({}, C.AUTO_W) });
+  const autoOn = u => !!meta.auto[u.id];
   function autoBuy() {
     if (!meta.autoAll) return;
-    for (let guard = 0; guard < 200; guard++) {
-      const opts = C.RUN_UPG.filter(u => meta.auto[u.id] && run.canBuy(u)).sort((a, b) => run.cost(a) - run.cost(b));
-      if (!opts.length) break;
-      run.buy(opts[0]);
-    }
+    for (let guard = 0; guard < 200; guard++) { const u = run.autoPick(autoOn, acfg()); if (!u) break; run.buy(u); }
   }
+  function renderAutoCfg() {
+    const c = acfg(), sum = (c.w.atk + c.w.def + c.w.eco) || 1;
+    $$('#acMode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === c.mode ? 'true' : 'false'));
+    $('acModeTxt').textContent = c.mode === 'cheap' ? 'Kauft im Bereich immer das billigste Upgrade mit AUTO.' : 'Kauft im Bereich, was je Energie am meisten bringt. Nebenwaffen zählen nach ihrem Schadensanteil.';
+    $$('#acPre button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === [c.w.atk, c.w.def, c.w.eco].join(',') ? 'true' : 'false'));
+    $$('#autoCfgBox [data-w]').forEach(i => { i.value = c.w[i.dataset.w]; });
+    $$('#autoCfgBox [data-wv]').forEach(b => { b.textContent = Math.round(c.w[b.dataset.wv] / sum * 100) + ' %'; });
+  }
+  $('autoCfgBtn').addEventListener('click', () => { const box = $('autoCfgBox'); box.hidden = !box.hidden; $('autoCfgBtn').setAttribute('aria-expanded', box.hidden ? 'false' : 'true'); A.play('click'); renderAutoCfg(); });
+  $$('#acMode button').forEach(b => b.addEventListener('click', () => { acfg().mode = b.dataset.v; A.play('click'); save(); renderAutoCfg(); }));
+  $$('#acPre button').forEach(b => b.addEventListener('click', () => { const [a, d, e] = b.dataset.p.split(',').map(Number); acfg().w = { atk: a, def: d, eco: e }; A.play('click'); save(); renderAutoCfg(); }));
+  $$('#autoCfgBox [data-w]').forEach(i => i.addEventListener('input', () => { acfg().w[i.dataset.w] = +i.value; if (!(acfg().w.atk + acfg().w.def + acfg().w.eco)) acfg().w[i.dataset.w] = 5; save(); renderAutoCfg(); }));
 
   // ---------- Werte-Tab: Schaden pro Quelle ----------
   // Gemessene DPS: gleitendes Fenster über die letzten 10 Sekunden Spielzeit
@@ -893,6 +905,18 @@
   });
 
   // ---------- Menü, Sprungtor ----------
+  // ---------- Gerade online ----------
+  function presence() { O.setStatus(meta.name, runAlive() ? run.wave : 0, { pid: O.myId(), av: meta.avatar | 0, col: meta.color | 0, lvl: C.rankOf(meta).rank, rec: C.record(meta) }); }
+  function renderOnline() {
+    const list = O.who().sort((a, b) => (b.wave || 0) - (a.wave || 0) || (b.rec || 0) - (a.rec || 0)), me = O.myId();
+    $('onSum').textContent = list.length ? (list.length === 1 ? 'Gerade bist nur du online.' : `${list.length} Spieler gerade online.`) : 'Gerade ist niemand verbunden.';
+    $('onList').innerHTML = list.map(p => `<tr class="${p.pid === me ? 'me' : ''}" ${p.pid ? `data-pid="${esc(p.pid)}"` : ''}><td>${p.wave > 0 ? '<i class="onlive" title="im Lauf"></i>' : '<i class="onidle" title="im Menü"></i>'}</td><td><span class="who">${avatarSvg(p.av, p.col, 22)}<span class="nm">${esc(p.name || 'Anonym')}</span>${p.lvl ? `<small class="lbrk">${p.lvl}</small>` : ''}</span></td><td>${p.wave > 0 ? 'Welle ' + p.wave : 'im Menü'}</td></tr>`).join('');
+  }
+  function openOnline() { if (runAlive() && !current) setPaused(true); A.play('click'); show('online'); }
+  $('onlinePill').addEventListener('click', openOnline);
+  $('mOnline').addEventListener('click', openOnline);
+  $('onClose').addEventListener('click', home);
+
   // Bestenliste auf der Startseite: Top 3, eigener Platz und wer direkt davor liegt
   let lbTeaseT = 0;
   async function renderLbTeaser(force) {
@@ -910,7 +934,7 @@
   }
   $('mLb').addEventListener('click', () => { lbTab = 'rec'; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x.dataset.lb === 'rec' ? 'true' : 'false')); A.play('click'); show('board'); });
   function renderMenu() {
-    renderLbTeaser();
+    renderLbTeaser(); if (O.configured) presence();
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
     const max = C.maxStartWave(meta);
     renderJump();
@@ -1447,7 +1471,7 @@
   $('pSave').addEventListener('click', () => {
     meta.name = pDraft.name.trim().slice(0, 16); meta.avatar = pDraft.avatar; meta.color = pDraft.color; save(); A.play('buy');
     $('pNote').textContent = 'Profil gespeichert.'; $('pNote').className = 'note';
-    if (O.configured) { O.setStatus(meta.name, run ? run.wave : 0); O.profile(meta.name, meta.avatar, meta.color).then(() => { submitScore(); submitDaily(); }).catch(() => { $('pNote').textContent = 'Lokal gespeichert. Online gerade nicht erreichbar, es wird später übertragen.'; }); }
+    if (O.configured) { presence(); O.profile(meta.name, meta.avatar, meta.color).then(() => { submitScore(); submitDaily(); }).catch(() => { $('pNote').textContent = 'Lokal gespeichert. Online gerade nicht erreichbar, es wird später übertragen.'; }); }
   });
   $('pClose').addEventListener('click', () => { pDraft = null; home(); });
   $$('.prof-btn').forEach(b => b.addEventListener('click', () => { pDraft = null; show('profile'); }));
@@ -1831,7 +1855,11 @@
 
   if (O.configured) {
     O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); if (current === 'menu') renderLbTeaser(true); } });
-    O.onCount(n => { $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online'; });
+    O.onCount(n => {
+      $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online';
+      const m = $('mOnline'); m.hidden = false; m.textContent = n === 1 ? 'Nur du bist gerade online' : n + ' Spieler gerade online';
+      if (current === 'online') renderOnline();
+    });
     setInterval(fetchPolls, 5 * 60e3);
   }
   try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'pair' ? 'Gerät verbunden: Spielstand vom anderen Gerät übernommen.' : how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
@@ -2102,7 +2130,7 @@
       $('callBtn').disabled = !run.canCallWave();
       updateAbilities();
       refresh();
-      if (O.configured) O.setStatus(meta.name, run.wave);
+      if (O.configured) presence();
     }
     saveT += realDt; if (saveT > 5) { saveT = 0; if (runAlive()) save(); }
     R.draw(now, realDt, run, { strikeArmed: armed === 'strike', armed });
