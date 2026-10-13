@@ -39,6 +39,8 @@
 
   const pct = x => Math.round(x * 100) + ' %';
   const dec = (x, d) => x.toFixed(d).replace('.', ',');
+  // Multiplikatoren: klein mit zwei Nachkommastellen, groß wie alle Zahlen (K, M, B … bzw. wissenschaftlich)
+  const mult = v => (v >= 1000 ? fmt(v) : dec(v, 2));
 
   // ---------- Zustand ----------
   let catching = false;
@@ -602,9 +604,9 @@
     crit: s => pct(s.crit), critx: s => dec(s.critx, 1) + '×', multi: s => s.multi ? '+' + s.multi + ' × ' + Math.round(s.multiDmg * 100) + ' %' : '–', pierce: s => s.pierce ? s.pierce + ' Schiff' + (s.pierce > 1 ? 'e' : '') : '–',
     mine: s => s.mineCd ? fmt(s.mineDmg) : '–', hp: s => fmt(s.maxHp), regen: s => fmt(s.regen) + '/s', armor: s => pct(s.armor),
     knock: s => s.knock ? dec(s.knock, 1) : '–', shock: s => s.shockCd ? fmt(s.shockDmg) : '–',
-    blade: s => s.blades ? s.blades + '× ' + fmt(s.bladeDmg) : '–', loot: s => '×' + dec(s.loot, 2),
+    blade: s => s.blades ? s.blades + '× ' + fmt(s.bladeDmg) : '–', loot: s => '×' + mult(s.loot),
     rocket: s => s.rocketCd ? fmt(s.rocketDmg) : '–', cryo: s => s.cryoCd ? '−' + Math.round(s.cryoSlow * 100) + ' %' : '–',
-    interest: (s, r) => s.waveBonus ? '+' + fmt(r.waveBonusAmount()) + '/Welle' : '–', crys: s => '×' + dec(s.crysMult, 2),
+    interest: (s, r) => s.waveBonus ? '+' + fmt(r.waveBonusAmount()) + '/Welle' : '–', crys: s => '×' + mult(s.crysMult),
   };
   let rows = [];
   function buildList() {
@@ -718,7 +720,7 @@
       ['Gesamt-DPS', fmt(sum)], ['Krit', pct(s.crit) + ' · ' + dec(s.critx, 1) + '×'], ['Reichweite', Math.round(s.range)],
       ['Strukturpunkte', fmt(s.maxHp)], ['Reparatur', fmt(s.regen) + '/s'], ['Panzerung', pct(s.armor)],
       ['Treffer erhalten', fmt(measured('taken')) + '/s'], ['Abgewehrt', fmt(measured('blocked')) + '/s'],
-      ['Energie-Faktor', '×' + dec(s.loot, 2)], ['Wellenprämie', s.waveBonus ? '+' + fmt(run.waveBonusAmount()) : '–'], ['Kristalle (Lauf)', fmt(Math.floor(run.crystals))], ['Abschüsse', fmt(run.kills)],
+      ['Energie-Faktor', '×' + mult(s.loot)], ['Wellenprämie', s.waveBonus ? '+' + fmt(run.waveBonusAmount()) : '–'], ['Kristalle (Lauf)', fmt(Math.floor(run.crystals))], ['Abschüsse', fmt(run.kills)],
     ];
     $('kv').innerHTML = kv.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
     const eq = (meta.equip || []).filter(t => meta.modules[t]);
@@ -802,8 +804,8 @@
   // Wirkung eines Labor-Upgrades auf Stufe l (für "aktuell → nächste Stufe")
   const plus = (x, d) => '+' + dec(x, d || 0) + ' %';
   const LAB_FX = {
-    m_dmg: l => '×' + dec(Math.pow(1.08, l), 2),
-    m_hp: l => '×' + dec(Math.pow(1.08, l), 2),
+    m_dmg: l => '×' + mult(Math.pow(1.08, l)),
+    m_hp: l => '×' + mult(Math.pow(1.08, l)),
     m_rate: l => plus(3 * l),
     m_regen: l => plus(10 * l),
     m_armor: l => plus(l),
@@ -1075,7 +1077,7 @@
     try { if (!$('menu').hidden) renderHub(); } catch (e) {}
   }
   const F_FX = {
-    f_core: l => '×' + dec(Math.pow(C.P.fCore, l), 2),
+    f_core: l => '×' + mult(Math.pow(C.P.fCore, l)),
     f_crys: l => '+' + Math.round(C.P.fCrys * 100 * l) + ' %',
     f_frag: l => '+' + 20 * l + ' %',
     f_keep: l => 10 * l + ' %',
