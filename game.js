@@ -1707,6 +1707,8 @@
         const sh = boss.shieldUntil > run.time;
         bb.classList.toggle('shield', sh);
         $('bossPct').textContent = (pct < 1 ? pct.toFixed(1) : Math.ceil(pct)) + ' %' + (sh ? ' · Schild' : '');
+        const bn = boss.kind ? C.BOSS_KINDS[boss.kind].name + (boss.lord ? ' · Phase ' + ((boss.phase || 0) + 1) : '') : 'Mutterschiff';
+        if ($('bossName').textContent !== bn) $('bossName').textContent = bn;
       }
       $('callBtn').disabled = !run.canCallWave();
       updateAbilities();

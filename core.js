@@ -114,6 +114,24 @@
   ];
   const sectorOf = w => SECTORS[Math.min(SECTORS.length - 1, Math.floor((Math.max(1, w) - 1) / 50))];
 
+  // ---------- Bosse: je Zone vier Wächter (Welle x10–x40) und ein riesiger Herrscher (x50) ----------
+  // acts: Fähigkeiten im Wechsel; ph2/ph3: kommen beim Herrscher unter 66 % bzw. 33 % Lebenspunkten dazu.
+  // parts: Bauteile mit eigenen Lebenspunkten (fwd/lat: Lage am Rumpf in Weltkoordinaten, hp: Anteil der Boss-LP)
+  const BOSS_KINDS = {
+    gunboat: { name: 'Kanonenboot', hp: 1, r: 23, acts: ['salvo', 'broadside', 'spawn'] },
+    layer:   { name: 'Minenleger', hp: 1, r: 23, acts: ['mines', 'salvo', 'spawn'] },
+    frigate: { name: 'Schildfregatte', hp: 1.1, r: 23, acts: ['shield', 'salvo', 'spawn', 'broadside'] },
+    lancer:  { name: 'Lanzenträger', hp: 1, r: 23, acts: ['laser', 'salvo', 'broadside'] },
+    bastion: { name: 'Großträger Bastion', hp: 2, r: 32, lord: true, acts: ['hangar', 'salvo', 'bomb'], ph2: ['shield'], ph3: ['laser'],
+      parts: [{ k: 'turret', fwd: 20, lat: -31 }, { k: 'turret', fwd: 20, lat: 31 }, { k: 'turret', fwd: -18, lat: -33 }, { k: 'turret', fwd: -18, lat: 33 }] },
+  };
+  const BOSS_ROSTER = { 1: ['gunboat', 'layer', 'frigate', 'lancer', 'bastion'] };
+  function bossKind(w) {
+    if (w % 10 || w > 250) return null;
+    const ro = BOSS_ROSTER[sectorOf(w).n];
+    return ro ? ro[(w / 10 - 1) % 5] : null;
+  }
+
   // ---------- Boss-Module: Beute der Mutterschiffe, je Sektor eigene Typen ----------
   // Wirkung = Grundwert × Seltenheit × (1 + 15 % je zusätzlichem Fund, max. 10 Funde)
   const MODULES = {
@@ -184,6 +202,7 @@
     brute:   { hp: 14,  spd: 17, dmg: 2.5, rw: 3,   r: 11, col: 'brute' },
     shooter: { hp: 7,   spd: 28, dmg: 0.8, rw: 2.5, r: 7,  col: 'shooter', stop: 120 },
     boss:    { hp: 140, spd: 14, dmg: 8,   rw: 30,  r: 20, col: 'boss' },
+    part:    { hp: 1,   spd: 0,  dmg: 0,   rw: 0,   r: 7,  col: 'part' }, // Bauteil eines Bosses (Geschützturm …)
     phantom: { hp: 6,   spd: 34, dmg: 1,   rw: 2,   r: 7,  col: 'phantom', cloakFrom: 170 },
     bulwark: { hp: 20,  spd: 15, dmg: 2,   rw: 4,   r: 12, col: 'bulwark' },
     splitter:{ hp: 12,  spd: 22, dmg: 1.5, rw: 2,   r: 10, col: 'splitter' },
@@ -576,7 +595,7 @@
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
         'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
       const o = {}; keep.forEach(k => (o[k] = this[k]));
-      o.enemies = this.enemies.map(e => Object.assign({}, e));
+      o.enemies = this.enemies.map(e => { const c = Object.assign({}, e); if (e.host) { c.hostId = e.host.id; delete c.host; } return c; });
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
       o.mines = this.mines.map(m => Object.assign({}, m));
       return JSON.parse(JSON.stringify(o));
@@ -586,6 +605,7 @@
       Object.assign(r, o);
       r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.fires = []; r.hole = null; r.invulnUntil = 0; r.focus = null; r.dead = false; r.ring = null;
       r.cd = Object.assign({ freeze: 0, over: 0 }, o.cd || {});
+      for (const e of r.enemies) if (e.hostId != null) { e.host = r.enemies.find(h => h.id === e.hostId); if (!e.host) e.hp = 0; }
       RUN_UPG.forEach(u => { if (r.lv[u.id] == null) r.lv[u.id] = 0; }); // neue Upgrades in alten Spielständen
       r.dealt = Object.assign({}, r.dealt, o.dealt || {});
       SOURCES.forEach(k => { if (r.dealt[k] == null) r.dealt[k] = 0; }); r.modDealt = Object.assign({}, o.modDealt || {});
@@ -766,11 +786,12 @@
       }
       // höchstens wenige Heiler pro Welle, der Rest wird zu normalen Jägern
       let mends = 0; for (let i = 0; i < list.length; i++) if (list[i] === 'mender' && ++mends > P.mendMax) list[i] = 'grunt';
-      if (boss) list.splice(Math.floor(n / 3), 0, 'boss');
+      // Bosswelle: nur der Boss; was er selbst aussetzt, kommt dazu. Die Energie der fehlenden Schiffe trägt er mit.
+      if (boss) { this.bossRwAdd = waveCount(w) * ENEMY.grunt.rw * rwScale(w); list.length = 0; list.push('boss'); }
       this.queue = list;
-      this.spawnGap = SPAWN_LEN / list.length;
+      this.spawnGap = boss ? 1 : SPAWN_LEN / list.length;
       this.spawnT = 0;
-      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, kind: WT.name, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
+      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Mutterschiff' }).name : null, kind: WT.name, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
     }
 
     // Neues Schiff an Weltposition (x, y) erzeugen
@@ -790,10 +811,22 @@
       if (type === 'mender') e.stop = Math.max(110, Math.min(d.stop, this.s.range - 30)); // Heiler bleiben in Kanonenreichweite
       if (type === 'boss') {
         e.stop = Math.max(115, Math.min(210, this.s.range - 20));
-        e.actT = 2.5; e.hoverT = 0; e.shieldUntil = 0; e.a0 = e.a; e.acts = 0; e.sector = sectorOf(w).n;
+        e.actT = 2.5; e.hoverT = 0; e.shieldUntil = 0; e.a0 = e.a; e.acts = 0; e.sector = sectorOf(w).n; e.phase = 0;
+        e.rw += this.bossRwAdd || 0; this.bossRwAdd = 0;
+        const kind = o && o.kind !== undefined ? o.kind : bossKind(w), K = BOSS_KINDS[kind];
+        if (K) {
+          e.kind = kind; e.hp *= K.hp; e.maxHp = e.hp; e.r = K.r; e.lord = !!K.lord;
+          if (K.lord) e.stop += 12; // der Herrscher schwebt etwas weiter hinten, sein Rumpf ragt trotzdem in die Reichweite
+        }
       }
       if (o) Object.assign(e, o);
       this.enemies.push(e);
+      const BK = e.type === 'boss' && BOSS_KINDS[e.kind];
+      if (BK && BK.parts) for (const q of BK.parts) {
+        const hp = e.maxHp * 0.07;
+        const pt = this.spawnAt('part', 0, -FIELD_H, { host: e, pk: q.k, fwd: q.fwd, lat: q.lat, hp, maxHp: hp, rw: e.rw * 0.03, dmg: e.dmg * 0.3, shotT: 1.5 + Math.random() * 2 });
+        this.placePart(pt);
+      }
       return e;
     }
     spawn(type) { this.spawnAt(type, (this.rng() * 2 - 1) * FIELD_W, -FIELD_H - this.rng() * 30); }
@@ -801,6 +834,12 @@
     cloaked(e) { if (this.s.mod && this.s.mod.scanner) return false; return (e.type === 'phantom' && e.dist > ENEMY.phantom.cloakFrom) || (e.cloakUntil && e.cloakUntil > this.time); }
 
     pos(e) { return { x: Math.cos(e.a) * e.dist, y: Math.sin(e.a) * e.dist }; }
+    // Bauteil folgt seinem Boss: Lage relativ zur Blickrichtung auf die Kanone
+    placePart(pt) {
+      const h = pt.host, p = this.pos(h), d = Math.hypot(p.x, p.y) || 1, fx = -p.x / d, fy = -p.y / d;
+      const x = p.x + fx * pt.fwd - fy * pt.lat, y = p.y + fy * pt.fwd + fx * pt.lat;
+      pt.a = Math.atan2(y, x); pt.dist = Math.hypot(x, y);
+    }
 
 
 
@@ -824,7 +863,7 @@
       // Orbitalschlag lädt nur über zugefügten Schaden: gemessen an einem typischen Schiff der Welle,
       // beim Mutterschiff an seinen Lebenspunkten (ein ganzes Mutterschiff lädt mehrere Schläge)
       if (!this.s.noGun && e.type !== 'bomb' && e.maxHp > 0 && src !== 'strike' && !(this.time < this.strikeLock)) { // der Schlag selbst lädt nicht, kurz danach lädt nichts
-        const per = e.type === 'boss' ? eff / e.maxHp * P.strikeBoss : eff / (this.refHp || e.maxHp) * P.strikeDmg / STRIKE_KILLS;
+        const per = e.type === 'boss' ? eff / e.maxHp * P.strikeBoss : e.host ? eff / e.host.maxHp * P.strikeBoss : eff / (this.refHp || e.maxHp) * P.strikeDmg / STRIKE_KILLS;
         this.charge = Math.min(1, this.charge + per * (1 + ((this.s.mod && this.s.mod.leech) || 0) / 2) * (this.s.chargeK || 1));
       }
       if (tag) this.credit(tag, eff);
@@ -856,7 +895,13 @@
               if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'loot', x: p.x, y: p.y, t: 0, drop }); }
             } else this.meta.dry = (this.meta.dry || 0) + 1;
           }
-          if (e.sector === 4) { const p = this.pos(e); for (let i = -1; i <= 1; i++) this.spawnAt('splitter', p.x + i * 30, p.y, {}); }
+          if (e.sector === 4 && !e.kind) { const p = this.pos(e); for (let i = -1; i <= 1; i++) this.spawnAt('splitter', p.x + i * 30, p.y, {}); }
+          for (const o of this.enemies) if (o.host === e && o.hp > 0) { o.hp = 0; if (this.fxOn) { const q = this.pos(o); this.fx.push({ k: 'boom', x: q.x, y: q.y, t: 0, type: 'part', r: o.r, a: o.a }); } }
+        }
+        if (e.host && e.host.hp > 0) {
+          // zerstörtes Bauteil reißt ein Loch in den Rumpf
+          this.hurt(e.host, e.host.maxHp * 0.05, false, src || 'gun');
+          if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'part', x: p.x, y: p.y + 30, t: 0 }); }
         }
         if (e.type === 'splitter') {
           const p = this.pos(e), hp = e.maxHp * 0.3;
@@ -942,7 +987,7 @@
         if (this.hole) {
           const H = this.hole;
           for (const e of this.enemies) {
-            if (e.hp <= 0 || e.type === 'boss') continue;
+            if (e.hp <= 0 || e.type === 'boss' || e.host) continue;
             const p = this.pos(e), dx = H.x - p.x, dy = H.y - p.y, d = Math.hypot(dx, dy);
             if (d > 130) continue;
             if (d > 6) { const v = Math.min(d, 90 * dt), x = p.x + dx / d * v, y = Math.min(-10, p.y + dy / d * v); e.a = Math.atan2(y, x); e.dist = Math.max(WALL_R + e.r, Math.hypot(x, y)); }
@@ -955,7 +1000,7 @@
     }
     // Rückstoß mit Abnutzung: jeder Stoß macht das Schiff kurz unempfindlicher, und niemand wird aus der Reichweite geschoben
     push(e, amt) {
-      if (e.type === 'boss' || e.hp <= 0) return;
+      if (e.type === 'boss' || e.host || e.hp <= 0) return;
       const k = e.kres || 0; amt /= 1 + k; e.kres = Math.min(4, k + 0.35);
       const lim = Math.max(e.dist, this.s.range - 20); e.dist = Math.min(e.dist + amt, lim);
     }
@@ -1030,13 +1075,17 @@
 
     // Mutterschiff: schwebt in Reichweite und wechselt zwischen Fähigkeiten
     bossAct(e) {
-      const w = this.wave, p = this.pos(e);
-      const acts = ['salvo', 'spawn'];
-      if (w >= 20) acts.push('bomb');
-      if (w >= 30) acts.push('shield');
-      if (w >= 40) acts.push('laser');
-      const extra = SECTORS[e.sector - 1].boss;
-      if (extra) acts.push(extra, extra === 'mend' ? 'salvo' : extra); // Reparatur nur einmal im Zyklus
+      const w = this.wave, p = this.pos(e), BK = BOSS_KINDS[e.kind];
+      let acts;
+      if (BK) acts = BK.acts.concat(e.phase >= 1 && BK.ph2 || [], e.phase >= 2 && BK.ph3 || []);
+      else {
+        acts = ['salvo', 'spawn'];
+        if (w >= 20) acts.push('bomb');
+        if (w >= 30) acts.push('shield');
+        if (w >= 40) acts.push('laser');
+        const extra = SECTORS[e.sector - 1].boss;
+        if (extra) acts.push(extra, extra === 'mend' ? 'salvo' : extra); // Reparatur nur einmal im Zyklus
+      }
       let act = acts[e.acts % acts.length];
       if (e.acts >= acts.length) act = acts[Math.floor(Math.random() * acts.length)];
       e.acts++;
@@ -1044,6 +1093,17 @@
         // gezielter Fächer auf die Kanone
         const n = 5 + Math.min(4, Math.floor(w / 25));
         for (let i = 0; i < n; i++) this.ebullets.push({ x: p.x + (i - (n - 1) / 2) * 12, y: p.y + 10, dmg: e.dmg * 0.4, big: true });
+      } else if (act === 'broadside') {
+        // Breitseite: zwei Fächer aus den Seitengeschützen
+        const fx = -p.x / (Math.hypot(p.x, p.y) || 1), fy = -p.y / (Math.hypot(p.x, p.y) || 1);
+        for (const sd of [-1, 1]) for (let i = 0; i < 4; i++) { const l = sd * (e.r * 1.2 + i * 7); this.ebullets.push({ x: p.x - fy * l, y: p.y + fx * l, dmg: e.dmg * 0.3, big: true }); }
+      } else if (act === 'mines') {
+        // Minenteppich: drei langsame Bomben, breit gestreut
+        for (const dx of [-45, 0, 45]) { const hp = e.maxHp * 0.03; this.spawnAt('bomb', p.x + dx, p.y + e.r, { hp, maxHp: hp, dmg: e.dmg * 2.5, rw: 0.4 * rwScale(w), bomb: true }); }
+      } else if (act === 'hangar') {
+        // Hangar: Staffel aus dem Bug, bei vollem Feld weniger
+        const n = this.enemies.length >= 18 ? 0 : 4 + Math.min(4, Math.floor(w / 40));
+        for (let i = 0; i < n; i++) { const t = i % 4 === 3 ? 'brute' : i % 2 ? 'runner' : 'grunt', hp = ENEMY[t].hp * hpScale(w) * 0.7; this.spawnAt(t, p.x + (i - (n - 1) / 2) * 14, p.y + e.r * 0.8, { hp, maxHp: hp }); }
       } else if (act === 'spawn') {
         const n = this.enemies.length >= 16 ? 0 : 3 + Math.min(3, Math.floor(w / 40)); // Staffel kleiner und nur, wenn das Feld nicht schon voll ist
         for (let i = 0; i < n; i++) {
@@ -1083,13 +1143,7 @@
       while (this.queue.length && this.spawnT >= this.spawnGap) { if (this.enemies.length >= P.aliveCap) { this.spawnT = this.spawnGap; break; } this.spawnT -= this.spawnGap; this.spawn(this.queue.shift()); } // volles Feld: Nachschub wartet
       if (this.waveT >= WAVE_LEN) {
         if (this.bossAlive()) {
-          this.waveT = WAVE_LEN; this.holding = true;
-          // Verstärkung, solange das Mutterschiff lebt: keine Verschnaufpause
-          this.reinfT += dt;
-          if (this.wave >= 20 && this.reinfT >= 6 && !frozen && this.enemies.length < 20) {
-            this.reinfT = 0;
-            for (let i = 0; i < 1 + Math.floor(this.wave / 80); i++) this.spawn(Math.random() < 0.3 ? 'runner' : 'grunt');
-          }
+          this.waveT = WAVE_LEN; this.holding = true; // keine Verstärkung: im Bosskampf kommt nur, was der Boss selbst aussetzt
         } else { this.reinfT = 0; this.nextWave(); }
       }
 
@@ -1106,14 +1160,27 @@
         }
       }
 
+      for (const e of this.enemies) if (e.host && e.hp > 0) this.placePart(e);
       if (!frozen) for (const e of this.enemies) {
         if (e.hp <= 0) continue;
         e.flash = Math.max(0, e.flash - dt);
+        if (e.host) {
+          // Geschützturm: eigener kleiner Feuerstoß auf die Kanone
+          e.dmg = e.host.dmg * 0.3;
+          if (e.pk === 'turret' && e.host.dist <= e.host.stop + 5 && (e.shotT -= dt) <= 0) {
+            e.shotT = Math.max(1.6, 3 - this.wave * 0.004) * (0.85 + Math.random() * 0.3);
+            const p = this.pos(e); for (const o of [-6, 6]) this.ebullets.push({ x: p.x + o, y: p.y, dmg: e.dmg, big: false });
+            if (this.fxOn) this.fx.push({ k: 'eshot', t: 0, type: 'shooter' });
+          }
+          continue;
+        }
         const contact = WALL_R + e.r * 0.3;
         if (e.type === 'boss') {
           // Wut: je länger der Kampf dauert, desto härter schlägt das Mutterschiff zu (+100 % alle 90 s)
           e.fightT = (e.fightT || 0) + dt; if (e.dmg0 == null) e.dmg0 = e.dmg;
           e.dmg = e.dmg0 * (1 + e.fightT / P.bossWrath);
+          // Herrscher: neue Phase unter 66 % und 33 % Lebenspunkten
+          if (e.lord) { const ph = e.hp < e.maxHp * 0.33 ? 2 : e.hp < e.maxHp * 0.66 ? 1 : 0; if (ph > e.phase) { e.phase = ph; e.actT = Math.min(e.actT, 1); if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'phase', x: p.x, y: p.y, t: 0 }); } } }
           if (e.retreat) {
             // nach dem Sturmangriff zurück auf Abstand, dann beginnt das Schweben von vorn
             e.dist = Math.min(e.stop, e.dist + e.spd * 1.3 * dt);
@@ -1694,6 +1761,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.8.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  const VERSION = '0.9.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, bossKind, P };
 })(typeof window !== 'undefined' ? window : globalThis);

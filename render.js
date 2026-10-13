@@ -17,7 +17,7 @@
       core: col('--core'), hostile: col('--hostile'), energy: col('--energy'), crystal: col('--crystal'), heal: col('--heal'),
       line: col('--line'), dim: col('--ink-dim'), range: col('--range'), void: col('--void'), sky: col('--sky-top'), frost: col('--frost'), heat: col('--heat'),
     };
-    const SHIP = { grunt: '#ff4f9a', runner: '#ff9447', brute: '#ff5a5a', shooter: '#c9ff4f', boss: '#ff4ff0', bomb: '#ffdd55',
+    const SHIP = { grunt: '#ff4f9a', runner: '#ff9447', brute: '#ff5a5a', shooter: '#c9ff4f', boss: '#ff4ff0', part: '#ff4ff0', bomb: '#ffdd55',
       phantom: '#7dffcf', bulwark: '#ffb347', splitter: '#ff6b6b', shard: '#ff8f8f', mender: '#8dff7d' };
     const BOSS_COL = ['#ff4ff0', '#4fffc8', '#ff9a3c', '#ff4040', '#9fb6ff'];
     // Gegner-Fraktionen je Sektor: eigene Farben für die Grundtypen
@@ -76,7 +76,7 @@
     // ---------- Raumschiffe (lokale Achse +x = Flugrichtung) ----------
     function drawShip(e, t, frozen) {
       const fc = FAC_COL[e.fac || 1] && FAC_COL[e.fac][e.type];
-      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : e.pdps > 0 && e.type !== 'boss' ? '#8dff5a' : e.type === 'boss' ? BOSS_COL[(e.sector || 1) - 1] : fc || SHIP[e.type], r = e.r, sd = e.seed;
+      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : e.pdps > 0 && e.type !== 'boss' ? '#8dff5a' : e.type === 'boss' ? BOSS_COL[(e.sector || 1) - 1] : e.type === 'part' ? BOSS_COL[((e.host && e.host.sector) || 1) - 1] : fc || SHIP[e.type], r = e.r, sd = e.seed;
       if (fc && drawFaction(e, c, r, t, sd, frozen ? 0.25 : 1)) return;
       const fl = frozen ? 0.25 : 1;
       ctx.lineJoin = 'round';
@@ -137,6 +137,13 @@
         // Heiler: Ring mit Kreuz
         ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); fillHull(); glow(c, 1.6);
         ctx.beginPath(); ctx.moveTo(-r * 0.5, 0); ctx.lineTo(r * 0.5, 0); ctx.moveTo(0, -r * 0.5); ctx.lineTo(0, r * 0.5); glow(c, 1.8);
+      } else if (e.type === 'part') {
+        // Geschützturm auf dem Rumpf des Bosses
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.05, 0, 7); fillHull(); glow(c, 1.6);
+        ctx.beginPath(); ctx.moveTo(r * 0.3, -r * 0.32); ctx.lineTo(r * 1.9, -r * 0.32); ctx.moveTo(r * 0.3, r * 0.32); ctx.lineTo(r * 1.9, r * 0.32); glow(c, 1.5);
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.38, 0, 7); ctx.fillStyle = c; ctx.globalAlpha = 0.5 + 0.5 * Math.sin(t * 0.01 + sd); ctx.fill(); ctx.globalAlpha = 1;
+      } else if (e.kind && drawBoss(e, c, r, t, sd, fl)) {
+        // eigener Boss gezeichnet
       } else {
         // Mutterschiff
         for (const o of [-0.55, 0, 0.55]) flame(-r * 0.9, r * o, r * 1.2 * fl, r * 0.14, '#ff9af7', t, sd + o * 3);
@@ -150,6 +157,76 @@
         ctx.beginPath(); ctx.arc(0, 0, r * 0.28, 0, 7); ctx.fillStyle = pulse; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * (e.enraged ? 0.025 : 0.008)); ctx.fill(); ctx.globalAlpha = 1;
         ctx.beginPath(); ctx.moveTo(r * 1.1, -r * 0.4); ctx.lineTo(r * 1.55, -r * 0.4); ctx.moveTo(r * 1.1, r * 0.4); ctx.lineTo(r * 1.55, r * 0.4); glow(c, 1.8);
       }
+    }
+
+    // ---------- Bosse (lokale Achse +x = zur Kanone) ----------
+    function poly(pts) { ctx.beginPath(); pts.forEach(([x, y], i) => ctx[i ? 'lineTo' : 'moveTo'](x, y)); ctx.closePath(); }
+    function drawBoss(e, c, r, t, sd, fl) {
+      const k = e.kind, pulse = e.enraged ? '#ff3030' : c, beat = 0.6 + 0.4 * Math.sin(t * (e.enraged ? 0.025 : 0.008));
+      const core = (x, y, rr) => { ctx.beginPath(); ctx.arc(x, y, rr, 0, 7); ctx.fillStyle = pulse; ctx.globalAlpha = beat; ctx.fill(); ctx.globalAlpha = 1; };
+      if (k === 'gunboat') {
+        // Kanonenboot: langer Keil, zwei Seitengeschütze, Brücke
+        for (const o of [-0.4, 0.4]) flame(-r * 1.05, r * o, r * 1.3 * fl, r * 0.16, '#ff9af7', t, sd + o);
+        poly([[r * 1.55, 0], [r * 0.55, -r * 0.48], [-r * 0.9, -r * 0.62], [-r * 1.15, -r * 0.25], [-r * 1.15, r * 0.25], [-r * 0.9, r * 0.62], [r * 0.55, r * 0.48]]); fillHull(); glow(c, 2.2);
+        for (const sg of [-1, 1]) {
+          ctx.beginPath(); ctx.roundRect(-r * 0.35, sg * r * 0.62 - r * 0.2, r * 0.75, r * 0.4, r * 0.1); fillHull(); glow(c, 1.4);
+          ctx.beginPath(); ctx.moveTo(r * 0.4, sg * r * 0.55); ctx.lineTo(r * 1.15, sg * r * 0.55); ctx.moveTo(r * 0.4, sg * r * 0.7); ctx.lineTo(r * 1.15, sg * r * 0.7); glow(c, 1.3);
+        }
+        ctx.beginPath(); ctx.moveTo(-r * 0.7, 0); ctx.lineTo(r * 0.9, 0); glow(c, 1, 0.5);
+        core(-r * 0.2, 0, r * 0.22);
+        return true;
+      }
+      if (k === 'layer') {
+        // Minenleger: breiter, flacher Rumpf, Minenschächte am Heck
+        for (const o of [-0.6, 0.6]) flame(-r * 1.0, r * o, r * 1.1 * fl, r * 0.15, '#ff9af7', t, sd + o);
+        ctx.beginPath(); ctx.roundRect(-r * 1.0, -r * 1.0, r * 1.9, r * 2.0, r * 0.45); fillHull(); glow(c, 2.2);
+        poly([[r * 0.9, -r * 0.55], [r * 1.35, -r * 0.25], [r * 1.35, r * 0.25], [r * 0.9, r * 0.55]]); fillHull(); glow(c, 1.4);
+        for (let i = 0; i < 3; i++) {
+          const y = (i - 1) * r * 0.62, on = Math.sin(t * 0.006 + i * 2) > 0;
+          ctx.beginPath(); ctx.roundRect(-r * 0.85, y - r * 0.2, r * 0.7, r * 0.4, r * 0.08); ctx.fillStyle = '#0a0a18'; ctx.fill(); glow(c, 1);
+          ctx.beginPath(); ctx.arc(-r * 0.5, y, r * 0.13, 0, 7); ctx.fillStyle = on ? '#ffdd55' : '#6a5a20'; ctx.fill();
+        }
+        core(r * 0.45, 0, r * 0.2);
+        return true;
+      }
+      if (k === 'frigate') {
+        // Schildfregatte: Sechseck mit zwei Schildemittern und kreisendem Feldring
+        flame(-r * 1.0, 0, r * 1.5 * fl, r * 0.22, '#ff9af7', t, sd);
+        hexPath(r * 1.05, 0); fillHull(); glow(c, 2.2);
+        for (const sg of [-1, 1]) { poly([[r * 0.2, sg * r * 0.9], [r * 0.75, sg * r * 1.45], [r * 1.0, sg * r * 1.3], [r * 0.6, sg * r * 0.75]]); fillHull(); glow(c, 1.4); ctx.beginPath(); ctx.arc(r * 0.88, sg * r * 1.38, r * 0.12, 0, 7); ctx.fillStyle = PAL.frost; ctx.fill(); }
+        ctx.save(); ctx.rotate(-t * 0.0015); ctx.beginPath(); ctx.arc(0, 0, r * 0.7, 0, 7); ctx.setLineDash([r * 0.18, r * 0.14]); glow(PAL.frost, 1.2, 0.6); ctx.setLineDash([]); ctx.restore();
+        core(0, 0, r * 0.3);
+        return true;
+      }
+      if (k === 'lancer') {
+        // Lanzenträger: schlanker Rumpf mit langer Lanze; die Spitze glüht, wenn der Laser lädt
+        for (const o of [-0.3, 0.3]) flame(-r * 1.1, r * o, r * 1.4 * fl, r * 0.14, '#ff9af7', t, sd + o);
+        poly([[r * 0.8, -r * 0.3], [-r * 0.2, -r * 0.55], [-r * 0.6, -r * 1.25], [-r * 0.95, -r * 1.2], [-r * 1.15, -r * 0.3], [-r * 1.15, r * 0.3], [-r * 0.95, r * 1.2], [-r * 0.6, r * 1.25], [-r * 0.2, r * 0.55], [r * 0.8, r * 0.3]]); fillHull(); glow(c, 2.2);
+        poly([[r * 2.3, 0], [r * 0.7, -r * 0.16], [r * 0.7, r * 0.16]]); fillHull(); glow(c, 1.6);
+        const ch = e.laser > 0 ? 1 - e.laser / 2 : 0;
+        ctx.beginPath(); ctx.arc(r * 2.3, 0, r * (0.12 + 0.3 * ch), 0, 7); ctx.fillStyle = ch ? '#ff3030' : c; ctx.globalAlpha = ch ? 0.6 + 0.4 * Math.sin(t * 0.05) : 0.7; ctx.fill(); ctx.globalAlpha = 1;
+        for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(r * (1.0 + i * 0.4), 0, r * 0.22, -1.1, 1.1); glow(c, 1, 0.5); }
+        core(-r * 0.4, 0, r * 0.24);
+        return true;
+      }
+      if (k === 'bastion') {
+        // Großträger: breiter Panzerrumpf, Hangar am Bug, vier Turmsockel (die Türme sind eigene Bauteile)
+        for (const o of [-0.62, -0.22, 0.22, 0.62]) flame(-r * 1.05, r * o, r * 1.0 * fl, r * 0.12, '#ff9af7', t, sd + o * 4);
+        poly([[r * 1.15, -r * 0.5], [r * 0.75, -r * 0.92], [-r * 0.85, -r * 0.92], [-r * 1.08, -r * 0.6], [-r * 1.08, r * 0.6], [-r * 0.85, r * 0.92], [r * 0.75, r * 0.92], [r * 1.15, r * 0.5]]); fillHull(); glow(c, 2.6);
+        ctx.beginPath(); for (const x of [-0.45, 0.05]) { ctx.moveTo(r * x, -r * 0.92); ctx.lineTo(r * x, r * 0.92); } glow(c, 1, 0.35);
+        // Hangar mit Lauflichtern
+        ctx.beginPath(); ctx.roundRect(r * 0.55, -r * 0.3, r * 0.6, r * 0.6, r * 0.06); ctx.fillStyle = '#05050f'; ctx.fill(); glow(c, 1.3);
+        for (let i = 0; i < 4; i++) { const on = Math.floor(t * 0.006 + i) % 4 === 0; ctx.beginPath(); ctx.arc(r * (0.62 + i * 0.15), r * 0.38, r * 0.04, 0, 7); ctx.fillStyle = on ? '#ffffff' : c; ctx.globalAlpha = on ? 1 : 0.4; ctx.fill(); ctx.globalAlpha = 1; }
+        // Turmsockel an den Stellen der Bauteile (Weltmaß / Zeichenmaßstab 1,5)
+        for (const [fx, ly] of [[20, -31], [20, 31], [-18, -33], [-18, 33]]) { ctx.beginPath(); ctx.arc(fx / 1.5, ly / 1.5, r * 0.3, 0, 7); ctx.fillStyle = '#0d0c22'; ctx.fill(); glow(c, 1, 0.5); }
+        // Brücke und Kern, ab Phase 2 offenliegend
+        ctx.beginPath(); ctx.roundRect(-r * 0.55, -r * 0.28, r * 0.6, r * 0.56, r * 0.12); fillHull(); glow(c, 1.4);
+        core(-r * 0.25, 0, r * (0.14 + 0.05 * (e.phase || 0)));
+        if (e.phase >= 1) { ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 0.92); ctx.lineTo(-r * 0.05, -r * 0.6); ctx.lineTo(-r * 0.25, -r * 0.4); glow('#ff6a3d', 1.2, 0.8); }
+        if (e.phase >= 2) { ctx.beginPath(); ctx.moveTo(r * 0.4, r * 0.92); ctx.lineTo(r * 0.25, r * 0.55); ctx.lineTo(r * 0.45, r * 0.4); glow('#ff6a3d', 1.2, 0.8); }
+        return true;
+      }
+      return false;
     }
 
     // Fraktionsformen für Jäger, Abfangjäger und Kanonenboot in Sektor 2–5
@@ -739,7 +816,7 @@
           ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
-          const label = { salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
+          const label = { broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
           ctx.globalAlpha = a; ctx.fillStyle = SHIP.boss; ctx.font = `700 13px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }
@@ -776,7 +853,7 @@
           ctx.globalAlpha = Math.min(1, (1 - k) * 2);
           ctx.fillStyle = f.boss ? SHIP.boss : PAL.core; ctx.textAlign = 'center';
           ctx.font = `700 ${Math.round(Math.min(W, H) * 0.08)}px ${FONT_UI()}`;
-          ctx.fillText(f.boss ? 'MUTTERSCHIFF' : 'WELLE ' + f.w, W / 2, H * 0.4 - k * 10);
+          ctx.fillText(f.boss ? (f.bossName || 'Mutterschiff').toUpperCase() : 'WELLE ' + f.w, W / 2, H * 0.4 - k * 10);
           if (f.kind && !f.sector) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`; ctx.fillStyle = f.kind === 'Schwarm' ? '#ffb066' : f.kind === 'Panzerverband' ? '#ff8a8a' : '#e0ff6b'; ctx.fillText(f.kind.toUpperCase(), W / 2, H * 0.4 + Math.min(W, H) * 0.06 - k * 10); }
           if (f.sector) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`; ctx.fillStyle = BIOME[f.sector.n - 1].star; ctx.fillText('SEKTOR ' + f.sector.n + ' · ' + f.sector.name.toUpperCase(), W / 2, H * 0.4 + Math.min(W, H) * 0.06 - k * 10); }
           ctx.globalAlpha = 1;
@@ -786,7 +863,7 @@
         ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 0.006);
         ctx.fillStyle = SHIP.boss; ctx.textAlign = 'center';
         ctx.font = `700 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`;
-        ctx.fillText('MUTTERSCHIFF BESIEGEN', W / 2, H * 0.2);
+        { const b = run.enemies.find(e => e.type === 'boss' && e.hp > 0); ctx.fillText(((b && b.kind && C.BOSS_KINDS[b.kind].name) || 'Mutterschiff').toUpperCase() + ' BESIEGEN', W / 2, H * 0.2); }
         ctx.globalAlpha = 1;
       }
     }
