@@ -466,6 +466,27 @@ textarea { resize: vertical; min-height: 70px; }
 .pcfl span { border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px; }
 .pcbr { justify-content: space-between; }
 .pcsk { width: 100%; max-height: 260px; display: block; }
+.cx { gap: 10px; }
+#cxList { display: grid; gap: 8px; }
+.cxi { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: start; border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: #ffffff04; }
+.cxi.lord { border-color: color-mix(in srgb, var(--energy, #ffd23f) 45%, var(--line)); }
+.cxp { width: 76px; height: 76px; display: block; border-radius: 4px; background: radial-gradient(circle, #ffffff0a, transparent 70%); }
+.cxi.lock .cxp { filter: brightness(0) drop-shadow(0 0 1px #6c68a8); opacity: .7; }
+.cxi.lock .cxt b, .cxi.lock .cxic { color: var(--ink-dim); }
+.cxt { display: grid; gap: 4px; min-width: 0; }
+.cxt b { font-size: .95rem; }
+.cxt small { font-size: .76rem; color: var(--ink-dim); line-height: 1.35; }
+.cxt small.cxw { font-family: var(--font-num); color: var(--energy, #ffd23f); font-size: .7rem; letter-spacing: .04em; }
+.cxt small.cxchk { color: #ffb3ea; }
+.cxtag { font-size: .62rem; letter-spacing: .08em; text-transform: uppercase; color: var(--energy, #ffd23f); border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; vertical-align: 2px; }
+.cxok { font-size: .7rem; color: var(--heal); font-weight: 600; }
+.cxchips { display: flex; flex-wrap: wrap; gap: 4px; }
+.cxchips span { font-size: .68rem; border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; color: var(--ink); }
+.cxbar { display: grid; grid-template-columns: 58px 1fr; gap: 8px; align-items: center; font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-dim); }
+.cxbar i { height: 4px; border-radius: 2px; background: #ffffff10; overflow: hidden; } .cxbar b { display: block; height: 100%; border-radius: 2px; }
+.cxic { width: 76px; height: 52px; display: flex; align-items: center; justify-content: center; font-size: 1.7rem; color: var(--c); text-shadow: 0 0 12px var(--c); border: 1px solid var(--line); border-radius: 4px; }
+.cxi:has(.cxic) { grid-template-columns: 76px 1fr; }
+.cxz { margin: 8px 0 0; font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
 .lbrk::before { content: "R "; opacity: .7; }
 
 .cannonview { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
@@ -781,6 +802,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <button class="tile ach-btn" id="achBtn" style="--tc:#ffd23f"><span class="ic">♛</span><span class="tx"><b>Erfolge</b><small>Stufen mit dauerhaften Boni</small></span><span class="st" id="st-achBtn"></span></button>
         <button class="tile lb-btn" id="lbBtn" style="--tc:var(--core)"><span class="ic">≡</span><span class="tx"><b>Highscores</b><small>Rekorde und Tagesliste</small></span><span class="st" id="st-lbBtn"></span></button>
         <button class="tile prof-btn" id="profBtn" style="--tc:#c3a6ff"><span class="ic">☺</span><span class="tx"><b>Profil</b><small>Name, Profilbild, Geräte verbinden</small></span><span class="st" id="st-profBtn"></span></button>
+        <button class="tile" id="codexBtn" style="--tc:#ff8a3d"><span class="ic">❖</span><span class="tx"><b>Kompendium</b><small>Gegner, Bosse und Waffen</small></span><span class="st" id="st-codexBtn"></span></button>
         <button class="tile set-btn" id="setBtn" style="--tc:var(--ink-dim)"><span class="ic">⚙</span><span class="tx"><b>Optionen</b><small>Ton, Zahlen, Sprache, Hinweise</small></span><span class="st" id="st-setBtn"></span></button>
         <button class="tile fb-btn" id="fbBtn" style="--tc:#ffd23f"><span class="ic">✉</span><span class="tx"><b>Feedback</b><small>Fehler melden, Ideen schicken</small></span><span class="st" id="st-fbBtn"></span></button>
         <button class="tile guide-btn" id="guideBtn" style="--tc:var(--heal)"><span class="ic">?</span><span class="tx"><b>Anleitung</b><small>Wie alles funktioniert</small></span><span class="st" id="st-guideBtn"></span></button>
@@ -920,6 +942,20 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <button class="sec" id="labClose">Zurück</button>
     </div>
     <button class="danger" id="resetBtn">Spielstand löschen</button>
+  </div>
+</div>
+
+<div class="ov" id="codex" hidden>
+  <div class="card cx">
+    <h2>Kompendium</h2>
+    <div class="lbtabs mtabs" id="cxTabs" role="tablist">
+      <button data-cx="enemy" aria-selected="true">Gegner</button>
+      <button data-cx="boss" aria-selected="false">Bosse</button>
+      <button data-cx="weapon" aria-selected="false">Waffen</button>
+    </div>
+    <p class="pcst" id="cxSum"></p>
+    <div id="cxList"></div>
+    <div class="actions"><button class="sec" id="cxClose">Zurück</button></div>
   </div>
 </div>
 

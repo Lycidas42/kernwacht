@@ -49,7 +49,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['codex', 'pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -58,6 +58,7 @@
     if (name === 'lab') renderLab();
     if (name === 'menu') renderMenu();
     if (name === 'board') renderBoard();
+    if (name === 'codex') renderCodex();
     if (name === 'admin') renderAdmin();
     if (name === 'pause') { syncSoundBtns(); if (run) $('pauseSub').textContent = `Welle ${run.wave} · Rekord ${C.record(meta)}`; }
     if (name === 'fusion') renderFusion();
@@ -1294,6 +1295,97 @@
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   $('lbProfile').addEventListener('click', () => show('profile'));
+
+  // ---------- Kompendium: Gegner, Bosse, Waffen ----------
+  const CX_ENEMY = [
+    ['grunt', 'Jäger', 1, 'Das Standardschiff. Fliegt geradewegs auf den Schutzwall zu.'],
+    ['runner', 'Flitzer', 3, 'Schnell und zerbrechlich. Kommt gern im Schwarm.'],
+    ['brute', 'Koloss', 6, 'Langsam, sehr zäh und trifft hart. Panzerverbände bestehen fast nur aus ihnen.'],
+    ['shooter', 'Kanonenboot', 15, 'Bleibt auf Abstand stehen und beschießt die Kanone. Reichweite hilft.'],
+    ['bomb', 'Bombe', 50, 'Wird von Bossen abgeworfen und explodiert am Wall. Abschießen, bevor sie einschlägt.'],
+    ['phantom', 'Phantom', 51, 'Ab dem Smaragdnebel. Tarnt sich in der Ferne. Das Modul Zielerfassung hebt die Tarnung auf.'],
+    ['bulwark', 'Schildträger', 101, 'Ab dem Glutgürtel. Der Frontschild muss erst brechen und lädt sich ohne Treffer wieder auf.'],
+    ['splitter', 'Splitter', 151, 'Ab dem Roten Riesen. Zerfällt beim Abschuss in mehrere kleine, schnelle Splitter.'],
+    ['mender', 'Heiler', 201, 'In der Leere. Repariert Schiffe in der Nähe. Die Kanone nimmt Heiler automatisch zuerst.'],
+  ];
+  const CX_CHECK = { dps: 'Schadensprobe: verliert er zu langsam Leben, heizt er auf', def: 'Sturmangriff: schwere Fächer, Hülle und Panzerung zählen', sustain: 'Glutstrahlung: ständiger Schaden, Reparatur zählt', burst: 'Panzerschild: muss schnell gebrochen werden, sonst heilt er' };
+  const CX_PART = { arm: 'Tentakel', tentacle: 'Tentakel', eye: 'Augen', turret: 'Geschütze', gate: 'Hangartore', vent: 'Schlote', gwing: 'Schwingen', head: 'Kopf', core: 'Kern', armor: 'Panzerplatten', lance: 'Lanze', rack: 'Minenschächte', seal: 'Siegel', prism: 'Prismen', segment: 'Wurmglieder' };
+  const CX_WEAP = [
+    { ic: '◉', col: '#3ef0ff', name: 'Hauptkanone', desc: 'Schießt auf das nächste Schiff in Reichweite. Schaden, Feuerrate, Reichweite und Krits kaufst du im Lauf.', ok: () => true, how: 'Von Anfang an' },
+    { ic: '⋔', col: '#3ef0ff', name: 'Mehrfachschuss', desc: 'Bis zu zwei Nebenrohre mit 35 % Schaden.', ok: () => true, how: 'Lauf-Upgrade' },
+    { ic: '➶', col: '#3ef0ff', name: 'Durchschlag', desc: 'Geschosse fliegen durch bis zu drei weitere Schiffe.', ok: () => true, how: 'Lauf-Upgrade' },
+    { ic: '✹', col: '#ff4fa0', name: 'Orbitalschlag', desc: 'Lädt sich durch Schaden auf. Ein Tipp ins Feld schlägt genau dort ein, gegen Bosse besonders stark.', ok: () => true, how: 'Von Anfang an' },
+    { ic: '❄', col: '#9fe8ff', name: 'Stasis', desc: 'Fähigkeit: friert alle Gegner für ein paar Sekunden ein.', ok: () => C.mlv(meta, 'u_freeze') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_freeze}` },
+    { ic: '◎', col: '#3ef0ff', name: 'Schockwelle', desc: 'Druckring, der weit ins Feld läuft und alles darin trifft.', ok: () => C.mlv(meta, 'u_shock') > 0, how: 'Labor' },
+    { ic: '⟳', col: '#5dffb0', name: 'Orbitklingen', desc: 'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall.', ok: () => C.mlv(meta, 'u_blade') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_blade}` },
+    { ic: '⚡', col: '#ff8a3d', name: 'Überladung', desc: 'Fähigkeit: Feuerrate für kurze Zeit stark erhöht.', ok: () => C.mlv(meta, 'u_over') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_over}` },
+    { ic: '✱', col: '#ffd23f', name: 'Minenwerfer', desc: 'Wirft Minen ins Feld, die bei Kontakt oder nach kurzer Zeit zünden. Bevorzugt auf Bosse.', ok: () => C.mlv(meta, 'u_mine') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_mine}` },
+    { ic: '➹', col: '#ff8a3d', name: 'Raketenwerfer', desc: 'Nebenkanone links: langsame Rakete mit großem Flächenschaden.', ok: () => C.flv(meta, 'f_rocket') > 0, how: 'Kernfusion' },
+    { ic: '❆', col: '#9fe8ff', name: 'Kryowerfer', desc: 'Nebenkanone rechts: verlangsamt getroffene Schiffe.', ok: () => C.flv(meta, 'f_cryo') > 0, how: 'Kernfusion' },
+    { ic: '◈', col: '#c3a6ff', name: 'Module', desc: 'Beute der Bosse. Drei ausgerüstete Module verändern Geschosse und Fähigkeiten.', ok: () => C.record(meta) >= C.MODULES_AT, how: `ab Rekordwelle ${C.MODULES_AT}` },
+  ];
+  let cxTab = 'enemy', cxR = null, cxRaf = 0;
+  const cxVis = new Set();
+  const cxObs = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? cxVis.add(e.target) : cxVis.delete(e.target))) : null;
+  function cxBossList() {
+    const out = [];
+    for (let z = 1; z <= 5; z++) C.BOSS_ROSTER[z].forEach((k, i) => out.push({ k, z, w: (z - 1) * 50 + (i + 1) * 10, B: C.BOSS_KINDS[k] }));
+    return out;
+  }
+  function renderCodex() {
+    const rec = C.record(meta), el = $('cxList');
+    $$('#cxTabs [data-cx]').forEach(b => b.setAttribute('aria-selected', b.dataset.cx === cxTab ? 'true' : 'false'));
+    cxVis.clear(); if (cxObs) cxObs.disconnect();
+    let h = '', n = 0, tot = 0;
+    if (cxTab === 'enemy') {
+      const mx = k => Math.max(...CX_ENEMY.map(([t]) => C.ENEMY[t][k]));
+      const bar = (lbl, v, m, col) => `<div class="cxbar"><span>${lbl}</span><i><b style="width:${Math.max(6, Math.round(v / m * 100))}%;background:${col}"></b></i></div>`;
+      for (const [t, name, w, desc] of CX_ENEMY) {
+        const known = rec >= w, d = C.ENEMY[t]; tot++; if (known) n++;
+        h += `<div class="cxi${known ? '' : ' lock'}"><canvas class="cxp" data-e="${t}"></canvas><div class="cxt"><b>${known ? name : '???'}</b><small class="cxw">ab Welle ${w}</small>`
+          + (known ? `<small>${desc}</small>${bar('Leben', d.hp, mx('hp'), '#5dffb0')}${bar('Tempo', d.spd, mx('spd'), '#3ef0ff')}${bar('Schaden', d.dmg, mx('dmg'), '#ff4f6a')}` : '<small>Noch nicht begegnet.</small>') + '</div></div>';
+      }
+    } else if (cxTab === 'boss') {
+      let z0 = 0;
+      for (const b of cxBossList()) {
+        if (b.z !== z0) { z0 = b.z; const S = C.SECTORS[b.z - 1]; h += `<h4 class="cxz">Zone ${b.z} · ${S.name}</h4>`; }
+        const known = rec >= b.w, beat = rec > b.w || (meta.bossBeat && meta.bossBeat[b.k]), B = b.B; tot++; if (known) n++;
+        const acts = [...new Set((B.acts || []).concat(B.ph2 || [], B.ph3 || []))].map(a => C.BOSS_ACT_NAME[a] || a);
+        const parts = [...new Set((B.parts || []).map(p => CX_PART[p.k]).filter(Boolean))];
+        h += `<div class="cxi${known ? '' : ' lock'}${B.lord ? ' lord' : ''}"><canvas class="cxp" data-b="${b.k}"></canvas><div class="cxt"><b>${known ? B.name : '???'}${B.lord && known ? ' <span class="cxtag">Herrscher</span>' : ''}${beat ? ' <span class="cxok">✓ besiegt</span>' : ''}</b><small class="cxw">Welle ${b.w}</small>`
+          + (known ? `${(B.chk || []).map(c => `<small class="cxchk">${CX_CHECK[c]}</small>`).join('')}<div class="cxchips">${acts.map(a => `<span>${a}</span>`).join('')}</div>${parts.length ? `<small><span>Anvisierbare Teile:</span> ${parts.map(x => `<span>${x}</span>`).join(', ')}</small>` : ''}` : '<small>Noch nicht begegnet.</small>') + '</div></div>';
+      }
+      h += `<p class="pcst">Ab Welle 260 kehren alle Bosse in derselben Reihenfolge stärker zurück.</p>`;
+    } else {
+      for (const W of CX_WEAP) {
+        const ok = W.ok(); tot++; if (ok) n++;
+        h += `<div class="cxi${ok ? '' : ' lock'}"><span class="cxic" style="--c:${W.col}">${W.ic}</span><div class="cxt"><b>${W.name}${ok ? ' <span class="cxok">✓</span>' : ''}</b><small class="cxw">${W.how}</small><small>${W.desc}</small></div></div>`;
+      }
+    }
+    el.innerHTML = h;
+    $('cxSum').textContent = cxTab === 'weapon' ? `${n} von ${tot} freigeschaltet` : `${n} von ${tot} entdeckt`;
+    if (cxObs) $$('#cxList canvas').forEach(c => cxObs.observe(c)); else $$('#cxList canvas').forEach(c => cxVis.add(c));
+    if (!cxRaf) cxRaf = requestAnimationFrame(cxLoop);
+  }
+  const cxBuf = document.createElement('canvas');
+  function cxLoop(t) {
+    if (current !== 'codex') { cxRaf = 0; return; }
+    cxRaf = requestAnimationFrame(cxLoop);
+    if (!cxR) cxR = window.KWRender.create(cxBuf);
+    for (const c of cxVis) {
+      const w = c.clientWidth, h = c.clientHeight; if (!w) continue;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+      let e;
+      if (c.dataset.e) { const d = C.ENEMY[c.dataset.e]; e = { type: c.dataset.e, r: d.r, seed: 1.3, hp: 1, maxHp: 1, guard: 1, fac: 1 }; }
+      else { const k = c.dataset.b, B = C.BOSS_KINDS[k], z = cxBossList().find(x => x.k === k).z; e = B.giant ? { giant: true, kind: k, sector: z } : { type: 'boss', kind: k, r: B.r, seed: 2.1, hp: 1, maxHp: 1, sector: z }; }
+      cxR.portrait(e, t, w, h);
+      const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(cxBuf, 0, 0, c.width, c.height);
+    }
+  }
+  $$('#cxTabs [data-cx]').forEach(b => b.addEventListener('click', () => { cxTab = b.dataset.cx; A.play('click'); renderCodex(); $('cxList').scrollTop = 0; }));
+  $('cxClose').addEventListener('click', home);
+  $('codexBtn').addEventListener('click', () => show('codex'));
 
   // ---------- Profil: Name und Profilbild ----------
   const AV_COLORS = ['#3ef0ff', '#ff4fa0', '#ffc04d', '#5dffb0', '#c3a6ff', '#ff8a3d', '#7da8ff', '#f4f1ff'];

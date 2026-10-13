@@ -1459,6 +1459,18 @@
 
     // Großansicht für das Labor: nur die Kanone, Turm schwenkt langsam
     // Porträt für das Kompendium: ein Schiff (oder der Körper eines Riesen) mittig in w×h CSS-Pixeln
+    // Umriss eines Riesenkörpers einmal ausmessen (Pixel mit Deckung), damit das Porträt ihn ganz zeigt
+    const gBox = {};
+    function giantBox(g, col, t) {
+      if (gBox[g.kind]) return gBox[g.kind];
+      const S = 900, k = 0.5; cv.width = S; cv.height = S;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, S, S); ctx.setTransform(k, 0, 0, k, S / 2, S / 2);
+      drawGiantBody(g, 0, 0, col, t);
+      const d = ctx.getImageData(0, 0, S, S).data; let x0 = S, y0 = S, x1 = 0, y1 = 0;
+      for (let y = 0; y < S; y += 2) for (let x = 0; x < S; x += 2) if (d[(y * S + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 <= x0) { x0 = 0; y0 = 0; x1 = S; y1 = S; }
+      return (gBox[g.kind] = { cx: ((x0 + x1) / 2 - S / 2) / k, cy: ((y0 + y1) / 2 - S / 2) / k, w: (x1 - x0) / k, h: (y1 - y0) / k });
+    }
     function portrait(e, t, w, h) {
       const dpr = Math.min(2, window.devicePixelRatio || 1), cw = Math.round(w * dpr), ch = Math.round(h * dpr);
       if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
@@ -1466,9 +1478,12 @@
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       try {
         if (e.giant) {
-          const k = Math.min(w / 600, h / 470);
-          ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * w / 2, dpr * h / 2);
-          drawGiantBody(Object.assign({ phase: 0, flash: 0 }, e), 0, 120, BOSS_COL[(e.sector || 1) - 1], t);
+          const g = Object.assign({ phase: 0, flash: 0 }, e), col = BOSS_COL[(e.sector || 1) - 1], B = giantBox(g, col, t);
+          if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+          ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
+          const k = Math.min(w / B.w, h / B.h) * 0.94;
+          ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * (w / 2 - k * B.cx), dpr * (h / 2 - k * B.cy));
+          drawGiantBody(g, 0, 0, col, t);
         } else {
           const k = Math.min(w, h) / (e.r * (e.type === 'boss' ? 3.6 : 4.2));
           ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * w / 2, dpr * h / 2); ctx.rotate(Math.PI / 2);
