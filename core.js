@@ -1753,7 +1753,7 @@
         this.rocketT += dt;
         if (this.rocketT >= s.rocketCd) {
           // Ziel: Schiff mit den meisten Nachbarn in Reichweite
-          const cand = this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.range && !this.cloaked(e));
+          const cand = this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.range + 40 && !this.cloaked(e));
           if (cand.length) {
             this.rocketT = 0;
             let best = cand[0], bn = -1;
@@ -1769,7 +1769,7 @@
         // Zielsuchend: stirbt das Ziel, nimmt die Rakete das nächste Schiff in ihrer Nähe
         if (!m.tgt || m.tgt.hp <= 0) {
           let best = null, bd = 1e9;
-          for (const e of this.enemies) { if (e.hp <= 0 || this.cloaked(e) || e.dist - e.r > s.range) continue; const p = this.pos(e), d = Math.hypot(p.x - m.x, p.y - m.y); if (d < bd) { bd = d; best = e; } } // nur Ziele in Reichweite
+          for (const e of this.enemies) { if (e.hp <= 0 || this.cloaked(e)) continue; const p = this.pos(e), d = Math.hypot(p.x - m.x, p.y - m.y); if (d < bd) { bd = d; best = e; } }
           m.tgt = best;
         }
         const t = m.tgt ? this.pos(m.tgt) : null;
@@ -1785,16 +1785,14 @@
         // Annäherungszünder: explodiert am ersten Schiff, das sie berührt
         let hit = false;
         for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - m.x, p.y - m.y) < e.r + 8) { hit = true; break; } }
-        // ohne Ziel oder außerhalb der Reichweite: verpufft, ohne Schaden
-        if (!hit && (Math.hypot(m.x, m.y) > s.range + 30 || (!t && m.life <= 0))) { m.done = true; continue; }
-        if (hit || m.life <= 0) {
+        if (hit || m.life <= 0 || (!t && m.y < -FIELD_H)) {
           m.done = true;
-          for (const e of this.enemies) { const p = this.pos(e); if (e.hp > 0 && e.dist - e.r <= s.range && Math.hypot(p.x - m.x, p.y - m.y) < s.rocketR + e.r) this.hurt(e, s.rocketDmg * (e === this.focus && s.K && s.K('x_seek') ? 1.5 : 1), false, 'rocket'); }
+          for (const e of this.enemies) { const p = this.pos(e); if (e.hp > 0 && Math.hypot(p.x - m.x, p.y - m.y) < s.rocketR + e.r) this.hurt(e, s.rocketDmg * (e === this.focus && s.K && s.K('x_seek') ? 1.5 : 1), false, 'rocket'); }
           if (this.fxOn) this.fx.push({ k: 'mine', x: m.x, y: m.y, t: 0, r: s.rocketR, rocket: true });
           if (s.K('a_cluster')) for (let i = 0; i < 3; i++) {
             // Streuraketen: drei Submunitionen rund um den Einschlag
             const an = Math.random() * 6.28, rr = s.rocketR * (0.8 + Math.random() * 0.6), x = m.x + Math.cos(an) * rr, y = m.y + Math.sin(an) * rr;
-            for (const e of this.enemies) { const p = this.pos(e); if (e.hp > 0 && e.dist - e.r <= s.range && Math.hypot(p.x - x, p.y - y) < 30 + e.r) this.hurt(e, s.rocketDmg * 0.4, false, 'rocket'); }
+            for (const e of this.enemies) { const p = this.pos(e); if (e.hp > 0 && Math.hypot(p.x - x, p.y - y) < 30 + e.r) this.hurt(e, s.rocketDmg * 0.4, false, 'rocket'); }
             if (this.fxOn) this.fx.push({ k: 'mine', x, y, t: 0, r: 30, rocket: true });
           }
         }
@@ -2197,6 +2195,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.25.4'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.25.5'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, fusionCostOld, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
