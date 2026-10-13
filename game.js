@@ -913,11 +913,12 @@
     $('onSum').textContent = list.length ? (list.length === 1 ? 'Gerade bist nur du online.' : `${list.length} Spieler gerade online.`) : 'Gerade ist niemand verbunden.';
     $('onList').innerHTML = list.map(p => `<tr class="${p.pid === me ? 'me' : ''}" ${p.pid ? `data-pid="${esc(p.pid)}"` : ''}><td>${p.wave > 0 ? '<i class="onlive" title="im Lauf"></i>' : '<i class="onidle" title="im Menü"></i>'}</td><td><span class="who">${avatarSvg(p.av, p.col, 22)}<span class="nm">${esc(p.name || 'Anonym')}</span>${p.lvl ? `<small class="lbrk">${p.lvl}</small>` : ''}</span></td><td>${p.wave > 0 ? 'Welle ' + p.wave : 'im Menü'}</td></tr>`).join('');
   }
-  function openOnline() { if (runAlive() && !current) setPaused(true); A.play('click'); show('online'); }
+  let onFromRun = false; // aus dem laufenden Spiel geöffnet: „Zurück“ setzt den Lauf direkt fort
+  function openOnline() { onFromRun = runAlive() && !current; if (onFromRun) setPaused(true); A.play('click'); show('online'); }
   $('onlinePill').addEventListener('click', openOnline);
   $('mOnline').addEventListener('click', openOnline);
   $('pOnline').addEventListener('click', openOnline);
-  $('onClose').addEventListener('click', home);
+  $('onClose').addEventListener('click', () => { if (onFromRun && runAlive()) { onFromRun = false; show(null); setPaused(false); } else home(); });
 
   // Bestenliste auf der Startseite: Top 3, eigener Platz und wer direkt davor liegt
   let lbTeaseT = 0;
@@ -1831,7 +1832,7 @@
     const pop = open.find(p => !meta.pollLater[p.id]), box = $('pollPop');
     if (!pop || current === 'poll') { box.hidden = true; return; }
     $('ppQ').textContent = pop.question; box.hidden = false;
-    $('ppGo').onclick = () => { box.hidden = true; pollCur = pop; if (runAlive() && !current) setPaused(true); A.play('click'); show('poll'); };
+    $('ppGo').onclick = () => { box.hidden = true; pollCur = pop; pollFromRun = runAlive() && !current; if (pollFromRun) setPaused(true); A.play('click'); show('poll'); };
     $('ppLater').onclick = () => { box.hidden = true; meta.pollLater[pop.id] = 1; save(); A.play('click'); };
   }
   setInterval(() => { if (!document.hidden) fetchPolls(); }, 10 * 60e3);
@@ -1853,7 +1854,8 @@
       catch (e) { $('pqNote').textContent = 'Abstimmen fehlgeschlagen: ' + e.message; }
     }));
   }
-  $('pqClose').addEventListener('click', home);
+  let pollFromRun = false;
+  $('pqClose').addEventListener('click', () => { if (pollFromRun && runAlive()) { pollFromRun = false; show(null); setPaused(false); } else home(); });
 
   if (O.configured) {
     O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); if (current === 'menu') renderLbTeaser(true); } });
