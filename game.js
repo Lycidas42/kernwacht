@@ -49,7 +49,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['online', 'codex', 'pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['welcome', 'online', 'codex', 'pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -1456,6 +1456,26 @@
   $('cxClose').addEventListener('click', home);
   $$('.codex-btn').forEach(b => b.addEventListener('click', () => { A.play('click'); show('codex'); }));
 
+  // ---------- Willkommen (erster Start) ----------
+  const wl = { avatar: 0, color: 0 };
+  function showWelcome() { renderWelcome(); show('welcome'); }
+  function renderWelcome() {
+    $('wlPrev').innerHTML = avatarSvg(wl.avatar, wl.color, 64);
+    $('wlAv').innerHTML = AVATARS.slice(0, 6).map((_, i) => `<button class="avbtn" data-av="${i}" aria-pressed="${i === wl.avatar}">${avatarSvg(i, i, 26)}</button>`).join('');
+    $$('#wlAv [data-av]').forEach(b => b.addEventListener('click', () => { wl.avatar = wl.color = +b.dataset.av; A.play('click'); renderWelcome(); }));
+  }
+  function closeWelcome() { meta.welcomed = 1; save(); show('menu'); }
+  $('wlGo').addEventListener('click', () => {
+    const n = $('wlName').value.trim().slice(0, 16);
+    if (!n) { $('wlName').focus(); $('wlName').placeholder = 'Name eingeben oder „ohne Namen“ wählen'; return; }
+    meta.name = n; meta.avatar = wl.avatar; meta.color = wl.color; A.play('buy');
+    if (O.configured) { presence(); O.profile(meta.name, meta.avatar, meta.color).catch(() => {}); }
+    closeWelcome();
+  });
+  $('wlName').addEventListener('keydown', e => { if (e.key === 'Enter') $('wlGo').click(); });
+  $('wlAnon').addEventListener('click', () => { meta.avatar = wl.avatar; meta.color = wl.color; A.play('click'); closeWelcome(); });
+  $('wlOther').addEventListener('click', () => { meta.welcomed = 1; save(); pDraft = null; show('profile'); });
+
   // ---------- Profil: Name und Profilbild ----------
   const AV_COLORS = ['#3ef0ff', '#ff4fa0', '#ffc04d', '#5dffb0', '#c3a6ff', '#ff8a3d', '#7da8ff', '#f4f1ff'];
   const AVATARS = [
@@ -2231,5 +2251,7 @@
     try { run = C.Run.restore(meta, snap); lastShots = run.shots; buildList(); syncModeFrame(false); welcomeBack(true); }
     catch (e) { run = null; put(RKEY, null); show('menu'); welcomeBack(false); }
   } else { show('menu'); welcomeBack(false); }
+  // Erster Start: Namen wählen oder anonym spielen (nur einmal, nur für neue Spielstände)
+  if (!run && !meta.name && !meta.runs && !meta.welcomed && !C.record(meta)) showWelcome();
   requestAnimationFrame(frame);
 })();

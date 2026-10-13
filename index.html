@@ -500,6 +500,15 @@ textarea { resize: vertical; min-height: 70px; }
 .fbreply textarea { min-height: 38px; height: 38px; resize: vertical; font-size: .82rem; }
 .fbreply button { height: 38px; padding: 0 12px; font-size: .74rem; }
 .fbpub .who { font-size: .76rem; }
+.wl { gap: 12px; }
+.wlhead h1 { margin: 0; font-size: 2rem; letter-spacing: .06em; text-transform: uppercase; } .wlhead h1 span { color: var(--core); text-shadow: 0 0 14px var(--core); }
+.wlhead p { margin: 6px 0 0; color: var(--ink-dim); font-size: .9rem; }
+.wlprev { display: flex; justify-content: center; padding: 6px 0; }
+#wlName { height: 48px; font-size: 1.05rem; text-align: center; }
+.wlhint { color: var(--ink-dim); font-size: .74rem; text-align: center; line-height: 1.4; }
+.wlav { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.wlav .avbtn { height: 44px; }
+#wlOther { text-align: center; }
 .lbteaser .row { border: 0; padding: 0; margin: 0; }
 .lbteaser .row i { font-style: normal; color: var(--ink-dim); font-family: var(--font-num); }
 .lbteaser .row em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1000,6 +1009,19 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="actions">
       <button class="sec" id="labClose">Zurück</button>
     </div>
+  </div>
+</div>
+
+<div class="ov" id="welcome" hidden>
+  <div class="card wl">
+    <div class="wlhead"><h1>Kern<span>wacht</span></h1><p>Willkommen, Wächter. Wie sollen dich die anderen nennen?</p></div>
+    <div class="wlprev" id="wlPrev"></div>
+    <input id="wlName" maxlength="16" autocomplete="nickname" placeholder="Dein Name (Pseudonym)" spellcheck="false">
+    <small class="wlhint">Erscheint in den Highscores und in der Liste der Spieler, die gerade online sind. Du kannst ihn jederzeit im Profil ändern.</small>
+    <div class="wlav" id="wlAv"></div>
+    <button class="cta" id="wlGo">Los geht’s</button>
+    <button class="sec" id="wlAnon">Erst mal ohne Namen spielen</button>
+    <button class="pz-link" id="wlOther">Ich spiele schon auf einem anderen Gerät ›</button>
   </div>
 </div>
 
