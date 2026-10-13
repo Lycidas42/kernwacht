@@ -891,9 +891,74 @@
     renderJump();
     renderRoadmap();
     const fl = $('fragLine');
-    fl.hidden = !(meta.fusions || meta.frag);
+    fl.hidden = true; // steht jetzt in den Kennzahlen oben
     if (!fl.hidden) fl.innerHTML = `Kernfragmente <b>${fmt(meta.frag)}</b> · Fusionen <b>${meta.fusions || 0}</b> · Rekord <b>${meta.bestEver || 0}</b>`;
     syncSoundBtns();
+    renderHub();
+  }
+  // ---------- Hauptmenü: Bereiche, Kachel-Status, „Zu tun“ ----------
+  let mPage = 'start';
+  const PAGE_INFO = {
+    cannon: '<b>Kanone</b><br>Hier machst du die Kanone dauerhaft stärker: Labor, Kommandant, Module und Kernfusion.',
+    modes: '<b>Modi</b><br>Besondere Läufe: der Tageslauf mit gleichen Wellen für alle, Challenges mit Handicap und Bosskämpfe.',
+    world: '<b>Welt</b><br>Bergbau auf den Planeten und der Hangar für das Aussehen deiner Kanone.',
+  };
+  function setPage(pg) {
+    mPage = pg;
+    $$('#menu .mpage').forEach(sec => (sec.hidden = sec.dataset.page !== pg));
+    $$('#mNav [data-go]').forEach(b => b.setAttribute('aria-current', b.dataset.go === pg ? 'true' : 'false'));
+    const mp = $('menu').querySelector('.mpages'); if (mp) mp.scrollTop = 0;
+    meta.areaSeen = meta.areaSeen || {};
+    if (PAGE_INFO[pg] && !meta.areaSeen[pg]) { meta.areaSeen[pg] = 1; save(); toast(PAGE_INFO[pg], 4500); }
+  }
+  $$('#mNav [data-go]').forEach(b => b.addEventListener('click', () => {
+    A.play('click');
+    // Anfänger: der Knopf „Labor“ öffnet direkt das Labor
+    if (b.dataset.go === 'cannon' && b.dataset.direct) { show('lab'); return; }
+    setPage(b.dataset.go);
+  }));
+  function renderHub() {
+    const R = C.rankOf(meta), rec = C.record(meta);
+    $('mRank').textContent = R.rank; $('mRankBox').hidden = !R.rank;
+    $('mFragBox').hidden = !(meta.fusions || meta.frag); $('mFrag').textContent = fmt(meta.frag || 0);
+    $('mIntro').hidden = rec >= 20;
+    // Kachel-Status
+    const st = (id, t) => { const el = $('st-' + id); if (el) el.textContent = t || ''; };
+    const lab = C.cheapest(meta), sk = C.skPoints(meta), gain = C.fragmentsFor(meta), d = dailyToday();
+    st('labBtn', lab && meta.crystals >= lab.cost ? 'kaufbar' : '');
+    st('cmdBtn', sk > 0 ? sk + ' frei' : 'Rang ' + R.rank);
+    st('modBtn', (meta.equip || []).filter(t => meta.modules && meta.modules[t]).length + '/3');
+    st('fusBtn', gain > 0 ? '+' + fmt(gain) : '');
+    st('dailyBtn', d && d.bonus ? (d.best ? 'heute ' + d.best : '') : 'Bonus offen');
+    st('chalBtn', chalSum() ? chalSum() + ' Stufen' : '');
+    st('bossBtn', Object.keys(meta.bossBeat || {}).length + '/25');
+    st('mineBtn', $('mineBtn').classList.contains('new') ? 'Lager voll' : '');
+    st('hangBtn', $('hangBtn').classList.contains('new') ? 'neu' : '');
+    st('achBtn', C.achPoints(meta) + ' Stufen');
+    // Bereiche: nur zeigen, was freigeschaltet ist; Punkt, wenn darin etwas wartet
+    const vis = pg => [...document.querySelectorAll(`#menu .mpage[data-page="${pg}"] .tile`)].filter(t => !t.hidden);
+    const beginner = vis('cannon').length <= 1;
+    for (const b of $$('#mNav [data-go]')) {
+      const pg = b.dataset.go, v = pg === 'start' || pg === 'more' ? null : vis(pg);
+      b.hidden = !!(v && !v.length);
+      b.classList.toggle('dot', !!(v && v.some(t => t.classList.contains('dot'))) || (pg === 'more' && vis('more').some(t => t.classList.contains('dot'))));
+      if (pg === 'cannon') { b.dataset.direct = beginner ? '1' : ''; b.querySelector('span').textContent = beginner ? 'Labor' : 'Kanone'; }
+    }
+    { const cur = document.querySelector(`#mNav [data-go="${mPage}"]`); if (!cur || cur.hidden || (mPage === 'cannon' && cur.dataset.direct)) mPage = 'start'; }
+    // Zu tun: höchstens drei Einträge, Tipp springt an die richtige Stelle
+    const todo = [];
+    const add = (cond, txt, area, btn) => { if (cond) todo.push({ txt, area, btn }); };
+    add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kanone', 'cmdBtn');
+    add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kanone', 'fusBtn');
+    add(!$('dailyBtn').hidden && !(d && d.bonus), 'Tageslauf-Bonus wartet', 'Modi', 'dailyBtn');
+    add($('labBtn').classList.contains('dot'), 'Im Labor gibt es etwas zu kaufen', 'Kanone', 'labBtn');
+    add($('modBtn').classList.contains('dot') && !$('modBtn').hidden, 'Neue Modulfunde', 'Kanone', 'modBtn');
+    add($('achBtn').classList.contains('dot'), 'Neue Erfolgsstufe', 'Mehr', 'achBtn');
+    add($('mineBtn').classList.contains('new') && !$('mineBtn').hidden, 'Ein Lager im Bergbau ist voll', 'Welt', 'mineBtn');
+    add($('hangBtn').classList.contains('new') && !$('hangBtn').hidden, 'Neue Teile im Hangar', 'Welt', 'hangBtn');
+    $('mTodo').innerHTML = todo.slice(0, 3).map(x => `<button data-todo="${x.btn}"><i></i>${x.txt}<span>${beginner && x.btn === 'labBtn' ? 'Labor' : x.area} ›</span></button>`).join('');
+    $$('#mTodo [data-todo]').forEach(b => b.addEventListener('click', () => { A.play('click'); $(b.dataset.todo).click(); }));
+    setPage(mPage);
   }
   // Sprungtor-Wahl: im Startmenü, im Labor und nach dem Lauf
   function renderJump() {
@@ -934,7 +999,14 @@
   function renderRoadmap() {
     const nx = C.nextUnlock(meta), rec = C.record(meta);
     $$('.roadmap').forEach(el => {
-      if (!nx) { el.hidden = true; return; }
+      if (!nx) {
+        // alles freigeschaltet: nächstes Ziel ist der nächste Boss über der Bestwelle
+        const w = Math.floor((meta.best || 0) / 10) * 10 + 10, k2 = C.bossKind(w), B = k2 && C.BOSS_KINDS[k2];
+        const k = Math.max(0, Math.min(1, ((meta.best || 0) - (w - 10)) / 10));
+        el.hidden = false;
+        el.innerHTML = `<div class="rmhead"><span>Nächstes Ziel</span><b>Welle ${w}</b></div><div class="rmlabel">${B ? B.name + (B.lord ? ' (Herrscher)' : '') : 'Boss'}</div><div class="bar rmbar"><i style="width:${Math.round(k * 100)}%"></i></div><div class="rmsub">Bestwelle ${meta.best || 0} · Rekord ${rec}</div>`;
+        return;
+      }
       const prev = [...C.ROADMAP].reverse().find(x => x.w <= rec), from = prev ? prev.w : 0;
       const k = Math.max(0, Math.min(1, (rec - from) / (nx.w - from)));
       el.hidden = false;
@@ -980,8 +1052,11 @@
     $$('.chal-btn').forEach(b => { b.hidden = !(rec >= C.CHAL_AT || meta.chal && Object.keys(meta.chal).length); });
     $$('.daily-btn').forEach(b => { b.hidden = rec < C.DAILY_AT; b.classList.toggle('ready', !(d && d.bonus)); });
     // Leere Zweierreihen ausblenden
-    $$('.daily-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
-    $$('.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
+    $$('button.sec.daily-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
+    $$('button.sec.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
+    $('cmdBtn').hidden = !C.rankOf(meta).rank && !C.skSpent(meta);
+    $('hangBtn').hidden = C.record(meta) < 20 && !(meta.skinSeen || []).length;
+    try { if (!$('menu').hidden) renderHub(); } catch (e) {}
   }
   const F_FX = {
     f_core: l => '×' + dec(Math.pow(C.P.fCore, l), 2),
@@ -1490,7 +1565,7 @@
     const M = C.mineTick(meta), full = C.PLANETS.some(P => { const pl = M.p[P.id]; return pl && pl.d && pl.stock >= C.mineCap(pl, P) * 0.9; });
     const show_ = C.record(meta) >= C.MINE_AT || Object.keys(M.p).length > 0;
     $$('.mine-btn').forEach(b => { b.hidden = !show_; b.classList.toggle('new', full); });
-    $$('.hang-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
+    $$('button.sec.hang-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
   }
   $$('.mine-btn').forEach(b => b.addEventListener('click', () => show('mine')));
   $('mineClose').addEventListener('click', home);

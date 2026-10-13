@@ -570,6 +570,42 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
   .row .ds { display: block; }
 }
 @media (prefers-reduced-motion: reduce) { .ab.active, .ab.armed, #wavebar.hold i { animation: none; } }
+
+/* ---------- Hauptmenü: Startseite + Bereiche mit Navigationsleiste ---------- */
+.card.mshell { padding: 0; gap: 0; height: min(860px, 100%); display: flex; flex-direction: column; overflow: hidden; }
+.mpages { flex: 1; overflow-y: auto; padding: 20px 18px 16px; }
+.mpage { display: grid; gap: 12px; align-content: start; }
+.mpage[hidden] { display: none; }
+.mpage h2 { margin: 2px 0 0; font-size: 1.4rem; }
+.mdesc { margin: -6px 0 2px; font-size: .82rem; color: var(--ink-dim); }
+.mtop { display: flex; justify-content: space-between; align-items: center; }
+.mtop h1 { font-size: clamp(1.8rem, 8vw, 2.3rem) !important; }
+.mrank { text-align: right; font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; color: #ffd23f; }
+.mrank b { display: block; font-size: 1.15rem; color: var(--ink); font-family: var(--font-num); letter-spacing: 0; }
+.mintro { margin: 0; font-size: .86rem; color: var(--ink-dim); }
+.stats .v.frag { color: var(--heat); }
+.hero { display: grid; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: linear-gradient(160deg, color-mix(in srgb, var(--core) 6%, var(--deck)), var(--deck)); }
+.hero .jumpbox h3 { margin: 0 0 6px; }
+.hero .cta { height: 54px; font-size: 1rem; }
+.todo { display: grid; gap: 8px; }
+.todo button { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .84rem; text-align: left; color: var(--ink); background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.todo button i { width: 8px; height: 8px; border-radius: 50%; background: var(--hostile); box-shadow: 0 0 8px var(--hostile); flex: 0 0 auto; }
+.todo button span { margin-left: auto; color: var(--ink-dim); font-size: .76rem; white-space: nowrap; }
+.tile { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; text-align: left; background: color-mix(in srgb, var(--ink) 3%, transparent); color: var(--ink); }
+.tile[hidden] { display: none; }
+.tile .ic { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, transparent); }
+.tile .tx b { display: block; font-size: .96rem; }
+.tile .tx small { display: block; font-size: .76rem; color: var(--ink-dim); margin-top: 2px; line-height: 1.3; }
+.tile .st { margin-left: auto; font-family: var(--font-num); font-size: .76rem; color: #ffd23f; text-align: right; white-space: nowrap; padding-left: 6px; }
+.tile.dot::before { content: ""; position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--hostile); box-shadow: 0 0 6px var(--hostile); }
+.tile.ready { border-color: color-mix(in srgb, var(--tc) 55%, var(--line)); box-shadow: 0 0 12px color-mix(in srgb, var(--tc) 22%, transparent); }
+.menunav { display: flex; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--void) 55%, var(--deck)); padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); }
+.menunav button { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; font-size: .68rem; letter-spacing: .03em; color: var(--ink-dim); }
+.menunav button[hidden] { display: none; }
+.menunav svg { width: 23px; height: 23px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.menunav button[aria-current="true"] { color: var(--core); }
+.menunav button.dot::after { content: ""; position: absolute; top: 3px; left: calc(50% + 8px); width: 8px; height: 8px; border-radius: 50%; background: var(--hostile); box-shadow: 0 0 6px var(--hostile); }
+#menu { padding: 10px; }
 </style>
 </head>
 <body>
@@ -640,67 +676,80 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 </div>
 
 <div class="ov" id="menu">
-  <div class="card">
-    <h1 id="title">Kern<span>wacht</span></h1>
-    <p>Deine Kanone hält, bis sie fällt. Jeder Fall bringt Kristalle, und im Labor wird die nächste Kanone stärker.</p>
-    <div class="stats">
-      <div class="stat"><div class="l">Bestwelle</div><div class="v num" id="mBest">0</div></div>
-      <div class="stat"><div class="l">Läufe</div><div class="v num" id="mRuns">0</div></div>
-      <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="mK">0</div></div>
+  <div class="card mshell">
+    <div class="mpages">
+      <!-- Start: das Wichtigste auf einen Blick -->
+      <section class="mpage" data-page="start">
+        <div class="mtop"><h1 id="title">Kern<span>wacht</span></h1><div class="mrank" id="mRankBox">Rang<b id="mRank">0</b></div></div>
+        <p class="mintro" id="mIntro">Deine Kanone hält, bis sie fällt. Jeder Fall bringt Kristalle, und im Labor wird die nächste Kanone stärker.</p>
+        <div class="stats">
+          <div class="stat"><div class="l">Bestwelle</div><div class="v num" id="mBest">0</div></div>
+          <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="mK">0</div></div>
+          <div class="stat" id="mFragBox" hidden><div class="l">Fragmente</div><div class="v num frag" id="mFrag">0</div></div>
+        </div>
+        <span id="mRuns" hidden></span><p class="metaline" id="fragLine" hidden></p>
+        <button class="pollbanner" hidden></button>
+        <div class="note" id="offlineNote" hidden></div>
+        <div class="hero">
+          <div class="jumpbox" hidden>
+            <h3>Startwelle · Sprungtor</h3>
+            <div class="stepper">
+              <button class="jm" aria-label="Frühere Startwelle">−</button>
+              <div class="val"><b class="jv">Welle 1</b><small class="ji"></small></div>
+              <button class="jp" aria-label="Spätere Startwelle">+</button>
+            </div>
+          </div>
+          <button class="cta" id="startBtn">Lauf starten</button>
+        </div>
+        <div class="roadmap" hidden></div>
+        <div class="todo" id="mTodo"></div>
+      </section>
+      <section class="mpage" data-page="cannon" hidden>
+        <h2>Kanone</h2><p class="mdesc">Alles, was deine Kanone dauerhaft stärker macht.</p>
+        <button class="tile lab-btn" id="labBtn" style="--tc:var(--core)"><span class="ic">⚗</span><span class="tx"><b>Labor</b><small>Dauerhafte Upgrades mit Kristallen</small></span><span class="st" id="st-labBtn"></span></button>
+        <button class="tile cmd-btn" id="cmdBtn" style="--tc:#ffd23f"><span class="ic">★</span><span class="tx"><b>Kommandant</b><small>Skill-Sternkarte, Punkte aus deinem Rang</small></span><span class="st" id="st-cmdBtn"></span></button>
+        <button class="tile mod-btn" id="modBtn" style="--tc:#c3a6ff"><span class="ic">◈</span><span class="tx"><b>Module</b><small>Beute der Bosse, drei ausrüstbar</small></span><span class="st" id="st-modBtn"></span></button>
+        <button class="tile fus-btn" id="fusBtn" style="--tc:var(--heat)"><span class="ic">✺</span><span class="tx"><b>Kernfusion</b><small>Neustart für Kernfragmente und starke Upgrades</small></span><span class="st" id="st-fusBtn"></span></button>
+      </section>
+      <section class="mpage" data-page="modes" hidden>
+        <h2>Modi</h2><p class="mdesc">Besondere Läufe neben dem normalen Spiel.</p>
+        <button class="tile daily-btn" id="dailyBtn" style="--tc:var(--heal)"><span class="ic">☀</span><span class="tx"><b>Tageslauf</b><small>Gleiche Wellen für alle, täglicher Bonus</small></span><span class="st" id="st-dailyBtn"></span></button>
+        <button class="tile chal-btn" id="chalBtn" style="--tc:#ff4fa0"><span class="ic">⚑</span><span class="tx"><b>Challenge</b><small>Läufe mit Handicap für dauerhafte Boni</small></span><span class="st" id="st-chalBtn"></span></button>
+        <button class="tile boss-btn" id="bossBtn" style="--tc:#ff4ff0"><span class="ic">☠</span><span class="tx"><b>Bosse</b><small>Besiegte Bosse direkt herausfordern</small></span><span class="st" id="st-bossBtn"></span></button>
+      </section>
+      <section class="mpage" data-page="world" hidden>
+        <h2>Welt</h2><p class="mdesc">Planeten, Rohstoffe und das Aussehen deiner Kanone.</p>
+        <button class="tile mine-btn" id="mineBtn" style="--tc:var(--heat)"><span class="ic">⛏</span><span class="tx"><b>Bergbau</b><small>Rohstoffe fördern, Raffinerie, Forschung, Werkstatt</small></span><span class="st" id="st-mineBtn"></span></button>
+        <button class="tile hang-btn" id="hangBtn" style="--tc:var(--core)"><span class="ic">✧</span><span class="tx"><b>Hangar</b><small>Farben, Formen und Verzierungen</small></span><span class="st" id="st-hangBtn"></span></button>
+      </section>
+      <section class="mpage" data-page="more" hidden>
+        <h2>Mehr</h2>
+        <button class="tile ach-btn" id="achBtn" style="--tc:#ffd23f"><span class="ic">♛</span><span class="tx"><b>Erfolge</b><small>Stufen mit dauerhaften Boni</small></span><span class="st" id="st-achBtn"></span></button>
+        <button class="tile lb-btn" id="lbBtn" style="--tc:var(--core)"><span class="ic">≡</span><span class="tx"><b>Highscores</b><small>Rekorde und Tagesliste</small></span><span class="st" id="st-lbBtn"></span></button>
+        <button class="tile prof-btn" id="profBtn" style="--tc:#c3a6ff"><span class="ic">☺</span><span class="tx"><b>Profil</b><small>Name, Profilbild, Geräte verbinden</small></span><span class="st" id="st-profBtn"></span></button>
+        <button class="tile set-btn" id="setBtn" style="--tc:var(--ink-dim)"><span class="ic">⚙</span><span class="tx"><b>Optionen</b><small>Ton, Zahlen, Sprache, Hinweise</small></span><span class="st" id="st-setBtn"></span></button>
+        <button class="tile fb-btn" id="fbBtn" style="--tc:#ffd23f"><span class="ic">✉</span><span class="tx"><b>Feedback</b><small>Fehler melden, Ideen schicken</small></span><span class="st" id="st-fbBtn"></span></button>
+        <button class="tile guide-btn" id="guideBtn" style="--tc:var(--heal)"><span class="ic">?</span><span class="tx"><b>Anleitung</b><small>Wie alles funktioniert</small></span><span class="st" id="st-guideBtn"></span></button>
+        <ul class="howto">
+          <li><b>Gegner antippen</b> markiert ihn als Ziel, bis er zerstört ist. Nochmal antippen hebt die Markierung auf.</li>
+          <li><b>Orbitalschlag</b> lädt sich durch zugefügten Schaden auf. Geladen trifft ein Tipp ins Feld genau dort, der Knopf trifft automatisch.</li>
+          <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. N ruft die nächste Welle.</li>
+        </ul>
+        <div class="verline"><span id="verTxt"></span><button class="mini" id="updBtn">Nach Update suchen</button></div>
+        <ul class="fair">
+          <li>Kein Shop, keine Werbung, keine Premiumwährung</li>
+          <li>Tempo 4× und Auto-Kauf sind von Anfang an frei</li>
+          <li>Das Labor sammelt offline weiter, bis zu 24 Stunden</li>
+        </ul>
+      </section>
     </div>
-    <button class="pollbanner" hidden></button>
-    <div class="roadmap" hidden></div>
-    <p class="metaline" id="fragLine" hidden></p>
-    <div class="note" id="offlineNote" hidden></div>
-    <div class="jumpbox" hidden>
-      <h3>Startwelle (Sprungtor)</h3>
-      <div class="stepper">
-        <button class="jm" aria-label="Frühere Startwelle">−</button>
-        <div class="val"><b class="jv">Welle 1</b><small class="ji"></small></div>
-        <button class="jp" aria-label="Spätere Startwelle">+</button>
-      </div>
-    </div>
-    <div class="actions">
-      <button class="cta" id="startBtn">Lauf starten</button>
-      <div class="actions two">
-        <button class="sec" id="labBtn">Labor</button>
-        <button class="sec" id="lbBtn">Highscores</button>
-      </div>
-      <div class="actions three">
-        <button class="sec mod-btn" id="modBtn">Module</button>
-        <button class="sec fus-btn" id="fusBtn">Kernfusion</button>
-        <button class="sec boss-btn" id="bossBtn">Bosse</button>
-      </div>
-      <div class="actions three">
-        <button class="sec daily-btn" id="dailyBtn">Tageslauf</button>
-        <button class="sec chal-btn" id="chalBtn">Challenge</button>
-        <button class="sec ach-btn" id="achBtn">Erfolge</button>
-      </div>
-      <div class="actions three">
-        <button class="sec cmd-btn" id="cmdBtn">Kommandant</button>
-        <button class="sec hang-btn" id="hangBtn">Hangar</button>
-        <button class="sec mine-btn" id="mineBtn">Bergbau</button>
-      </div>
-      <div class="actions three">
-        <button class="sec prof-btn" id="profBtn">Profil</button>
-        <button class="sec fb-btn" id="fbBtn">Feedback</button>
-        <button class="sec set-btn" id="setBtn">Optionen</button>
-      </div>
-    </div>
-    <button class="sec guide-btn" id="guideBtn">Anleitung</button>
-    <ul class="howto">
-      <li><b>Gegner antippen</b> markiert ihn als Ziel, bis er zerstört ist. Nochmal antippen hebt die Markierung auf.</li>
-      <li><b>Orbitalschlag</b> lädt sich durch zugefügten Schaden auf. Geladen trifft ein Tipp ins Feld genau dort, der Knopf trifft automatisch.</li>
-      <li><b>Stasis und Überladung</b> schaltest du im Labor frei.</li>
-      <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. N ruft die nächste Welle.</li>
-      <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, auch mehrfach hintereinander (nicht während eines Bosses). Die gesparte Zeit bringt Bonus-Energie. Im Pausenmenü lässt sich das automatische Rufen einschalten.</li>
-    </ul>
-    <div class="verline"><span id="verTxt"></span><button class="mini" id="updBtn">Nach Update suchen</button></div>
-    <ul class="fair">
-      <li>Kein Shop, keine Werbung, keine Premiumwährung</li>
-      <li>Tempo 4× und Auto-Kauf sind von Anfang an frei</li>
-      <li>Das Labor sammelt offline weiter, bis zu 24 Stunden</li>
-    </ul>
+    <nav class="menunav" id="mNav">
+      <button data-go="start"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg><span>Start</span></button>
+      <button data-go="cannon"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="5"/><path d="M12 9V3M9 4h6"/></svg><span>Kanone</span></button>
+      <button data-go="modes"><svg viewBox="0 0 24 24"><path d="M12 3l3 6 6 1-4.5 4 1 6L12 17l-5.5 3 1-6L3 10l6-1z"/></svg><span>Modi</span></button>
+      <button data-go="world"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c3 3 3 13 0 16M12 4c-3 3-3 13 0 16"/></svg><span>Welt</span></button>
+      <button data-go="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg><span>Mehr</span></button>
+    </nav>
   </div>
 </div>
 
