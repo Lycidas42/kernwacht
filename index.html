@@ -483,6 +483,23 @@ textarea { resize: vertical; min-height: 70px; }
 .mineteaser .mrow small { font-family: var(--font-num); text-align: right; color: var(--ink-dim); font-size: .72rem; }
 .mineteaser .mrow.full small { color: var(--heat); font-weight: 700; }
 .mineteaser .mnew { font-size: .76rem; color: var(--heal); }
+.fbitem { border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: grid; gap: 8px; margin-bottom: 8px; background: #ffffff04; }
+.fbitem.unread { border-color: var(--energy); box-shadow: 0 0 12px color-mix(in srgb, var(--energy) 25%, transparent); }
+.fbitem .fh { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .7rem; color: var(--ink-dim); }
+.fbitem .fh .k { text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.fbitem .fh .k.bug { color: var(--hostile); } .fbitem .fh .k.idee { color: var(--heal); } .fbitem .fh .k.sonstiges { color: var(--crystal, #c3a6ff); }
+.fbitem .fh .st { margin-left: auto; border: 1px solid currentColor; border-radius: 3px; padding: 0 5px; }
+.fbitem .fh .st.erledigt { color: var(--heal); } .fbitem .fh .st.gesehen { color: var(--core); } .fbitem .fh .st.verworfen { color: var(--ink-dim); } .fbitem .fh .st.neu { color: var(--energy); }
+.fbitem .fb0 { font-size: .84rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fbmsg { font-size: .82rem; padding: 7px 10px; border-radius: 8px; max-width: 88%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fbmsg small { display: block; font-size: .64rem; color: var(--ink-dim); margin-bottom: 2px; letter-spacing: .04em; }
+.fbmsg.dev { background: color-mix(in srgb, var(--core) 12%, transparent); border: 1px solid color-mix(in srgb, var(--core) 40%, transparent); justify-self: start; }
+.fbmsg.dev small { color: var(--core); }
+.fbmsg.me { background: #ffffff08; border: 1px solid var(--line); justify-self: end; }
+.fbreply { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+.fbreply textarea { min-height: 38px; height: 38px; resize: vertical; font-size: .82rem; }
+.fbreply button { height: 38px; padding: 0 12px; font-size: .74rem; }
+.fbpub .who { font-size: .76rem; }
 .lbteaser .row { border: 0; padding: 0; margin: 0; }
 .lbteaser .row i { font-style: normal; color: var(--ink-dim); font-family: var(--font-num); }
 .lbteaser .row em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1191,6 +1208,11 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 </div>
 
 <div id="toast" class="toast" hidden></div>
+<div id="fbPop" class="pollpop" role="dialog" aria-live="polite" hidden>
+  <span class="pp-k">Antwort auf dein Feedback</span>
+  <b id="fpQ"></b>
+  <div class="pp-a"><button class="cta" id="fpGo">Lesen</button><button class="sec" id="fpLater">Später</button></div>
+</div>
 <div id="pollPop" class="pollpop" role="dialog" aria-live="polite" hidden>
   <span class="pp-k">Neue Umfrage</span>
   <b id="ppQ"></b>
@@ -1297,10 +1319,15 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 <div class="ov" id="feedback" hidden>
   <div class="card">
     <h2>Feedback</h2>
-    <p>Fehler gefunden oder eine Idee? Schreib es hier rein. Spielversion, Welle und Gerät werden automatisch mitgeschickt.</p>
-    <div class="lbtabs three"><button data-fb="bug" aria-selected="true">Fehler</button><button data-fb="idee" aria-selected="false">Idee</button><button data-fb="sonstiges" aria-selected="false">Sonstiges</button></div>
-    <textarea id="fbText" rows="6" maxlength="2000" placeholder="Was ist passiert, oder was wünschst du dir?"></textarea>
-    <button class="cta" id="fbSend">Senden</button>
+    <div class="lbtabs mtabs" id="fbTabs"><button data-fbt="new" aria-selected="true">Schreiben</button><button data-fbt="mine" aria-selected="false">Meine</button><button data-fbt="pub" aria-selected="false">Für alle</button></div>
+    <div id="fbNew">
+      <p>Fehler gefunden oder eine Idee? Schreib es hier rein. Spielversion, Welle und Gerät werden automatisch mitgeschickt. Antworten bekommst du unter „Meine“.</p>
+      <div class="lbtabs three"><button data-fb="bug" aria-selected="true">Fehler</button><button data-fb="idee" aria-selected="false">Idee</button><button data-fb="sonstiges" aria-selected="false">Sonstiges</button></div>
+      <textarea id="fbText" rows="6" maxlength="2000" placeholder="Was ist passiert, oder was wünschst du dir?"></textarea>
+      <button class="cta" id="fbSend">Senden</button>
+    </div>
+    <div id="fbMine" hidden></div>
+    <div id="fbPub" hidden></div>
     <p class="note" id="fbNote"></p>
     <div class="actions"><button class="sec" id="fbClose">Zurück</button></div>
   </div>

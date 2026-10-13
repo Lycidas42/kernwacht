@@ -56,6 +56,7 @@
     for (const k of OV) $(k).hidden = k !== name;
     if (name === 'menu' || name === 'over') syncPollBanner();
     if (name === 'poll') $('pollPop').hidden = true;
+    if (name === 'feedback') $('fbPop').hidden = true;
     if (name === 'lab') renderLab();
     if (name === 'menu') renderMenu();
     if (name === 'board') renderBoard();
@@ -1027,6 +1028,7 @@
     // Zu tun: höchstens drei Einträge, Tipp springt an die richtige Stelle
     const todo = [];
     const add = (cond, txt, area, btn) => { if (cond) todo.push({ txt, area, btn }); };
+    add(fbUnread > 0, fbUnread === 1 ? 'Neue Antwort auf dein Feedback' : `${fbUnread} neue Antworten auf dein Feedback`, 'Feedback', 'fbBtn');
     add(!meta.name && (meta.runs || 0) >= 1, 'Gib dir einen Namen, damit du in den Highscores erscheinst', 'Profil', 'mMeProf');
     add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kommandant', 'cmdBtn');
     add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kernfusion', 'fusBtn');
@@ -1812,7 +1814,69 @@
   // ---------- Feedback ----------
   let fbKind = 'bug';
   $$('[data-fb]').forEach(b => b.addEventListener('click', () => { fbKind = b.dataset.fb; $$('[data-fb]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false')); A.play('click'); }));
-  function renderFeedback() { $('fbNote').textContent = O.configured ? '' : 'Feedback braucht den Online-Dienst, der ist gerade nicht eingerichtet.'; $('fbSend').disabled = !O.configured; }
+  var fbTab = 'new', fbMine = [], fbUnread = 0; // var: renderMenu liest fbUnread schon beim Start
+  const FB_KIND = { bug: 'Fehler', idee: 'Idee', sonstiges: 'Sonstiges' }, FB_ST = { neu: 'Neu', gesehen: 'In Arbeit', erledigt: 'Erledigt', verworfen: 'Verworfen' };
+  const fbDate = ts => { const d = new Date(ts); return isNaN(d) ? '' : d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); };
+  $$('#fbTabs [data-fbt]').forEach(b => b.addEventListener('click', () => { fbTab = b.dataset.fbt; A.play('click'); renderFeedback(); }));
+  function renderFeedback() {
+    $$('#fbTabs [data-fbt]').forEach(b => b.setAttribute('aria-selected', b.dataset.fbt === fbTab ? 'true' : 'false'));
+    $('fbTabs').querySelector('[data-fbt="mine"]').textContent = fbUnread ? `Meine (${fbUnread})` : 'Meine';
+    $('fbNew').hidden = fbTab !== 'new'; $('fbMine').hidden = fbTab !== 'mine'; $('fbPub').hidden = fbTab !== 'pub';
+    $('fbNote').className = 'note'; $('fbNote').textContent = O.configured ? '' : 'Feedback braucht den Online-Dienst, der ist gerade nicht eingerichtet.'; $('fbSend').disabled = !O.configured;
+    if (fbTab === 'mine') renderFbMine(true);
+    if (fbTab === 'pub') renderFbPub();
+  }
+  // Eigene Meldungen mit Verlauf; beim Ansehen gelten Antworten als gelesen
+  async function renderFbMine(load) {
+    const el = $('fbMine');
+    if (!O.configured) { el.innerHTML = ''; return; }
+    if (load) { el.innerHTML = '<p class="pcst">Wird geladen …</p>'; await fetchMyFeedback(); if (current !== 'feedback' || fbTab !== 'mine') return; }
+    if (!fbMine) { el.innerHTML = '<p class="pcst">Deine Meldungen sind gerade nicht erreichbar.</p>'; return; }
+    if (!fbMine.length) { el.innerHTML = '<p class="pcst">Du hast noch kein Feedback geschickt.</p>'; return; }
+    el.innerHTML = fbMine.map(f => `<div class="fbitem${f.unread ? ' unread' : ''}" data-fid="${f.id}">
+      <div class="fh"><span class="k ${f.kind}">${FB_KIND[f.kind] || f.kind}</span><span>${fbDate(f.created_at)}</span>${f.public ? '<span>· für alle sichtbar</span>' : ''}<span class="st ${f.status}">${FB_ST[f.status] || f.status}</span></div>
+      <div class="fb0">${esc(f.body)}</div>
+      ${(f.msgs || []).map(m => `<div class="fbmsg ${m.admin ? 'dev' : 'me'}"><small>${m.admin ? 'Entwickler' : 'Du'} · ${fbDate(m.at)}</small>${esc(m.body)}</div>`).join('')}
+      <div class="fbreply"><textarea maxlength="2000" placeholder="${(f.msgs || []).some(m => m.admin) ? 'Antworten …' : 'Etwas ergänzen …'}"></textarea><button class="sec">Senden</button></div></div>`).join('');
+    $$('#fbMine .fbitem').forEach(it => {
+      const id = +it.dataset.fid, ta = it.querySelector('textarea'), bt = it.querySelector('.fbreply button');
+      bt.addEventListener('click', async () => {
+        const t = ta.value.trim(); if (!t) return; bt.disabled = true;
+        try { await O.feedbackReply(id, t); A.play('buy'); await renderFbMine(true); }
+        catch (e) { $('fbNote').className = 'note err'; $('fbNote').textContent = 'Senden fehlgeschlagen: ' + e.message; bt.disabled = false; }
+      });
+    });
+    const unread = fbMine.filter(f => f.unread);
+    if (unread.length) { await Promise.all(unread.map(f => O.feedbackSeen(f.id).catch(() => {}))); unread.forEach(f => (f.unread = 0)); fbUnread = 0; syncFbBadge(); }
+  }
+  async function renderFbPub() {
+    const el = $('fbPub'); el.innerHTML = '<p class="pcst">Wird geladen …</p>';
+    const list = O.configured ? await O.publicFeedback() : null;
+    if (current !== 'feedback' || fbTab !== 'pub') return;
+    if (!list) { el.innerHTML = '<p class="pcst">Gerade nicht erreichbar.</p>'; return; }
+    if (!list.length) { el.innerHTML = '<p class="pcst">Hier erscheinen Ideen und Meldungen von Spielern, die umgesetzt oder geplant sind.</p>'; return; }
+    el.innerHTML = '<p class="pcst">Ideen und Meldungen von Spielern, die umgesetzt oder geplant sind.</p>' + list.map(f => `<div class="fbitem fbpub">
+      <div class="fh"><span class="k ${f.kind}">${FB_KIND[f.kind] || f.kind}</span><span class="who"><span>von</span> ${esc(f.name)}</span><span class="st ${f.status}">${FB_ST[f.status] || f.status}</span></div>
+      <div class="fb0">${esc(f.text)}</div>${f.reply ? `<div class="fbmsg dev"><small>Entwickler</small>${esc(f.reply)}</div>` : ''}</div>`).join('');
+  }
+  async function fetchMyFeedback() {
+    if (!O.configured) return;
+    try { fbMine = await O.myFeedback() || []; } catch (e) { fbMine = null; return; }
+    fbUnread = fbMine.reduce((a, f) => a + (f.unread ? 1 : 0), 0); syncFbBadge();
+  }
+  // Hinweis auf neue Antworten: Punkt an der Feedback-Kachel und Einblendung (einmal je Antwortstand)
+  function syncFbBadge() {
+    $$('.fb-btn').forEach(b => b.classList.toggle('dot', fbUnread > 0));
+    if (current === 'menu') renderMenu();
+    const box = $('fbPop'), f = fbMine && fbMine.find(x => x.unread), sig = f ? f.id + ':' + (f.msgs || []).length : '';
+    if (!f || current === 'feedback' || !$('pollPop').hidden || meta.fbLater === sig) { box.hidden = true; return; }
+    const last = (f.msgs || []).filter(m => m.admin).pop();
+    $('fpQ').textContent = last ? last.body.slice(0, 140) + (last.body.length > 140 ? ' …' : '') : '';
+    box.hidden = false;
+    $('fpGo').onclick = () => { box.hidden = true; fbTab = 'mine'; fbFromRun = runAlive() && !current; if (fbFromRun) setPaused(true); A.play('click'); show('feedback'); };
+    $('fpLater').onclick = () => { box.hidden = true; meta.fbLater = sig; save(); A.play('click'); };
+  }
+  let fbFromRun = false;
   $('fbSend').addEventListener('click', async () => {
     const body = $('fbText').value.trim();
     if (body.length < 3) { $('fbNote').className = 'note err'; $('fbNote').textContent = 'Schreib bitte ein paar Worte dazu.'; return; }
@@ -1822,8 +1886,9 @@
     catch (e) { $('fbNote').className = 'note err'; $('fbNote').textContent = 'Senden fehlgeschlagen: ' + e.message; }
     finally { $('fbSend').disabled = false; }
   });
-  $$('.fb-btn').forEach(b => b.addEventListener('click', () => show('feedback')));
-  $('fbClose').addEventListener('click', home);
+  $$('.fb-btn').forEach(b => b.addEventListener('click', () => { if (fbUnread) fbTab = 'mine'; show('feedback'); }));
+  $('fbClose').addEventListener('click', () => { if (fbFromRun && runAlive()) { fbFromRun = false; show(null); setPaused(false); } else home(); });
+  setInterval(() => { if (!document.hidden) fetchMyFeedback(); }, 5 * 60e3);
 
   // ---------- Umfragen ----------
   let polls = [], pollCur = null;
@@ -1874,7 +1939,7 @@
   $('pqClose').addEventListener('click', () => { if (pollFromRun && runAlive()) { pollFromRun = false; show(null); setPaused(false); } else home(); });
 
   if (O.configured) {
-    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); if (current === 'menu') renderLbTeaser(true); } });
+    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); fetchMyFeedback(); if (current === 'menu') renderLbTeaser(true); } });
     O.onCount(n => {
       $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online';
       for (const m of [$('mOnline'), $('pOnline')]) { m.hidden = false; m.textContent = n === 1 ? 'Nur du bist gerade online' : n + ' Spieler gerade online'; }

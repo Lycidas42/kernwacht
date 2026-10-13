@@ -166,6 +166,15 @@
 
   // ---------- Feedback und Umfragen ----------
   const feedback = (kind, body, ctx) => rpc('kw_feedback', { p_kind: kind, p_body: body, p_ctx: ctx || {} });
+  // Feedback-Gespräch: eigene Meldungen mit Verlauf, zurückschreiben, gelesen markieren, öffentliche Liste
+  const myFeedback = () => rpc('kw_my_feedback');
+  const feedbackReply = (id, body) => rpc('kw_feedback_reply', { p_id: id, p_body: body });
+  const feedbackSeen = id => rpc('kw_feedback_seen', { p_id: id });
+  async function publicFeedback() {
+    if (!(await start())) return null;
+    const { data, error } = await client.rpc('kw_public_feedback');
+    return error ? null : (data || []).map(r => Object.assign(r, { name: r.name || anon(r.pid) }));
+  }
   async function polls() {
     if (!(await start())) return null;
     const { data, error } = await client.from('polls').select('id,question,options,created_at').eq('active', true).order('created_at', { ascending: false });
@@ -176,7 +185,7 @@
 
   root.KWOnline = {
     configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
-    profile, stats, player, place, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, polls, vote, pollResults,
+    profile, stats, player, place, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, myFeedback, feedbackReply, feedbackSeen, publicFeedback, polls, vote, pollResults,
     who, onCount: f => listeners.push(f), get count() { return count; },
   };
 })(window);

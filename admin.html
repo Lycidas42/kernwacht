@@ -59,6 +59,14 @@ nav button[aria-selected="true"] { border-color: var(--core); color: var(--core)
 .fbact { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .fbact button { height: 30px; font-size: .78rem; }
 .fbact input { height: 30px; padding: 0 8px; flex: 1 1 200px; width: auto; font-size: .85rem; }
+.thread { display: grid; gap: 6px; }
+.msg { max-width: 85%; padding: 7px 10px; border-radius: 8px; font-size: .86rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg small { display: block; font-size: .7rem; color: var(--ink-dim); margin-bottom: 2px; }
+.msg.pl { background: #ffffff08; border: 1px solid var(--line); justify-self: start; }
+.msg.me { background: color-mix(in srgb, var(--core) 12%, transparent); border: 1px solid color-mix(in srgb, var(--core) 40%, transparent); justify-self: end; }
+.fbreply { display: flex; gap: 6px; align-items: stretch; }
+.fbreply textarea { flex: 1; min-height: 44px; font-size: .86rem; }
+.fbpubrow label { display: flex; gap: 6px; align-items: center; font-size: .82rem; white-space: nowrap; }
 .poll { border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 10px; display: grid; gap: 8px; }
 .poll.closed { opacity: .65; }
 .bar { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 70px; gap: 10px; align-items: center; font-size: .88rem; }
@@ -193,17 +201,26 @@ td.n, th.n { text-align: right; font-family: var(--font-num); }
     fbFilter = b.dataset.f; document.querySelectorAll('#fbFilters [data-f]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); renderFeedback();
   }));
   async function loadFeedback() { try { fb = await call('kw_admin_feedback') || []; renderFeedback(); } catch (e) { $('fbList').innerHTML = `<p class="err">${esc(e.message)}</p>`; } }
+  // Verlauf: Spieler links, eigene Antworten rechts; „gelesen“, wenn der Spieler nach der letzten Antwort reingeschaut hat
+  function thread(f) {
+    const ms = f.msgs || []; if (!ms.length) return '';
+    const lastAdmin = ms.filter(m => m.admin).pop(), read = lastAdmin && f.player_seen && new Date(f.player_seen) >= new Date(lastAdmin.at);
+    return `<div class="thread">${ms.map(m => `<div class="msg ${m.admin ? 'me' : 'pl'}"><small>${m.admin ? 'Du' : esc(f.player_name || 'Spieler')} · ${when(m.at)}</small>${esc(m.body)}</div>`).join('')}${lastAdmin ? `<small class="dim">${read ? 'vom Spieler gelesen ' + when(f.player_seen) : 'noch nicht gelesen'}</small>` : ''}</div>`;
+  }
   function renderFeedback() {
-    const open = f => f.status === 'neu' || f.status === 'gesehen';
+    const open = f => f.status === 'neu' || f.status === 'gesehen' || Number(f.player_unread) > 0;
     const list = fb.filter(f => fbFilter === 'alle' ? true : fbFilter === 'offen' ? open(f) : fbFilter === 'erledigt' ? !open(f) : f.kind === fbFilter && open(f));
     if (!list.length) { $('fbList').innerHTML = '<p class="dim">Nichts in dieser Ansicht.</p>'; return; }
     $('fbList').innerHTML = list.map(f => {
       const c = f.ctx || {};
       const ctx = [c.version, c.record != null && 'Rekord ' + c.record, c.wave && 'Welle ' + c.wave, c.mode, c.fusions && c.fusions + ' Fusionen', c.screen, c.ua].filter(Boolean).join(' · ');
       return `<div class="fb ${f.kind} ${f.status}" data-id="${f.id}">
-        <div class="fbhead"><span class="tag ${f.kind}">${KIND[f.kind] || f.kind}</span><span class="tag ${f.status}">${f.status}</span><b>${esc(f.player_name || c.name || 'ohne Namen')}</b><span>${when(f.created_at)}</span><span class="num">#${f.id}</span></div>
+        <div class="fbhead"><span class="tag ${f.kind}">${KIND[f.kind] || f.kind}</span><span class="tag ${f.status}">${f.status}</span>${Number(f.player_unread) > 0 ? '<span class="tag neu">neue Antwort vom Spieler</span>' : ''}${f.is_public ? '<span class="tag idee">öffentlich</span>' : ''}<b>${esc(f.player_name || c.name || 'ohne Namen')}</b><span>${when(f.created_at)}</span><span class="num">#${f.id}</span></div>
         <div class="fbbody">${esc(f.body)}</div>
         <div class="fbctx">${esc(ctx)}</div>
+        ${thread(f)}
+        <div class="fbreply"><textarea data-reply rows="2" maxlength="2000" placeholder="Antwort an ${esc(f.player_name || 'den Spieler')} (sieht er im Spiel)"></textarea><button data-send class="pri">Antworten</button>${Number(f.player_unread) > 0 ? '<button data-seen>Gelesen</button>' : ''}</div>
+        <div class="fbact fbpubrow"><label><input type="checkbox" data-pub ${f.is_public ? 'checked' : ''}> Für alle Spieler sichtbar</label><input data-pubnote placeholder="Öffentlicher Text (leer = Meldung selbst)" value="${esc(f.pub_note || '')}"></div>
         <div class="fbact">
           <button data-st="gesehen">Gesehen</button><button data-st="erledigt">Erledigt</button><button data-st="verworfen">Verwerfen</button><button data-st="neu">Wieder öffnen</button>
           <input data-note placeholder="Notiz (nur für dich)" value="${esc(f.note || '')}">
@@ -214,6 +231,13 @@ td.n, th.n { text-align: right; font-family: var(--font-num); }
       el.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', async () => {
         try { await call('kw_admin_feedback_set', { p_id: id, p_status: b.dataset.st, p_note: null }); const f = fb.find(x => x.id === id); f.status = b.dataset.st; renderFeedback(); loadOverview(); } catch (e) { alertMsg(e); }
       }));
+      el.querySelector('[data-send]').addEventListener('click', async () => {
+        const t = el.querySelector('[data-reply]').value.trim(); if (!t) return;
+        try { await call('kw_admin_feedback_reply', { p_id: id, p_body: t }); await loadFeedback(); } catch (e) { alertMsg(e); }
+      });
+      const sn = el.querySelector('[data-seen]'); if (sn) sn.addEventListener('click', async () => { try { await call('kw_admin_feedback_seen', { p_id: id }); await loadFeedback(); } catch (e) { alertMsg(e); } });
+      el.querySelector('[data-pub]').addEventListener('change', async ev => { try { await call('kw_admin_feedback_public', { p_id: id, p_public: ev.target.checked, p_note: null }); await loadFeedback(); } catch (e) { alertMsg(e); } });
+      el.querySelector('[data-pubnote]').addEventListener('change', async ev => { try { await call('kw_admin_feedback_public', { p_id: id, p_public: null, p_note: ev.target.value }); } catch (e) { alertMsg(e); } });
       el.querySelector('[data-note]').addEventListener('change', async ev => {
         try { await call('kw_admin_feedback_set', { p_id: id, p_status: null, p_note: ev.target.value }); fb.find(x => x.id === id).note = ev.target.value; } catch (e) { alertMsg(e); }
       });
