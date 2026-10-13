@@ -108,6 +108,7 @@ window.KW_EN = {
   'Panzerplatten {0}/{1}': 'Armor plates {0}/{1}', 'Lanze {0}/{1}': 'Lance {0}/{1}', 'Minenschächte {0}/{1}': 'Mine racks {0}/{1}', 'Siegel {0}/{1}': 'Seals {0}/{1}', 'Prismen {0}/{1}': 'Prisms {0}/{1}', 'Glieder {0}/{1}': 'Segments {0}/{1}', 'Brutsäcke {0}/{1}': 'Brood sacs {0}/{1}',
   'Panzerplatte': 'Armor plate', 'Lanze': 'Lance', 'Minenschacht': 'Mine rack', 'Siegel': 'Seal', 'Prisma': 'Prism',
   'PANZERPLATTE AB': 'ARMOR PLATE OFF', 'LANZE ZERSTÖRT': 'LANCE DESTROYED', 'MINENSCHACHT ZERSTÖRT': 'MINE RACK DESTROYED', 'SIEGEL GEBROCHEN': 'SEAL BROKEN', 'PRISMA ZERSPLITTERT': 'PRISM SHATTERED',
+  'Boss naht · Feld räumen': 'Boss incoming · clear the field',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',
