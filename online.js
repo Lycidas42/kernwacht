@@ -64,7 +64,7 @@
   // Präsenz: Name, aktuelle Welle (0 = im Menü) und Profilangaben für die Liste „Gerade online“
   let lastWave = -1;
   function setStatus(name, wave, extra) {
-    me.name = name || me.name; me.wave = wave || 0; if (extra) Object.assign(me, extra);
+    me.name = name || me.name; me.wave = wave || 0; if (extra) Object.assign(me, extra); me.ts = Date.now();
     if (!channel) return;
     const n = Date.now(), switched = (me.wave > 0) !== (lastWave > 0);
     if (!switched && n - lastTrack < 15000) return; lastTrack = n; lastWave = me.wave;
@@ -79,9 +79,9 @@
     for (const [key, arr] of Object.entries(channel.presenceState())) for (const p of arr) {
       const k = (p.pid || key) + '|' + (p.name || ''), o = seen.get(k); // gleiche ID, anderer Name (verbundene Geräte): getrennt zeigen
       if (!o) { seen.set(k, Object.assign({}, p)); continue; }
-      const m = Object.assign({}, o, p.pid ? p : {});
-      m.wave = Math.max(o.wave || 0, p.wave || 0); if (!m.name) m.name = o.name || p.name;
-      seen.set(k, m);
+      // der zuletzt gemeldete Stand gilt (aktuelle Welle, nicht die höchste); alte Versionen ohne Zeitstempel zählen nachrangig
+      const newer = (p.ts || 0) >= (o.ts || 0) ? p : o, older = newer === p ? o : p;
+      seen.set(k, Object.assign({}, older, newer));
     }
     return [...seen.values()];
   }
