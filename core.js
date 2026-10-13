@@ -407,7 +407,7 @@
     { id: 'p_cal',    br: 'p', max: 3, name: 'Kalibrierung',     desc: l => `+${pc(0.06 * l)} Kanonenschaden` },
     { id: 'p_pierce', br: 'p', max: 1, name: 'Wolframkern',      desc: () => '+1 Durchschlag für die Kanone' },
     { id: 'p_mark',   br: 'p', max: 2, name: 'Schwachstelle',    desc: l => `Markierte Ziele erleiden ${pc(0.2 * l)} mehr Schaden aus allen Quellen, auch Mutterschiffe` },
-    { id: 'p_poison', br: 'p', max: 3, name: 'Giftgeschosse',    desc: l => `Kanonentreffer vergiften: ${pc(0.1 * l)} des Treffers pro Sekunde, klingt in 3 s ab, stapelt. Dazu ${(0.15 * l).toFixed(2).replace('.', ',')} % der Lebenspunkte pro Sekunde (Mutterschiffe ${(0.03 * l).toFixed(2).replace('.', ',')} %)` },
+    { id: 'p_poison', br: 'p', max: 3, name: 'Giftgeschosse',    desc: l => `Kanonentreffer vergiften: ${pc(0.1 * l)} des Treffers pro Sekunde, klingt in 3 s ab, stapelt. Dazu ${(0.05 * l).toFixed(2).replace('.', ',')} % der Lebenspunkte pro Sekunde (Mutterschiffe ${(0.01 * l).toFixed(2).replace('.', ',')} %)` },
     { id: 'p_vamp',   br: 'p', max: 3, name: 'Vampirgeschosse',  desc: l => `Jeder Kanonentreffer repariert ${(0.03 * l).toFixed(2).replace('.', ',')} % der Hülle` },
     { id: 'p_exec',   br: 'p', max: 3, name: 'Hinrichtung',      desc: l => `Kanonentreffer zerstören Schiffe unter ${pc(0.05 * l)} Lebenspunkten sofort (keine Mutterschiffe)` },
     { id: 'p_charge', br: 'p', cap: 1, name: 'Ladeschuss',       desc: () => 'Alle 6 s feuert die Kanone einen geladenen Schuss: 12× Schaden, durchschlägt alles auf seiner Linie' },
@@ -878,7 +878,7 @@
       for (const e of this.enemies) if (e.kres) e.kres = Math.max(0, e.kres - 0.4 * dt);
       for (const e of this.enemies) if (e.pdps > 0 && e.hp > 0) { this.hurt(e, e.pdps * dt, false, 'dot'); e.pdps *= Math.max(0, 1 - dt / 3); }
       // Giftgeschosse: zusätzlich ein kleiner Anteil der Lebenspunkte pro Sekunde (stapelt nicht) – stark gegen zähe Gegner
-      if (K('p_poison')) for (const e of this.enemies) if (e.ppUntil > this.time && e.hp > 0) this.hurt(e, e.maxHp * (e.type === 'boss' ? 0.0003 : 0.0015) * K('p_poison') * dt, false, 'dot');
+      if (K('p_poison')) for (const e of this.enemies) if (e.ppUntil > this.time && e.hp > 0) this.hurt(e, e.maxHp * (e.type === 'boss' ? 0.0001 : 0.0005) * K('p_poison') * dt, false, 'dot');
       for (const f of this.fires) for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - f.x, p.y - f.y) < f.r + e.r) this.hurt(e, f.dps * dt, false, 'dot'); }
       this.fires = this.fires.filter(f => f.until > this.time);
       if (K('p_charge')) this.chargeShotT += dt;
@@ -1658,6 +1658,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.6.7'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.6.8'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
