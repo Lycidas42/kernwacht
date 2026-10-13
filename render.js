@@ -141,6 +141,12 @@
         // Tentakelspitze: Saugnapf-Klaue (der Arm selbst wird vorab gezeichnet)
         poly([[r * 1.6, 0], [r * 0.2, -r * 0.9], [-r * 0.6, -r * 0.5], [-r * 0.6, r * 0.5], [r * 0.2, r * 0.9]]); fillHull(); glow(c, 1.6);
         ctx.beginPath(); ctx.arc(r * 0.1, 0, r * 0.32, 0, 7); ctx.fillStyle = e.tst === 2 ? '#ffffff' : c; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+      } else if (e.type === 'part' && e.pk === 'wing') {
+        // Phönixschwinge: Federfächer aus Glut, schlägt
+        const fl2 = Math.sin(t * 0.008 + e.side) * 0.25;
+        for (let i = 0; i < 4; i++) { const a = (-0.9 + i * 0.45 + fl2) * 1; ctx.beginPath(); ctx.moveTo(-r * 0.4, 0); ctx.quadraticCurveTo(-r * 1.2 * Math.cos(a), r * 1.6 * Math.sin(a), -r * 2.2 * Math.cos(a), r * 2.4 * Math.sin(a)); glow(i % 2 ? '#ffb03d' : c, 1.6, 0.85); }
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.7, 0, 7); fillHull(); glow(c, 1.6);
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.3, 0, 7); ctx.fillStyle = '#ffb03d'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 0.01); ctx.fill(); ctx.globalAlpha = 1;
       } else if (e.type === 'part' && e.pk === 'segment') {
         // Wurmsegment: Panzerplatte mit glühender Fuge
         hexPath(r * 1.05, t * 0.001 + e.si); fillHull(); glow(c, 1.6);
@@ -310,6 +316,96 @@
         ctx.beginPath(); ctx.arc(r * 1.9, 0, r * (0.1 + 0.3 * ch), 0, 7); ctx.fillStyle = ch ? '#ff3030' : '#ff9a3c'; ctx.fill();
         const g = ctx.createRadialGradient(-r * 0.3, 0, 0, -r * 0.3, 0, r * 0.45); g.addColorStop(0, '#fff2c0'); g.addColorStop(1, 'rgba(255,120,40,0)');
         ctx.beginPath(); ctx.arc(-r * 0.3, 0, r * 0.45, 0, 7); ctx.fillStyle = g; ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 0.01); ctx.fill(); ctx.globalAlpha = 1;
+        return true;
+      }
+      const orbGlow = (rr, c0, c1) => { const g = ctx.createRadialGradient(0, 0, rr * 0.1, 0, 0, rr); g.addColorStop(0, '#fff2c0'); g.addColorStop(0.35, c0); g.addColorStop(1, c1); ctx.beginPath(); ctx.arc(0, 0, rr, 0, 7); ctx.fillStyle = g; ctx.globalAlpha = 0.9; ctx.fill(); ctx.globalAlpha = 1; };
+      if (k === 'sunwing') {
+        // Sonnenflieger: riesige, gefiederte Spannweite
+        for (const sg of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(r * 0.5, sg * r * 0.25); ctx.lineTo(-r * 0.2, sg * r * 2.6); ctx.lineTo(-r * 0.75, sg * r * 2.4); ctx.lineTo(-r * 0.5, sg * r * 0.4); ctx.closePath(); fillHull(); glow(c, 1.8);
+          ctx.beginPath(); for (let i = 1; i < 5; i++) { ctx.moveTo(r * (0.3 - i * 0.1), sg * r * (0.25 + i * 0.47)); ctx.lineTo(-r * (0.45 + i * 0.05), sg * r * (0.4 + i * 0.45)); } glow('#ffb03d', 1, 0.6);
+        }
+        poly([[r * 1.5, 0], [r * 0.4, -r * 0.35], [-r * 1.0, -r * 0.2], [-r * 1.0, r * 0.2], [r * 0.4, r * 0.35]]); fillHull(); glow(c, 2.2);
+        flame(-r * 1.0, 0, r * 1.6 * fl, r * 0.2, '#ffb03d', t, sd);
+        core(r * 0.2, 0, r * 0.2);
+        return true;
+      }
+      if (k === 'splitcore' || k === 'shard') {
+        // Splitterkern: Kristallkern mit Bruchlinien; Kernsplitter klein und kantig
+        const n = k === 'shard' ? 5 : 8;
+        ctx.save(); ctx.rotate(t * (k === 'shard' ? 0.003 : 0.0008));
+        ctx.beginPath(); for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, rr = r * (i % 2 ? 0.75 : 1.15); ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath(); fillHull(); glow(c, 2.2);
+        if (k === 'splitcore') { ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = i * 2.09; ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * r * 1.0, Math.sin(a) * r * 1.0); } glow('#ffb03d', 1.2, 0.8); }
+        ctx.restore();
+        core(0, 0, r * 0.28);
+        return true;
+      }
+      if (k === 'flameorb') {
+        // Flammenorb: lodernder Feuerball mit Zungen
+        ctx.beginPath(); for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2, rr = r * (1.05 + 0.3 * Math.abs(Math.sin(t * 0.007 + i * 1.7))); ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr, Math.sin(a) * rr); } ctx.closePath();
+        ctx.fillStyle = 'rgba(255,90,40,0.25)'; ctx.fill(); glow('#ff8a3d', 1.6, 0.8);
+        orbGlow(r * 0.85, '#ff6a3d', 'rgba(255,40,40,0.2)'); ctx.beginPath(); ctx.arc(0, 0, r * 0.85, 0, 7); glow(c, 2);
+        return true;
+      }
+      if (k === 'corona') {
+        // Koronakreuzer: Sonnenscheibe mit Strahlenkranz und Bugstachel
+        ctx.save(); ctx.rotate(t * 0.0009); ctx.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; ctx.moveTo(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95); ctx.lineTo(Math.cos(a) * r * 1.45, Math.sin(a) * r * 1.45); } glow('#ffb03d', 1.4, 0.7); ctx.restore();
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.95, 0, 7); fillHull(); glow(c, 2.4);
+        poly([[r * 1.9, 0], [r * 0.8, -r * 0.2], [r * 0.8, r * 0.2]]); fillHull(); glow(c, 1.4);
+        const ch = e.laser > 0 ? 1 - e.laser / 2 : 0; ctx.beginPath(); ctx.arc(r * 1.9, 0, r * (0.08 + 0.3 * ch), 0, 7); ctx.fillStyle = ch ? '#ff3030' : c; ctx.fill();
+        core(0, 0, r * 0.35);
+        return true;
+      }
+      if (k === 'phoenix') {
+        // Phönix: Vogelleib mit Kopfkamm und Schweiffedern (die Schwingen sind eigene Bauteile)
+        for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(-r * 0.6, i * r * 0.12); ctx.quadraticCurveTo(-r * 1.4, i * r * 0.4 + wob(0.006 + i * 0.001, r * 0.15), -r * 2.1, i * r * 0.6); glow(i % 2 ? '#ffb03d' : c, 1.4, 0.8); }
+        ctx.beginPath(); ctx.ellipse(-r * 0.05, 0, r * 0.75, r * 0.45, 0, 0, 7); fillHull(); glow(c, 2.2);
+        ctx.beginPath(); ctx.arc(r * 0.75, 0, r * 0.32, 0, 7); fillHull(); glow(c, 1.8);
+        poly([[r * 1.35, 0], [r * 1.0, -r * 0.1], [r * 1.0, r * 0.1]]); ctx.fillStyle = '#ffb03d'; ctx.fill();
+        ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(r * (0.6 - i * 0.12), -r * 0.2); ctx.lineTo(r * (0.35 - i * 0.2), -r * (0.6 + i * 0.05)); } glow('#ffb03d', 1.2);
+        if (e.reborn) { ctx.beginPath(); ctx.arc(0, 0, r * 1.25, 0, 7); glow('#ffffff', 1, 0.3 + 0.2 * Math.sin(t * 0.01)); }
+        core(-r * 0.05, 0, r * 0.2);
+        return true;
+      }
+      if (k === 'eye') {
+        // Leerauge: schwebendes Auge mit Lidern, die Pupille folgt der Kanone
+        ctx.beginPath(); ctx.moveTo(-r * 1.2, 0); ctx.quadraticCurveTo(0, -r * 1.35, r * 1.2, 0); ctx.quadraticCurveTo(0, r * 1.35, -r * 1.2, 0); ctx.closePath(); fillHull(); glow(c, 2.4);
+        ctx.beginPath(); ctx.arc(r * 0.15, 0, r * 0.55, 0, 7); ctx.fillStyle = '#1a2050'; ctx.fill(); glow(c, 1.4);
+        const ch = e.laser > 0 ? 1 - e.laser / 2 : 0;
+        ctx.beginPath(); ctx.ellipse(r * 0.4, 0, r * 0.12, r * (0.38 - 0.2 * ch), 0, 0, 7); ctx.fillStyle = ch ? '#ff3030' : '#05050f'; ctx.fill();
+        for (let i = 0; i < 6; i++) { const a = Math.PI * 0.6 + i * 0.16; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 1.0, Math.sin(a) * r * 0.9); ctx.lineTo(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.3 + wob(0.005 + i * 0.001, 3)); glow(c, 1, 0.6); }
+        return true;
+      }
+      if (k === 'shrine') {
+        // Heilerschrein: schwebender Tempel mit Heilkreuz und kreisenden Siegeln
+        hexPath(r * 1.0, Math.PI / 6); fillHull(); glow(c, 2.2);
+        ctx.beginPath(); ctx.moveTo(-r * 0.45, 0); ctx.lineTo(r * 0.45, 0); ctx.moveTo(0, -r * 0.45); ctx.lineTo(0, r * 0.45); glow('#5dffb0', 3, 0.6 + 0.3 * Math.sin(t * 0.006));
+        for (let i = 0; i < 4; i++) { const a = t * 0.0015 + i * Math.PI / 2; ctx.save(); ctx.translate(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5); hexPath(r * 0.18, a); fillHull(); glow(c, 1.2); ctx.restore(); }
+        return true;
+      }
+      if (k === 'mirror') {
+        // Spiegler: Kristallfacetten; im Spiegelmodus glänzend weiß
+        const on = e.mirrorUntil > (e._now || 0);
+        poly([[r * 1.3, 0], [r * 0.3, -r * 1.1], [-r * 0.9, -r * 0.7], [-r * 1.2, 0], [-r * 0.9, r * 0.7], [r * 0.3, r * 1.1]]); fillHull(); glow(on ? '#ffffff' : c, on ? 3 : 2.2);
+        ctx.beginPath(); ctx.moveTo(r * 1.3, 0); ctx.lineTo(-r * 1.2, 0); ctx.moveTo(r * 0.3, -r * 1.1); ctx.lineTo(r * 0.0, 0); ctx.lineTo(r * 0.3, r * 1.1); ctx.moveTo(-r * 0.9, -r * 0.7); ctx.lineTo(r * 0.0, 0); ctx.lineTo(-r * 0.9, r * 0.7); glow(c, 1, 0.55);
+        core(0, 0, r * 0.18);
+        return true;
+      }
+      if (k === 'shade') {
+        // Schattenrochen: dunkler, gezackter Rochen mit violettem Rand
+        const f = wob(0.004, 0.2);
+        ctx.beginPath(); ctx.moveTo(r * 1.1, 0); ctx.lineTo(r * 0.2, -r * (1.0 + f)); ctx.lineTo(-r * 0.3, -r * (1.8 + f)); ctx.lineTo(-r * 0.5, -r * 0.9); ctx.lineTo(-r * 0.9, 0); ctx.lineTo(-r * 0.5, r * 0.9); ctx.lineTo(-r * 0.3, r * (1.8 + f)); ctx.lineTo(r * 0.2, r * (1.0 + f)); ctx.closePath();
+        ctx.fillStyle = '#05040c'; ctx.fill(); glow(c, 2);
+        ctx.beginPath(); ctx.moveTo(-r * 0.9, 0); ctx.quadraticCurveTo(-r * 1.7, wob(0.006, r * 0.5), -r * 2.5, wob(0.005, r * 0.6)); glow(c, 1.3);
+        for (const sg of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.55, sg * r * 0.3, r * 0.09, 0, 7); ctx.fillStyle = '#c3a6ff'; ctx.fill(); }
+        return true;
+      }
+      if (k === 'devourer') {
+        // Der Verschlinger: Schlund mit Zahnkranz, Strudelkern
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.05, 0, 7); fillHull(); glow(c, 2.8);
+        ctx.save(); ctx.rotate(-t * 0.002); ctx.beginPath(); for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; ctx.moveTo(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95); ctx.lineTo(Math.cos(a + 0.12) * r * 0.62, Math.sin(a + 0.12) * r * 0.62); } glow('#ffffff', 1, 0.65); ctx.restore();
+        ctx.save(); ctx.rotate(t * 0.004); for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(0, 0, r * (0.18 + i * 0.13), i * 2, i * 2 + 4); glow(c, 1.2, 0.8); } ctx.restore();
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.12, 0, 7); ctx.fillStyle = '#000'; ctx.fill();
         return true;
       }
       if (k === 'titan') {
@@ -724,6 +820,7 @@
           ctx.fillStyle = '#ff6060'; ctx.font = `700 11px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText('LASER · SCHADEN BRICHT AB', p.x, p.y + e.r * 1.8 + 24);
         }
+        e._now = run.time;
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(facing); ctx.scale(1.5, 1.5);
         if (cloak) ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.01 + e.seed);
         drawShip(e, t, frozen || e.slowUntil > run.time); ctx.restore(); ctx.globalAlpha = 1;
@@ -732,6 +829,14 @@
           ctx.save(); ctx.translate(p.x, p.y - e.r * 1.9); ctx.rotate(t * 0.002);
           for (let i = 0; i < 3; i++) { ctx.rotate(Math.PI / 3); ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.strokeStyle = PAL.frost; ctx.lineWidth = 1.2; ctx.stroke(); }
           ctx.restore();
+        }
+        if (e.type === 'boss') {
+          // Prüfungen sichtbar machen: Panzerschild, Aufheizen, Strahlung, Spiegel
+          if (e.plate > 0) { const k2 = e.plate / (e.plateMax || 1); ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 2.0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k2); glow('#ffd23f', 3, 0.9); ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 2.0, 0, 7); ctx.fillStyle = 'rgba(255,210,63,0.07)'; ctx.fill(); }
+          if (e.heat > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.6, 0, 7); glow('#ff3030', 1 + e.heat * 0.4, 0.25 + 0.05 * e.heat); }
+          const CK = e.kind && C.BOSS_KINDS[e.kind].chk;
+          if (CK && CK.includes('sustain')) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(0, -8); ctx.setLineDash([2, 10]); ctx.lineDashOffset = -t * 0.04; glow('#ff8a3d', 1, 0.35); ctx.setLineDash([]); }
+          if (e.mirrorUntil > run.time) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 2.2, 0, 7); ctx.setLineDash([10, 6]); ctx.lineDashOffset = t * 0.03; glow('#ffffff', 2, 0.8); ctx.setLineDash([]); }
         }
         if (e.type === 'boss' && e.shieldUntil > run.time) {
           const left = e.shieldUntil - run.time;
@@ -931,7 +1036,7 @@
           ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
-          const label = { spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
+          const label = { storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
           ctx.globalAlpha = a; ctx.fillStyle = SHIP.boss; ctx.font = `700 13px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }

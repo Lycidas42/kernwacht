@@ -627,7 +627,7 @@
     { k: 'blade', name: 'Orbitklingen', hit: s => s.bladeDmg, rate: s => s.blades + ' Klingen', on: s => s.blades > 0 },
     { k: 'strike', name: 'Orbitalschlag', hit: s => s.strikeDmg, rate: () => 'manuell', on: () => true },
     { k: 'dot', name: 'Gift & Feuer', hit: () => 0, rate: () => 'Dauer', on: s => !!(s.K && (s.K('p_poison') || s.K('a_toxin') || s.K('a_burn') || s.K('t_quake'))) },
-    { k: 'skill', name: 'Kommandant', hit: () => 0, rate: () => 'Skills', on: s => !!(s.K && (s.K('a_drones') || s.K('a_barrage') || s.K('t_hole') || s.K('b_reflect'))) },
+    { k: 'skill', name: 'Kommandant', hit: () => 0, rate: () => 'Skills', on: s => !!(s.K && ['a_drones', 'a_barrage', 't_hole', 'b_reflect', 'p_charge', 'p_exec', 'x_shrap'].some(id => s.K(id))) },
     { k: 'mod', name: 'Module (direkt)', hit: () => 0, rate: () => 'passiv', on: s => Object.keys(s.mod || {}).length > 0 },
   ];
   let statEls = null;
@@ -676,6 +676,7 @@
     $('stMods').innerHTML = eq.length
       ? '<h4>Ausgerüstete Module · Beitrag zum Schaden</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span>${modShare(t, total)}<br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
         + '<p class="stnote">Kettenblitz, Kältebruch, Überspannung und Zielerfassung verstärken die Kanone; ihr Anteil steckt dort mit drin. Splitter, Dornenwall und Nova stehen unter „Module (direkt)“.</p>'
+        + '<p class="stnote">„Kommandant“ zählt nur Skills mit eigenem Schaden: Ladeschuss, Hinrichtung, Drohnen, Bombardement, Schwarzes Loch, Reflexion und Splitterpanzer. Verstärkende Skills wie Kalibrierung oder Sprengköpfe stecken im Anteil der jeweiligen Waffe, Gift und Brand unter „Gift & Feuer“.</p>'
       : (C.record(meta) >= C.MODULES_AT ? '<h4>Module</h4><p>Keine Module ausgerüstet. Bosse lassen sie fallen.</p>' : `<h4>Module</h4><p>Ab Rekordwelle ${C.MODULES_AT} lassen Bosse Module fallen.</p>`);
   }
 
@@ -1722,6 +1723,10 @@
       $('myDmg').textContent = fmt(run.s.gunDmg);
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));
       $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
+      // Kommandant: Erfahrung bis zum nächsten Rang (gedämpft, wenn die Welle unter dem halben Rekord liegt)
+      { const R = C.rankOf(meta), xl = $('xpLine'), rt = 'Rang ' + R.rank, tx = fmt(R.cur) + ' / ' + fmt(R.need);
+        if (xl._t !== rt + tx) { xl._t = rt + tx; $('xpRank').textContent = rt; $('xpTxt').textContent = tx; $('xpbar').firstElementChild.style.width = Math.min(100, R.cur / R.need * 100) + '%'; }
+        xl.classList.toggle('low', run.wave < C.record(meta) * C.P.xpLowAt); }
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
       $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';
       $('wavebar').classList.toggle('hold', !!run.holding);
@@ -1745,6 +1750,14 @@
         if (bb._nt !== nt) { bb._nt = nt; $('bossNext').innerHTML = nt; }
         $('bossNextBar').style.width = Math.min(100, (1 - left / (boss.actMax || 2.5)) * 100) + '%';
         bb.querySelector('.bossnext').classList.toggle('soon', soon);
+        // Prüfungen des Bosses mit ihrem Zustand
+        const CK = (boss.kind && C.BOSS_KINDS[boss.kind].chk) || [];
+        const chip = c => c === 'dps' ? [`Schadensprobe${boss.heat ? ' · aufgeheizt ×' + boss.heat : ''}`, boss.heat > 0]
+          : c === 'def' ? [`Sturmangriff in ${Math.max(0, Math.ceil(boss.stormT == null ? 12 : boss.stormT))} s`, boss.stormT != null && boss.stormT < 3]
+          : c === 'sustain' ? ['Glutstrahlung', false]
+          : [boss.plate > 0 ? `Panzerschild ${Math.ceil(boss.plate / boss.plateMax * 100)} % · ${Math.max(0, boss.plateEnd - run.time).toFixed(0)} s` : 'Panzerschild', boss.plate > 0];
+        const ch = CK.map(c => { const [t2, hot] = chip(c); return `<span class="${hot ? 'hot' : ''}">${t2}</span>`; }).join('');
+        if (bb._ch !== ch) { bb._ch = ch; $('bossChk').innerHTML = ch; }
         const sh = boss.shieldUntil > run.time;
         bb.classList.toggle('shield', sh);
         $('bossPct').textContent = (pct < 1 ? pct.toFixed(1) : Math.ceil(pct)) + ' %' + (sh ? ' · Schild' : '');

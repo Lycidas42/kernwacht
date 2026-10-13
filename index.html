@@ -82,6 +82,14 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .pill.admin { color: var(--void); background: var(--energy); border-color: var(--energy); font-weight: 700; }
 .bar { height: 6px; background: var(--deck-2); border-radius: 3px; overflow: hidden; position: relative; }
 .bar i { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px; }
+#xpLine { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 10px; letter-spacing: .06em; color: #ffd23f; text-transform: uppercase; }
+#xpLine .bar { flex: 1; height: 3px; background: rgba(255,255,255,.06); }
+#xpLine .bar i { background: #ffd23f; box-shadow: 0 0 6px #ffd23f; transition: width .3s; }
+#xpLine .num { color: var(--ink-dim); font-size: 10px; text-transform: none; }
+#xpLine.low { opacity: .55; }
+#bossBar .bosschk { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+#bossBar .bosschk span { font-size: 10px; letter-spacing: .04em; padding: 1px 6px; border: 1px solid rgba(255,179,234,.4); border-radius: 3px; color: #ffb3ea; }
+#bossBar .bosschk span.hot { border-color: #ff4040; color: #ff8080; }
 #hpbar i { background: linear-gradient(90deg, var(--heal), var(--core)); box-shadow: 0 0 8px var(--core); }
 #wavebar { height: 2px; }
 #bossBar { margin-top: 6px; padding: 5px 8px 6px; border: 1px solid rgba(255,80,200,.55); border-radius: 8px; background: rgba(40,6,34,.82); box-shadow: 0 0 14px rgba(255,60,190,.35); }
@@ -555,8 +563,9 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <div class="bar" id="wavebar"><i></i></div>
       <div class="hpline"><span>Kanone</span><span class="num" id="hpTxt">0 / 0</span></div>
       <div class="bar" id="hpbar"><i></i></div>
+      <div class="xpline" id="xpLine"><span id="xpRank">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
       <div class="mchip" id="mChip" hidden><b id="mfName"></b><span id="mfRule"></span></div>
-      <div id="bossBar" hidden><div class="bossline"><span id="bossName">Boss</span><b class="num" id="bossPct">100 %</b></div><div class="bar"><i></i></div><div class="bossnext"><span id="bossNext"></span><div class="nbar"><i id="bossNextBar"></i></div></div></div>
+      <div id="bossBar" hidden><div class="bossline"><span id="bossName">Boss</span><b class="num" id="bossPct">100 %</b></div><div class="bar"><i></i></div><div class="bossnext"><span id="bossNext"></span><div class="nbar"><i id="bossNextBar"></i></div></div><div class="bosschk" id="bossChk"></div></div>
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>
     <div id="abil">
@@ -839,7 +848,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     </details>
     <details class="gsec"><summary>Gegner</summary>
       <div class="gitem"><b>Jäger, Flitzer, Koloss</b><p>Die Grundtypen: normal, schnell, zäh. Kanonenboote schießen aus der Distanz.</p></div>
-      <div class="gitem"><b>Boss</b><p>Schwebt auf Abstand und wechselt zwischen Salven, Jägerstaffeln, Bomben, Schild und Laser. Der Laser bricht ab, wenn du genug Schaden machst. Nach einer Weile greift er den Wall an und zieht sich danach wieder zurück. Die Leiste oben zeigt seine Lebenspunkte. Je länger der Kampf dauert, desto wütender wird er: sein Schaden steigt alle 90 Sekunden um den Grundwert. Tentakelwesen bleiben knapp außer Reichweite: Triff ihre Tentakel, wenn sie zuschlagen. Gegen einen neuen Boss läuft das Spiel mit Tempo 1×, bis du ihn einmal besiegt hast.</p></div>
+      <div class="gitem"><b>Boss</b><p>Schwebt auf Abstand und wechselt zwischen Salven, Jägerstaffeln, Bomben, Schild und Laser. Der Laser bricht ab, wenn du genug Schaden machst. Nach einer Weile greift er den Wall an und zieht sich danach wieder zurück. Die Leiste oben zeigt seine Lebenspunkte. Je länger der Kampf dauert, desto wütender wird er: sein Schaden steigt alle 90 Sekunden um den Grundwert. Tentakelwesen bleiben knapp außer Reichweite: Triff ihre Tentakel, wenn sie zuschlagen. Gegen einen neuen Boss läuft das Spiel mit Tempo 1×, bis du ihn einmal besiegt hast. Viele Bosse prüfen dich: Schadensprobe (verliert er in 10 s zu wenig, heizt er auf und schlägt härter zu), Sturmangriff (alle 18 s ein schwerer Fächer), Glutstrahlung (ständiger Schaden, Reparatur hilft) und Panzerschild (in 6 s brechen, sonst heilt er sich). Die Bossleiste zeigt, was gerade läuft.</p></div>
       <div class="gitem"><b>Schildträger</b><p>Tragen einen Frontschild, der erst gebrochen werden muss und sich ohne Treffer wieder auflädt. Dauerfeuer und Flächenschaden helfen.</p></div>
       <div class="gitem"><b>Phantom</b><p>Tarnt sich zeitweise. Die Zielerfassung macht Tarnung wirkungslos.</p></div>
       <div class="gitem"><b>Splitter</b><p>Zerfällt beim Abschuss in kleinere Splitter.</p></div>

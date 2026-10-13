@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, bossHp: 2, bossHpEarly: 1.5, xpLow: 0.1,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, bossHp: 2, bossHpEarly: 1.5, bossDpsCheck: 0.04, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -120,45 +120,49 @@
   const BOSS_KINDS = {
     gunboat: { name: 'Kanonenboot', hp: 1, r: 23, acts: ['salvo', 'broadside', 'spawn'] },
     layer:   { name: 'Minenleger', hp: 1, r: 23, acts: ['mines', 'salvo', 'spawn'] },
-    frigate: { name: 'Schildfregatte', hp: 1.1, r: 23, acts: ['shield', 'salvo', 'spawn', 'broadside'] },
-    lancer:  { name: 'Lanzenträger', hp: 1, r: 23, acts: ['laser', 'salvo', 'broadside'] },
-    bastion: { name: 'Großträger Bastion', hp: 2, r: 32, lord: true, acts: ['hangar', 'salvo', 'bomb'], ph2: ['shield'], ph3: ['laser'],
+    frigate: { name: 'Schildfregatte', chk: ['burst'], hp: 1.1, r: 23, acts: ['shield', 'salvo', 'spawn', 'broadside'] },
+    lancer:  { name: 'Lanzenträger', chk: ['dps'], hp: 1, r: 23, acts: ['laser', 'salvo', 'broadside'] },
+    bastion: { name: 'Großträger Bastion', chk: ['def'], hp: 2, r: 32, lord: true, acts: ['hangar', 'salvo', 'bomb'], ph2: ['shield'], ph3: ['laser'],
       parts: [{ k: 'turret', fwd: 20, lat: -31 }, { k: 'turret', fwd: 20, lat: 31 }, { k: 'turret', fwd: -18, lat: -33 }, { k: 'turret', fwd: -18, lat: 33 }] },
     // Zone 2 · Smaragdnebel: organisch, Tarnung, Tentakel
-    ray:      { name: 'Nebelrochen', hp: 1, r: 24, glide: 0.8, acts: ['cloak', 'salvo', 'broadside'] },
-    jelly:    { name: 'Sporenqualle', hp: 1, r: 24, acts: ['spores', 'salvo', 'cloak'] },
+    ray:      { name: 'Nebelrochen', chk: ['dps'], hp: 1, r: 24, glide: 0.8, acts: ['cloak', 'salvo', 'broadside'] },
+    jelly:    { name: 'Sporenqualle', chk: ['sustain'], hp: 1, r: 24, acts: ['spores', 'salvo', 'cloak'] },
     squid:    { name: 'Tentakler', hp: 1, r: 24, far: true, acts: ['salvo', 'spawn'], parts: [{ k: 'tentacle', lat: -16, delay: 0 }, { k: 'tentacle', lat: 16, delay: 2.5 }] },
-    queen:    { name: 'Schwarmkönigin', hp: 1, r: 25, acts: ['swarm', 'shield', 'spawn'] },
-    leviathan:{ name: 'Leviathan', hp: 2, r: 34, lord: true, far: true, acts: ['cloak', 'salvo', 'spores'], ph2: ['swarm'], ph3: ['broadside'],
+    queen:    { name: 'Schwarmkönigin', chk: ['def'], hp: 1, r: 25, acts: ['swarm', 'shield', 'spawn'] },
+    leviathan:{ name: 'Leviathan', chk: ['dps'], hp: 2, r: 34, lord: true, far: true, acts: ['cloak', 'salvo', 'spores'], ph2: ['swarm'], ph3: ['broadside'],
       parts: [-30, -18, -6, 6, 18, 30].map((lat, i) => ({ k: 'tentacle', lat, delay: i * 1.1 })) },
     // Zone 3 · Glutgürtel: Feuer und Gestein
-    emberorb: { name: 'Glutorb', hp: 1, r: 22, acts: ['nova', 'salvo', 'fireball'] },
+    emberorb: { name: 'Glutorb', chk: ['sustain'], hp: 1, r: 22, acts: ['nova', 'salvo', 'fireball'] },
     worm:     { name: 'Magmawurm', hp: 1, r: 20, worm: true, acts: ['salvo', 'nova', 'spawn'], parts: [0, 1, 2].flatMap(i => [{ k: 'segment', i, side: -1 }, { k: 'segment', i, side: 1 }]) },
-    bulwarkcr:{ name: 'Bollwerkkreuzer', hp: 1.1, r: 25, acts: ['bulwarks', 'shield', 'broadside'] },
-    forge:    { name: 'Schmiedeschiff', hp: 1, r: 24, acts: ['laser', 'bomb', 'broadside'] },
-    titan:    { name: 'Vulkan-Titan', hp: 2, r: 36, lord: true, acts: ['lava', 'salvo', 'bomb'], ph2: ['nova'], ph3: ['laser'],
+    bulwarkcr:{ name: 'Bollwerkkreuzer', chk: ['burst'], hp: 1.1, r: 25, acts: ['bulwarks', 'shield', 'broadside'] },
+    forge:    { name: 'Schmiedeschiff', chk: ['dps'], hp: 1, r: 24, acts: ['laser', 'bomb', 'broadside'] },
+    titan:    { name: 'Vulkan-Titan', chk: ['def', 'sustain'], hp: 2, r: 36, lord: true, acts: ['lava', 'salvo', 'bomb'], ph2: ['nova'], ph3: ['laser'],
       parts: [{ k: 'turret', fwd: 22, lat: -36 }, { k: 'turret', fwd: 22, lat: 36 }, { k: 'turret', fwd: -20, lat: -38 }, { k: 'turret', fwd: -20, lat: 38 }] },
     // Zone 4 · Roter Riese: Sonne und Glut
-    sunwing:  { name: 'Sonnenflieger', hp: 1, r: 22, glide: 1.1, acts: ['broadside', 'salvo', 'fireball'] },
-    splitcore:{ name: 'Splitterkern', hp: 0.8, r: 24, split: true, acts: ['nova', 'salvo', 'spawn'] },
+    sunwing:  { name: 'Sonnenflieger', chk: ['dps'], hp: 1, r: 22, glide: 1.1, acts: ['broadside', 'salvo', 'fireball'] },
+    splitcore:{ name: 'Splitterkern', chk: ['def'], hp: 0.8, r: 24, split: true, acts: ['nova', 'salvo', 'spawn'] },
     shard:    { name: 'Kernsplitter', hp: 0.2, r: 14, acts: ['salvo', 'nova'] },
-    flameorb: { name: 'Flammenorb', hp: 1, r: 24, acts: ['fireball', 'nova', 'lava'] },
-    corona:   { name: 'Koronakreuzer', hp: 1.1, r: 25, acts: ['laser', 'shield', 'broadside'] },
-    phoenix:  { name: 'Phönix', hp: 1.6, r: 30, lord: true, rebirth: true, acts: ['fireball', 'nova', 'salvo'], ph2: ['laser'], ph3: ['lava'],
+    flameorb: { name: 'Flammenorb', chk: ['sustain'], hp: 1, r: 24, acts: ['fireball', 'nova', 'lava'] },
+    corona:   { name: 'Koronakreuzer', chk: ['burst'], hp: 1.1, r: 25, acts: ['laser', 'shield', 'broadside'] },
+    phoenix:  { name: 'Phönix', chk: ['dps', 'sustain'], hp: 1.6, r: 30, lord: true, rebirth: true, acts: ['fireball', 'nova', 'salvo'], ph2: ['laser'], ph3: ['lava'],
       parts: [{ k: 'wing', side: -1 }, { k: 'wing', side: 1 }] },
     // Zone 5 · Die Leere
-    eye:      { name: 'Leerauge', hp: 1, r: 24, acts: ['laser', 'cloak', 'salvo'] },
-    shrine:   { name: 'Heilerschrein', hp: 1, r: 25, acts: ['mend', 'spawn', 'shield', 'salvo'] },
-    mirror:   { name: 'Spiegler', hp: 1, r: 24, acts: ['mirror', 'salvo', 'broadside'] },
-    shade:    { name: 'Schattenrochen', hp: 1, r: 24, glide: 0.9, acts: ['cloak', 'salvo', 'broadside'] },
-    devourer: { name: 'Der Verschlinger', hp: 2, r: 36, lord: true, far: true, acts: ['pull', 'mend', 'salvo'], ph2: ['spawn'], ph3: ['laser'],
+    eye:      { name: 'Leerauge', chk: ['dps'], hp: 1, r: 24, acts: ['laser', 'cloak', 'salvo'] },
+    shrine:   { name: 'Heilerschrein', chk: ['dps'], hp: 1, r: 25, acts: ['mend', 'spawn', 'shield', 'salvo'] },
+    mirror:   { name: 'Spiegler', chk: ['def'], hp: 1, r: 24, acts: ['mirror', 'salvo', 'broadside'] },
+    shade:    { name: 'Schattenrochen', chk: ['burst'], hp: 1, r: 24, glide: 0.9, acts: ['cloak', 'salvo', 'broadside'] },
+    devourer: { name: 'Der Verschlinger', chk: ['dps', 'sustain'], hp: 2, r: 36, lord: true, far: true, acts: ['pull', 'mend', 'salvo'], ph2: ['spawn'], ph3: ['laser'],
       parts: [-26, -9, 9, 26].map((lat, i) => ({ k: 'tentacle', lat, delay: i * 1.4 })) },
   };
-  const BOSS_ACT_NAME = { spores: 'Sporen', swarm: 'Schwarm', fireball: 'Feuerbälle', lava: 'Lavaregen', mirror: 'Spiegel', pull: 'Sog', salvo: 'Salve', broadside: 'Breitseite', spawn: 'Jägerstaffel', hangar: 'Hangar', bomb: 'Bombe', mines: 'Minenteppich', shield: 'Schild', laser: 'Laser', cloak: 'Tarnung', bulwarks: 'Schildträger', nova: 'Nova', mend: 'Reparatur' };
+  // Prüfungen: was ein Boss beim Spieler testet
+  //  dps     Schadensprobe: verliert er in 10 s zu wenig Lebenspunkte, heizt er auf (+30 % Schaden je Stufe)
+  //  def     Sturmangriff: alle 18 s ein schwerer Fächer (Hülle und Panzerung zählen)
+  //  sustain Glutstrahlung: ständiger Schaden an der Kanone (Reparatur zählt)
+  //  burst   Panzerschild: alle 16 s ein Schild, der Schaden schluckt; nicht in 6 s gebrochen, heilt sich der Boss
+  const BOSS_CHECK = { dps: 'Schadensprobe', def: 'Sturmangriff', sustain: 'Glutstrahlung', burst: 'Panzerschild' };
+  const BOSS_ACT_NAME = { storm: 'Sturmangriff', spores: 'Sporen', swarm: 'Schwarm', fireball: 'Feuerbälle', lava: 'Lavaregen', mirror: 'Spiegel', pull: 'Sog', salvo: 'Salve', broadside: 'Breitseite', spawn: 'Jägerstaffel', hangar: 'Hangar', bomb: 'Bombe', mines: 'Minenteppich', shield: 'Schild', laser: 'Laser', cloak: 'Tarnung', bulwarks: 'Schildträger', nova: 'Nova', mend: 'Reparatur' };
   const BOSS_ROSTER = { 1: ['gunboat', 'layer', 'frigate', 'lancer', 'bastion'], 2: ['ray', 'jelly', 'squid', 'queen', 'leviathan'], 3: ['emberorb', 'worm', 'bulwarkcr', 'forge', 'titan'],
-    // Etappe 3 (Zone 4 und 5) ist im Kern fertig, wird aber erst mit ihren Grafiken freigeschaltet:
-    // 4: ['sunwing', 'splitcore', 'flameorb', 'corona', 'phoenix'], 5: ['eye', 'shrine', 'mirror', 'shade', 'devourer']
-  };
+    4: ['sunwing', 'splitcore', 'flameorb', 'corona', 'phoenix'], 5: ['eye', 'shrine', 'mirror', 'shade', 'devourer'] };
   // nach Welle 250 kommen alle 25 Bosse in fester Reihenfolge wieder
   function bossKind(w) {
     if (w % 10) return null;
@@ -910,7 +914,13 @@
         if (e.hp <= 0) this.partLost(e, src);
         return eff;
       }
-      if (e.worm && e.segs > 0) d *= 0.5; // Magmawurm: der Kopf ist gepanzert, solange Segmente leben
+      if (e.worm && e.segs > 0) d *= 0.5;
+      if (e.plate > 0) {
+        // Panzerschild schluckt Schaden, bis er bricht
+        const ab = Math.min(e.plate, d); e.plate -= ab; d -= ab; this.dealt[src || 'gun'] += ab; e.hitT = this.time;
+        if (e.plate <= 0 && this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'platebreak', x: p.x, y: p.y, t: 0 }); }
+        if (d <= 0) return ab;
+      } // Magmawurm: der Kopf ist gepanzert, solange Segmente leben
       if (e.mirrorUntil > this.time && src === 'gun' && this.time >= (e.mirT || 0)) {
         // Spiegel: Kanonentreffer werfen einen Teil zurück
         e.mirT = this.time + 0.25; this.hitBase(e.dmg * 0.25);
@@ -1153,6 +1163,37 @@
     get rateNow() { return this.s.rate * (this.overActive ? ABIL.over.mult(this.abilityLv('over')) + 0.25 * ((this.s.K && this.s.K('t_over')) || 0) : 1); }
 
     // Boss: schwebt in Reichweite und wechselt zwischen Fähigkeiten
+    // Prüfungen des Bosses laufen, sobald er angekommen ist
+    bossChecks(e, CK, dt) {
+      const p = this.pos(e);
+      if (CK.includes('dps')) {
+        if (e.chkHp == null) { e.chkHp = e.hp; e.chkT = 0; }
+        if ((e.chkT += dt) >= 10) {
+          const lost = (e.chkHp - e.hp) / e.maxHp;
+          if (lost < P.bossDpsCheck) { e.heat = Math.min(10, (e.heat || 0) + 1); if (this.fxOn) this.fx.push({ k: 'bossact', act: 'heat', x: p.x, y: p.y, t: 0 }); }
+          else e.heat = Math.max(0, (e.heat || 0) - 1);
+          e.chkHp = e.hp; e.chkT = 0;
+        }
+      }
+      if (CK.includes('def')) {
+        if ((e.stormT = (e.stormT == null ? 12 : e.stormT) - dt) <= 0) {
+          e.stormT = 18;
+          for (let i = 0; i < 10; i++) { const an = (i - 4.5) * 9; this.ebullets.push({ x: p.x + an, y: p.y + e.r * 0.6 + Math.abs(i - 4.5) * 3, dmg: e.dmg * 0.8, big: true, spd: 135, col: '#ff3060', rad: 6 }); }
+          if (this.fxOn) this.fx.push({ k: 'bossact', act: 'storm', x: p.x, y: p.y, t: 0 });
+        }
+      }
+      if (CK.includes('sustain')) {
+        if ((e.radT = (e.radT || 0) + dt) >= 1) { e.radT = 0; if (!this.frozen) this.hitBase(e.dmg * 0.12); }
+      }
+      if (CK.includes('burst')) {
+        if (e.plate > 0) {
+          if (this.time >= e.plateEnd) { e.plate = 0; e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.04); if (this.fxOn) this.fx.push({ k: 'bossact', act: 'plateheal', x: p.x, y: p.y, t: 0 }); }
+        } else if ((e.plateT = (e.plateT == null ? 8 : e.plateT) - dt) <= 0) {
+          e.plateT = 16; e.plateMax = e.plate = e.maxHp * P.bossBurst; e.plateEnd = this.time + 6;
+          if (this.fxOn) this.fx.push({ k: 'bossact', act: 'plate', x: p.x, y: p.y, t: 0 });
+        }
+      }
+    }
     bossNext(e) { if (!e.nextAct) { const a = this.bossActs(e); e.nextAct = a[e.acts % a.length]; } return e.nextAct; }
     bossActs(e) {
       const w = this.wave, BK = BOSS_KINDS[e.kind];
@@ -1299,7 +1340,9 @@
         if (e.type === 'boss') {
           // Wut: je länger der Kampf dauert, desto härter schlägt der Boss zu (+100 % alle 90 s)
           e.fightT = (e.fightT || 0) + dt; if (e.dmg0 == null) e.dmg0 = e.dmg;
-          e.dmg = e.dmg0 * (1 + e.fightT / P.bossWrath);
+          e.dmg = e.dmg0 * (1 + e.fightT / P.bossWrath) * (1 + 0.3 * (e.heat || 0));
+          const CK = BOSS_KINDS[e.kind] && BOSS_KINDS[e.kind].chk;
+          if (CK && e.dist <= e.stop + 5) this.bossChecks(e, CK, dt);
           if (e.regrow && e.regrow.length) for (const g of e.regrow.slice()) if (this.time >= g.at) { e.regrow.splice(e.regrow.indexOf(g), 1); this.spawnPart(e, g.q); if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'regrow', x: p.x, y: p.y, t: 0 }); } }
           // Herrscher: neue Phase unter 66 % und 33 % Lebenspunkten
           if (e.lord) { const ph = e.hp < e.maxHp * 0.33 ? 2 : e.hp < e.maxHp * 0.66 ? 1 : 0; if (ph > e.phase) { e.phase = ph; e.actT = Math.min(e.actT, 1); if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'phase', x: p.x, y: p.y, t: 0 }); } } }
@@ -1417,7 +1460,7 @@
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
           // Präzision: markierte Ziele verlieren zusätzlich 1,2 % (Bosse 0,04 %) ihrer max. Lebenspunkte je Treffer
           const pct = t !== this.focus ? 0 : t.maxHp * (t.type === 'boss' ? P.gunBossPct : P.gunFocusPct) * (b.pk || 1); // nur markierte Ziele, Bosse schwächer
-          const eff = this.hurt(t, (b.dmg + pct) * brittle, b.crit, 'gun');
+          const eff = this.hurt(t, (b.dmg + pct) * brittle, b.crit, b.big ? 'skill' : 'gun'); // Ladeschuss zählt als Kommandant-Skill
           if (eff > 0) {
             // Zusatzschaden den Modulen zurechnen: Anteil, der ohne das Modul fehlen würde
             if (brittle > 1) this.credit('cryoammo', eff * (1 - 1 / brittle));
@@ -1427,7 +1470,7 @@
           if (brittle > 1 && this.fxOn && Math.random() < 0.35) this.fx.push({ k: 'brittle', x: p.x, y: p.y, t: 0 });
           if (s.K('p_poison') && t.hp > 0) { this.poison(t, b.dmg * brittle * 0.1 * s.K('p_poison')); t.ppUntil = this.time + 3; }
           if (s.K('p_vamp') && !this.dead) this.hp = Math.min(s.maxHp, this.hp + s.maxHp * 0.0003 * s.K('p_vamp'));
-          if (s.K('p_exec') && t.hp > 0 && t.type !== 'boss' && t.hp < t.maxHp * 0.05 * s.K('p_exec')) { this.hurt(t, t.hp, true, 'gun'); if (this.fxOn) this.fx.push({ k: 'exec', x: p.x, y: p.y, t: 0 }); }
+          if (s.K('p_exec') && t.hp > 0 && t.type !== 'boss' && t.hp < t.maxHp * 0.05 * s.K('p_exec')) { this.hurt(t, t.hp, true, 'skill'); if (this.fxOn) this.fx.push({ k: 'exec', x: p.x, y: p.y, t: 0 }); }
           if (s.mod.cryoammo && t.hp > 0) { t.slow = Math.max(t.slowUntil > this.time ? t.slow : 0, 0.1 * (t.type === 'boss' ? 0.4 : 1)); t.slowUntil = this.time + 1.5; }
           if (s.mod.chain && Math.random() < s.mod.chain) {
             const others = this.enemies.filter(o => o !== t && o.hp > 0).map(o => ({ o, d: Math.hypot(this.pos(o).x - p.x, this.pos(o).y - p.y) })).filter(x => x.d < 110).sort((a, b) => a.d - b.d).slice(0, 2);
@@ -1887,6 +1930,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.10.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, bossKind, P };
+  const VERSION = '0.11.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, P };
 })(typeof window !== 'undefined' ? window : globalThis);
