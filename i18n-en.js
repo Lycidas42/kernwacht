@@ -180,7 +180,7 @@ window.KW_EN = {
   'Neue Versionen lädt die App von selbst. Unter „Mehr“ kannst du auch gezielt nach einem Update suchen.': 'The app loads new versions by itself. Under “More” you can also check for an update.',
   'Installiert': 'Installed',
   'Kernwacht liegt jetzt auf deinem Startbildschirm.': 'Kernwacht is now on your home screen.',
-  'Effekte': 'Effects', '„Klar“ dämpft Explosionen und Hintergrund, damit Gegner gut sichtbar bleiben': '“Clear” tones down explosions and background so enemies stay easy to see', 'Voll': 'Full', 'Klar': 'Clear', 'Minimal': 'Minimal',
+  'Effekte': 'Effects', '„Klar“ dämpft Explosionen und Treffereffekte, damit Gegner gut sichtbar bleiben': '“Clear” tones down explosions and hit effects so enemies stay easy to see', 'Voll': 'Full', 'Klar': 'Clear', 'Minimal': 'Minimal',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',

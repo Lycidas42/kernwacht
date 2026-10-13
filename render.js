@@ -860,7 +860,7 @@
       ctx.save(); ctx.translate(view.cx + sx, view.cy + sy); ctx.scale(view.s, view.s);
 
       // Peilraster und Boden
-      ctx.lineWidth = 1 / view.s; ctx.strokeStyle = B.grid; ctx.globalAlpha = fxMode === 'full' ? 0.6 : 0.22;
+      ctx.lineWidth = 1 / view.s; ctx.strokeStyle = B.grid; ctx.globalAlpha = 0.6;
       for (let r = 100; r <= 500; r += 100) { ctx.beginPath(); ctx.arc(0, 0, r, Math.PI, 0); ctx.stroke(); }
       for (let i = 1; i < 6; i++) { const a = Math.PI + i * Math.PI / 6; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 50, Math.sin(a) * 50); ctx.lineTo(Math.cos(a) * 520, Math.sin(a) * 520); ctx.stroke(); }
       ctx.globalAlpha = 1;
@@ -1337,7 +1337,7 @@
           const x = ((a.x + t * 0.00001 * a.v * 60) % 1.2 - 0.1) * W, y = a.y * H;
           ctx.save(); ctx.translate(x, y); ctx.rotate(a.rot + t * 0.0002 * a.v * 40);
           ctx.beginPath(); for (let i = 0; i < a.n; i++) { const an = i / a.n * 6.28, rr = a.r * (0.7 + 0.3 * Math.sin(a.seed * 10 + i * 2.3)); ctx[i ? 'lineTo' : 'moveTo'](Math.cos(an) * rr, Math.sin(an) * rr); } ctx.closePath();
-          ctx.fillStyle = '#2a1a12'; ctx.fill(); ctx.strokeStyle = fxMode === 'full' ? 'rgba(255,150,80,0.45)' : 'rgba(255,150,80,0.16)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+          ctx.fillStyle = '#2a1a12'; ctx.fill(); ctx.strokeStyle = 'rgba(255,150,80,0.45)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
         }
       } else if (sec === 4 && false) {
         const x = W * 0.18, y = H * 0.16, r = Math.min(W, H) * 0.22;
