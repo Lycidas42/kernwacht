@@ -196,6 +196,28 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .skpts { display: flex; justify-content: space-between; align-items: center; font-size: .86rem; }
 .skpts b { color: #ffd23f; font-family: var(--font-num); }
 .sklist, .skcaps { display: grid; gap: 6px; }
+#skills .card { width: min(600px, 100%); gap: 10px; }
+.skmap { position: relative; height: min(52vh, 460px); min-height: 260px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, #ffd23f 6%, transparent), transparent 60%), var(--void); }
+.skmap svg { width: 100%; height: 100%; display: block; cursor: grab; }
+.skmap svg.drag { cursor: grabbing; }
+.skctl { position: absolute; right: 6px; bottom: 6px; }
+.skctl .mini { background: color-mix(in srgb, var(--deck) 85%, transparent); }
+.skmap text { font-family: inherit; pointer-events: none; }
+.skn { cursor: pointer; }
+.skn .bg { fill: var(--deck); stroke-width: 2; }
+.skn.lock { opacity: .38; }
+.skn.can .bg { animation: skpulse 1.6s ease-in-out infinite; }
+@keyframes skpulse { 50% { stroke-width: 4; } }
+.skn.sel .halo { stroke: #fff; stroke-width: 1.5; stroke-dasharray: 3 3; fill: none; }
+.skdet { border: 1px solid var(--line); border-left: 3px solid var(--c, #ffd23f); border-radius: 4px; padding: 9px 11px; display: grid; gap: 4px; min-height: 92px; align-content: start; }
+.skdet .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.skdet b { font-size: .95rem; } .skdet .tag { font-size: .7rem; color: var(--c, #ffd23f); text-transform: uppercase; letter-spacing: .06em; }
+.skdet small { font-size: .78rem; color: var(--ink-dim); line-height: 1.4; }
+.skdet small.nx { color: var(--c, #ffd23f); }
+.skdet small.req { color: #ff8a8a; }
+.skdet button { justify-self: start; height: 34px; padding: 0 16px; border: 1px solid var(--c, #ffd23f); border-radius: 4px; color: var(--c, #ffd23f); font-weight: 700; margin-top: 4px; }
+.skdet button:disabled { opacity: .35; }
 .sknode { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-left: 2px solid #ffd23f; border-radius: 4px; padding: 7px 10px; }
 .sknode.off { opacity: .45; border-left-color: var(--line); }
 .sknode.full { border-left-color: var(--heal); }
@@ -825,7 +847,7 @@ textarea { resize: vertical; min-height: 70px; }
       <div class="gitem"><b>Tageslauf</b><p>Alle spielen dieselben Wellen mit Standard-Ausrüstung. Der erste Lauf am Tag bringt einen Kristallbonus.</p></div>
       <div class="gitem"><b>Bergbau</b><p>Ab Rekordwelle 25: Planeten fördern Ressourcen, auch offline. Daraus werden Kristalle (Raffinerie), dauerhafte Forschung oder stärkere Module (Werkstatt).</p></div>
       <div class="gitem"><b>Erfolge</b><p>Sammeln sich nebenbei und geben kleine dauerhafte Boni.</p></div>
-      <div class="gitem"><b>Kommandantenrang</b><p>Jede überstandene Welle gibt Erfahrung. Jeder Rang bringt einen Skillpunkt für den Skilltree mit vier Ästen und je einem wählbaren Schlussstein. Zurücksetzen ist außerhalb eines Laufs kostenlos.</p></div>
+      <div class="gitem"><b>Kommandantenrang</b><p>Jede überstandene Welle gibt Erfahrung. Jeder Rang bringt einen Skillpunkt für die Sternkarte: vier Äste mit je zwei Pfaden und einem wählbaren Schlussstein, dazu Brückenknoten zwischen benachbarten Ästen. Zurücksetzen ist außerhalb eines Laufs kostenlos.</p></div>
     </details>
     <div class="actions"><button class="sec" id="guideClose">Zurück</button></div>
   </div>
@@ -836,11 +858,10 @@ textarea { resize: vertical; min-height: 70px; }
     <p class="dim" style="font-size:.8rem">Jede überstandene Welle bringt Erfahrung, jeder Rang einen Skillpunkt. Der Rang bleibt auch bei der Kernfusion. Skills wirken in normalen Läufen und Challenges, nicht im Tageslauf.</p>
     <div class="skxp"><div class="bar"><i id="skXpBar"></i></div><small id="skXpTxt"></small></div>
     <div class="skpts"><span id="skPts"></span><button class="mini" id="skReset">Punkte zurücksetzen</button></div>
+    <div class="skmap" id="skMap"><svg id="skSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="skctl"><button class="mini" id="skFit" aria-label="Ganze Karte">Ganze Karte</button></div></div>
     <div class="lbtabs mtabs" id="skTabs"></div>
-    <p class="dim" id="skBrDesc" style="font-size:.78rem;margin:0"></p>
-    <div id="skList" class="sklist"></div>
-    <h3 id="skCapHead"></h3>
-    <div id="skCaps" class="skcaps"></div>
+    <div class="skdet" id="skDet"></div>
     <div class="actions"><button class="sec" id="skClose">Zurück</button></div>
   </div>
 </div>

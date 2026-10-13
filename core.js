@@ -405,50 +405,68 @@
   // Knoten je Ast der Reihe nach; jeder braucht den vorherigen. cap: Schlussstein (je Ast nur einer wählbar)
   const SKILLS = [
     { id: 'p_cal',    br: 'p', max: 3, name: 'Kalibrierung',     desc: l => `+${pc(0.06 * l)} Kanonenschaden` },
-    { id: 'p_pierce', br: 'p', max: 1, name: 'Wolframkern',      desc: () => '+1 Durchschlag für die Kanone' },
-    { id: 'p_mark',   br: 'p', max: 2, name: 'Schwachstelle',    desc: l => `Markierte Ziele erleiden ${pc(0.2 * l)} mehr Schaden aus allen Quellen, auch Mutterschiffe` },
-    { id: 'p_poison', br: 'p', max: 3, name: 'Giftgeschosse',    desc: l => `Kanonentreffer vergiften: ${pc(0.1 * l)} des Treffers pro Sekunde, klingt in 3 s ab, stapelt. Dazu ${(0.05 * l).toFixed(2).replace('.', ',')} % der Lebenspunkte pro Sekunde (Mutterschiffe ${(0.01 * l).toFixed(2).replace('.', ',')} %)` },
-    { id: 'p_vamp',   br: 'p', max: 3, name: 'Vampirgeschosse',  desc: l => `Jeder Kanonentreffer repariert ${(0.03 * l).toFixed(2).replace('.', ',')} % der Hülle` },
-    { id: 'p_exec',   br: 'p', max: 3, name: 'Hinrichtung',      desc: l => `Kanonentreffer zerstören Schiffe unter ${pc(0.05 * l)} Lebenspunkten sofort (keine Mutterschiffe)` },
-    { id: 'p_charge', br: 'p', cap: 1, name: 'Ladeschuss',       desc: () => 'Alle 6 s feuert die Kanone einen geladenen Schuss: 12× Schaden, durchschlägt alles auf seiner Linie' },
-    { id: 'p_sniper', br: 'p', cap: 1, name: 'Scharfschütze',    desc: () => '+30 % Kanonenschaden und +0,5× Krit-Schaden' },
+    { id: 'p_pierce', br: 'p', par: 'p_cal', max: 1, name: 'Wolframkern',      desc: () => '+1 Durchschlag für die Kanone' },
+    { id: 'p_mark',   br: 'p', par: 'p_pierce', max: 2, name: 'Schwachstelle',    desc: l => `Markierte Ziele erleiden ${pc(0.2 * l)} mehr Schaden aus allen Quellen, auch Mutterschiffe` },
+    { id: 'p_poison', br: 'p', par: 'p_cal', max: 3, name: 'Giftgeschosse',    desc: l => `Kanonentreffer vergiften: ${pc(0.1 * l)} des Treffers pro Sekunde, klingt in 3 s ab, stapelt. Dazu ${(0.05 * l).toFixed(2).replace('.', ',')} % der Lebenspunkte pro Sekunde (Mutterschiffe ${(0.01 * l).toFixed(2).replace('.', ',')} %)` },
+    { id: 'p_vamp',   br: 'p', par: 'p_poison', max: 3, name: 'Vampirgeschosse',  desc: l => `Jeder Kanonentreffer repariert ${(0.03 * l).toFixed(2).replace('.', ',')} % der Hülle` },
+    { id: 'p_exec',   br: 'p', par: 'p_poison', max: 3, name: 'Hinrichtung',      desc: l => `Kanonentreffer zerstören Schiffe unter ${pc(0.05 * l)} Lebenspunkten sofort (keine Mutterschiffe)` },
+    { id: 'p_charge', br: 'p', par: 'p_mark', cap: 1, name: 'Ladeschuss',       desc: () => 'Alle 6 s feuert die Kanone einen geladenen Schuss: 12× Schaden, durchschlägt alles auf seiner Linie' },
+    { id: 'p_sniper', br: 'p', par: 'p_exec', cap: 1, name: 'Scharfschütze',    desc: () => '+30 % Kanonenschaden und +0,5× Krit-Schaden' },
     { id: 'a_war',    br: 'a', max: 3, name: 'Sprengköpfe',      desc: l => `+${pc(0.1 * l)} Schaden von Raketen, Kryowerfer, Minen, Schockwelle und Klingen` },
-    { id: 'a_cluster',br: 'a', max: 1, name: 'Streuraketen',     desc: () => 'Raketen setzen beim Einschlag 3 Submunitionen mit je 40 % Schaden frei' },
-    { id: 'a_burn',   br: 'a', max: 2, name: 'Brandminen',       desc: l => `Minen hinterlassen 3 s Feuer: ${pc(0.25 * l)} Minenschaden pro Sekunde` },
-    { id: 'a_frost',  br: 'a', max: 1, name: 'Frostwelle',       desc: () => 'Die Schockwelle verlangsamt getroffene Schiffe 2 s um 30 %' },
-    { id: 'a_blades', br: 'a', max: 2, name: 'Klingenschwarm',   desc: l => `+${l} Orbitklinge${l > 1 ? 'n' : ''} (wenn Orbitklingen aktiv sind)` },
-    { id: 'a_toxin',  br: 'a', max: 1, name: 'Kryotoxin',        desc: () => 'Kryotreffer vergiften: Kryoschaden pro Sekunde, klingt in 3 s ab' },
-    { id: 'a_drones', br: 'a', cap: 1, name: 'Drohnenbucht',     desc: () => 'Zwei Kampfdrohnen kreisen um die Kanone und feuern auf Schiffe in Reichweite' },
-    { id: 'a_barrage',br: 'a', cap: 1, name: 'Bombardement',     desc: () => 'Alle 8 s schlägt Artillerie in der dichtesten Gruppe ein (5× Kanonenschaden)' },
+    { id: 'a_cluster',br: 'a', par: 'a_war', max: 1, name: 'Streuraketen',     desc: () => 'Raketen setzen beim Einschlag 3 Submunitionen mit je 40 % Schaden frei' },
+    { id: 'a_burn',   br: 'a', par: 'a_war', max: 2, name: 'Brandminen',       desc: l => `Minen hinterlassen 3 s Feuer: ${pc(0.25 * l)} Minenschaden pro Sekunde` },
+    { id: 'a_frost',  br: 'a', par: 'a_burn', max: 1, name: 'Frostwelle',       desc: () => 'Die Schockwelle verlangsamt getroffene Schiffe 2 s um 30 %' },
+    { id: 'a_blades', br: 'a', par: 'a_cluster', max: 2, name: 'Klingenschwarm',   desc: l => `+${l} Orbitklinge${l > 1 ? 'n' : ''} (wenn Orbitklingen aktiv sind)` },
+    { id: 'a_toxin',  br: 'a', par: 'a_burn', max: 1, name: 'Kryotoxin',        desc: () => 'Kryotreffer vergiften: Kryoschaden pro Sekunde, klingt in 3 s ab' },
+    { id: 'a_drones', br: 'a', par: 'a_blades', cap: 1, name: 'Drohnenbucht',     desc: () => 'Zwei Kampfdrohnen kreisen um die Kanone und feuern auf Schiffe in Reichweite' },
+    { id: 'a_barrage',br: 'a', par: 'a_frost', cap: 1, name: 'Bombardement',     desc: () => 'Alle 8 s schlägt Artillerie in der dichtesten Gruppe ein (5× Kanonenschaden)' },
     { id: 'b_plate',  br: 'b', max: 3, name: 'Panzerplatten',    desc: l => `+${pc(0.05 * l)} Strukturpunkte` },
-    { id: 'b_regen',  br: 'b', max: 2, name: 'Nanoschwarm',      desc: l => `+${pc(0.25 * l)} Reparatur` },
-    { id: 'b_leech',  br: 'b', max: 3, name: 'Lebensraub',       desc: l => `Jeder Abschuss repariert ${(0.3 * l).toFixed(1).replace('.', ',')} % der Hülle` },
-    { id: 'b_reflect',br: 'b', max: 2, name: 'Reflexion',        desc: l => `Wird die Kanone getroffen, erleidet das nächste Schiff ${l}× Kanonenschaden` },
-    { id: 'b_stun',   br: 'b', max: 1, name: 'Schockplatten',    desc: () => 'Schiffe am Schutzwall werden zurückgestoßen und 1 s betäubt' },
-    { id: 'b_emerg',  br: 'b', max: 1, name: 'Notschild',        desc: () => 'Einmal pro Welle: fällt die Hülle unter 25 %, ist die Kanone 3 s unverwundbar' },
-    { id: 'b_phoenix',br: 'b', cap: 1, name: 'Phönix',           desc: () => 'Einmal pro Lauf: fällt die Kanone, steht sie mit halber Hülle wieder auf' },
-    { id: 'b_aegis',  br: 'b', cap: 1, name: 'Aegis',            desc: () => 'Alle 15 s ein Schild, der Schaden bis 25 % der Hülle abfängt' },
+    { id: 'b_regen',  br: 'b', par: 'b_plate', max: 2, name: 'Nanoschwarm',      desc: l => `+${pc(0.25 * l)} Reparatur` },
+    { id: 'b_leech',  br: 'b', par: 'b_plate', max: 3, name: 'Lebensraub',       desc: l => `Jeder Abschuss repariert ${(0.3 * l).toFixed(1).replace('.', ',')} % der Hülle` },
+    { id: 'b_reflect',br: 'b', par: 'b_leech', max: 2, name: 'Reflexion',        desc: l => `Wird die Kanone getroffen, erleidet das nächste Schiff ${l}× Kanonenschaden` },
+    { id: 'b_stun',   br: 'b', par: 'b_reflect', max: 1, name: 'Schockplatten',    desc: () => 'Schiffe am Schutzwall werden zurückgestoßen und 1 s betäubt' },
+    { id: 'b_emerg',  br: 'b', par: 'b_regen', max: 1, name: 'Notschild',        desc: () => 'Einmal pro Welle: fällt die Hülle unter 25 %, ist die Kanone 3 s unverwundbar' },
+    { id: 'b_phoenix',br: 'b', par: 'b_emerg', cap: 1, name: 'Phönix',           desc: () => 'Einmal pro Lauf: fällt die Kanone, steht sie mit halber Hülle wieder auf' },
+    { id: 'b_aegis',  br: 'b', par: 'b_stun', cap: 1, name: 'Aegis',            desc: () => 'Alle 15 s ein Schild, der Schaden bis 25 % der Hülle abfängt' },
     { id: 't_charge', br: 't', max: 3, name: 'Schnellladung',    desc: l => `Orbitalschlag lädt ${pc(0.15 * l)} schneller` },
-    { id: 't_quake',  br: 't', max: 1, name: 'Nachbeben',        desc: () => 'Der Orbitalschlag hinterlässt 3 s ein Feld mit 15 % Schlagschaden pro Sekunde' },
-    { id: 't_stasis', br: 't', max: 2, name: 'Kryostase',        desc: l => `Stasis hält ${l} s länger` },
-    { id: 't_over',   br: 't', max: 2, name: 'Feuersturm',       desc: l => `Überladung +${(0.25 * l).toFixed(2).replace('.', ',')}× Feuerrate` },
-    { id: 't_fund',   br: 't', max: 3, name: 'Kriegskasse',      desc: l => `+${pc(0.05 * l)} Energie` },
-    { id: 't_call',   br: 't', max: 1, name: 'Vorstoßprämie',    desc: () => 'Früh gerufene Wellen bringen doppelte Bonus-Energie' },
-    { id: 't_loop',   br: 't', cap: 1, name: 'Zeitschleife',     desc: () => 'Stasis und Überladung laden 40 % schneller, der Orbitalschlag 25 %' },
-    { id: 't_hole',   br: 't', cap: 1, name: 'Schwarzes Loch',   desc: () => 'Alle 20 s zieht ein Wirbel Schiffe 3 s lang zusammen und beschädigt sie (keine Mutterschiffe)' },
+    { id: 't_quake',  br: 't', par: 't_charge', max: 1, name: 'Nachbeben',        desc: () => 'Der Orbitalschlag hinterlässt 3 s ein Feld mit 15 % Schlagschaden pro Sekunde' },
+    { id: 't_stasis', br: 't', par: 't_charge', max: 2, name: 'Kryostase',        desc: l => `Stasis hält ${l} s länger` },
+    { id: 't_over',   br: 't', par: 't_stasis', max: 2, name: 'Feuersturm',       desc: l => `Überladung +${(0.25 * l).toFixed(2).replace('.', ',')}× Feuerrate` },
+    { id: 't_fund',   br: 't', par: 't_quake', max: 3, name: 'Kriegskasse',      desc: l => `+${pc(0.05 * l)} Energie` },
+    { id: 't_call',   br: 't', par: 't_fund', max: 1, name: 'Vorstoßprämie',    desc: () => 'Früh gerufene Wellen bringen doppelte Bonus-Energie' },
+    { id: 't_loop',   br: 't', par: 't_over', cap: 1, name: 'Zeitschleife',     desc: () => 'Stasis und Überladung laden 40 % schneller, der Orbitalschlag 25 %' },
+    { id: 'x_seek',   br: 'x', max: 1, link: ['p', 'a'], name: 'Zielsuchköpfe', desc: () => 'Raketen fliegen bevorzugt zum markierten Ziel und treffen es mit +50 % Schaden' },
+    { id: 'x_shrap',  br: 'x', max: 1, link: ['a', 'b'], name: 'Splitterpanzer', desc: () => 'Treffer an der Hülle schleudern Splitter auf die 3 nächsten Schiffe (je 1× Kanonenschaden)' },
+    { id: 'x_proto',  br: 'x', max: 1, link: ['b', 't'], name: 'Notfallprotokoll', desc: () => 'Einmal pro Welle: fällt die Hülle unter 30 %, friert ein Stasisfeld alle Gegner 3 s ein' },
+    { id: 'x_beam',   br: 'x', max: 1, link: ['t', 'p'], name: 'Leitstrahl', desc: () => 'Der Orbitalschlag vergiftet getroffene Schiffe (20 % des Schlagschadens pro Sekunde) und markiert das stärkste, wenn noch nichts markiert ist' },
+    { id: 't_hole',   br: 't', par: 't_call', cap: 1, name: 'Schwarzes Loch',   desc: () => 'Alle 20 s zieht ein Wirbel Schiffe 3 s lang zusammen und beschädigt sie (keine Mutterschiffe)' },
   ];
   const SK_BY_ID = {}; SKILLS.forEach(k => (SK_BY_ID[k.id] = k));
   const SK_CAP_AT = 8; // Punkte im Ast für den Schlussstein
+  const SK_LINK_AT = 6; // Punkte in beiden Nachbarästen für einen Brückenknoten
   const skLv = (m, id) => (m.sk && m.sk[id]) || 0;
   const skSpent = m => Object.values(m.sk || {}).reduce((a, b) => a + b, 0);
   const skPoints = m => rankOf(m).rank - skSpent(m);
   const skBranchPts = (m, br) => SKILLS.filter(k => k.br === br).reduce((a, k) => a + skLv(m, k.id), 0);
+  // Baum: jeder Knoten braucht seinen Elternknoten (par); Schlussstein zusätzlich 8 Punkte im Ast und
+  // keinen anderen Schlussstein im Ast; Brückenknoten (link) je 6 Punkte in beiden Nachbarästen
+  function skOpen(m, id) {
+    const k = SK_BY_ID[id]; if (!k) return false;
+    if (k.link) return k.link.every(b => skBranchPts(m, b) >= SK_LINK_AT);
+    if (k.par && !skLv(m, k.par)) return false;
+    if (k.cap) return !SKILLS.some(x => x.br === k.br && x.cap && x.id !== id && skLv(m, x.id)) && skBranchPts(m, k.br) - skLv(m, id) >= SK_CAP_AT;
+    return true;
+  }
   function skCan(m, id) {
     const k = SK_BY_ID[id]; if (!k || skPoints(m) < 1) return false;
-    if (k.cap) return !SKILLS.some(x => x.br === k.br && x.cap && skLv(m, x.id)) && skBranchPts(m, k.br) >= SK_CAP_AT;
-    if (skLv(m, id) >= k.max) return false;
-    const line = SKILLS.filter(x => x.br === k.br && !x.cap), i = line.indexOf(k);
-    return i === 0 || skLv(m, line[i - 1].id) > 0;
+    return skLv(m, id) < (k.cap ? 1 : k.max) && skOpen(m, id);
+  }
+  // Ungültige Knoten (z. B. nach Umbau des Baums) entfernen; die Punkte werden damit wieder frei
+  function skFix(m) {
+    if (!m.sk) return 0; let n = 0, ch = true;
+    for (const id in m.sk) if (!SK_BY_ID[id] || !m.sk[id]) { n += m.sk[id] || 0; delete m.sk[id]; }
+    while (ch) { ch = false; for (const id in m.sk) if (!skOpen(m, id)) { n += m.sk[id]; delete m.sk[id]; ch = true; } }
+    return n;
   }
   function skBuy(m, id) { if (!skCan(m, id)) return false; m.sk = m.sk || {}; m.sk[id] = skLv(m, id) + 1; return true; }
   function skReset(m) { m.sk = {}; }
@@ -556,7 +574,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
       const o = {}; keep.forEach(k => (o[k] = this[k]));
       o.enemies = this.enemies.map(e => Object.assign({}, e));
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -858,6 +876,12 @@
         let n = null, nd = 1e9; for (const e of this.enemies) if (e.hp > 0 && e.dist < nd) { nd = e.dist; n = e; }
         if (n) { this.reflT = this.time + 0.2; this.hurt(n, this.s.gunDmg * K('b_reflect'), false, 'skill'); if (this.fxOn) { const p = this.pos(n); this.fx.push({ k: 'reflect', x: p.x, y: p.y, t: 0 }); } }
       }
+      if (K('x_shrap') && this.time >= (this.shrapT || 0)) {
+        // Splitterpanzer: Splitter auf die drei nächsten Schiffe
+        this.shrapT = this.time + 0.3;
+        const near = this.enemies.filter(e => e.hp > 0).sort((a, b) => a.dist - b.dist).slice(0, 3);
+        for (const n of near) { this.hurt(n, this.s.gunDmg, false, 'skill'); if (this.fxOn) { const p = this.pos(n); this.fx.push({ k: 'reflect', x: p.x, y: p.y, t: 0 }); } }
+      }
       if (this.time < this.invulnUntil) return;
       let dd = d * (1 - this.s.armor);
       if (this.aegis > 0) { const ab = Math.min(this.aegis, dd); this.aegis -= ab; dd -= ab; this.blocked = (this.blocked || 0) + ab; if (dd <= 0) return; }
@@ -866,6 +890,7 @@
       this.hp -= dd;
       if (this.fxOn) this.fx.push({ k: 'hurt', t: 0 });
       if (this.s.mod && this.s.mod.nova && this.hp > 0 && this.hp < this.s.maxHp * 0.3 && this.time >= this.novaT - 9) this.fireNova();
+      if (K('x_proto') && this.hp > 0 && this.hp < this.s.maxHp * 0.3 && this.protoWave !== this.wave) { this.protoWave = this.wave; this.freezeUntil = Math.max(this.freezeUntil, this.time + 3); if (this.fxOn) this.fx.push({ k: 'freeze', t: 0 }); }
       if (K('b_emerg') && this.hp > 0 && this.hp < this.s.maxHp * 0.25 && this.emergWave !== this.wave) { this.emergWave = this.wave; this.invulnUntil = this.time + 3; if (this.fxOn) this.fx.push({ k: 'emerg', t: 0 }); }
       if (this.hp <= 0 && !this.dead) {
         if (K('b_phoenix') && !this.phoenixUsed) { this.phoenixUsed = true; this.hp = this.s.maxHp * 0.5; this.invulnUntil = this.time + 3; if (this.fxOn) this.fx.push({ k: 'phoenix', t: 0 }); return; }
@@ -971,11 +996,16 @@
     strike(x, y) {
       if (this.charge < 1 || this.dead) return false;
       this.charge = 0; this.strikeLock = this.time + 4; if (!this.admin) statOf(this.home).strikes++;
+      const beam = this.s.K && this.s.K('x_beam'); let bt = null;
       for (const e of this.enemies) {
         if (e.hp <= 0) continue;
         const p = this.pos(e);
-        if (Math.hypot(p.x - x, p.y - y) <= STRIKE_R + e.r) this.hurt(e, this.s.strikeDmg + e.maxHp * (e.type === 'boss' ? P.strikePct * 0.15 : P.strikePct), true, 'strike');
+        if (Math.hypot(p.x - x, p.y - y) <= STRIKE_R + e.r) {
+          this.hurt(e, this.s.strikeDmg + e.maxHp * (e.type === 'boss' ? P.strikePct * 0.15 : P.strikePct), true, 'strike');
+          if (beam && e.hp > 0) { this.poison(e, this.s.strikeDmg * 0.2); if (!bt || e.maxHp > bt.maxHp) bt = e; }
+        }
       }
+      if (bt && !(this.focus && this.focus.hp > 0)) { this.focus = bt; this.focusUntil = Infinity; }
       if (this.fxOn) this.fx.push({ k: 'strike', x, y, t: 0 });
       if (this.s.K && this.s.K('t_quake')) this.fires.push({ x, y, r: STRIKE_R, dps: this.s.strikeDmg * 0.15, until: this.time + 3, k: 'quake' });
       return true;
@@ -1241,6 +1271,7 @@
             this.rocketT = 0;
             let best = cand[0], bn = -1;
             for (const e of cand) { const p = this.pos(e); let n = 0; for (const o of cand) { const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) < s.rocketR) n++; } if (n > bn) { bn = n; best = e; } }
+            const fo = this.focus; if (s.K && s.K('x_seek') && fo && fo.hp > 0 && cand.includes(fo)) best = fo;
             this.rockets.push({ x: -40, y: -6, vx: 0, vy: -60, tgt: best, life: 6 });
             if (this.fxOn) this.fx.push({ k: 'rlaunch', t: 0 });
           } else this.rocketT = s.rocketCd;
@@ -1269,7 +1300,7 @@
         for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - m.x, p.y - m.y) < e.r + 8) { hit = true; break; } }
         if (hit || m.life <= 0 || (!t && m.y < -FIELD_H)) {
           m.done = true;
-          for (const e of this.enemies) { const p = this.pos(e); if (e.hp > 0 && Math.hypot(p.x - m.x, p.y - m.y) < s.rocketR + e.r) this.hurt(e, s.rocketDmg, false, 'rocket'); }
+          for (const e of this.enemies) { const p = this.pos(e); if (e.hp > 0 && Math.hypot(p.x - m.x, p.y - m.y) < s.rocketR + e.r) this.hurt(e, s.rocketDmg * (e === this.focus && s.K && s.K('x_seek') ? 1.5 : 1), false, 'rocket'); }
           if (this.fxOn) this.fx.push({ k: 'mine', x: m.x, y: m.y, t: 0, r: s.rocketR, rocket: true });
           if (s.K('a_cluster')) for (let i = 0; i < 3; i++) {
             // Streuraketen: drei Submunitionen rund um den Einschlag
@@ -1663,6 +1694,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.7.1'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
+  const VERSION = '0.8.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);

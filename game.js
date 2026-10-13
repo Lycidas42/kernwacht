@@ -25,6 +25,7 @@
     meta.bestEver = Math.max(meta.bestEver || 0, meta.best || 0);
   }
   normMeta();
+  C.skFix(meta); // Skillbaum umgebaut: ungültige Knoten geben ihre Punkte zurück
   let run = null;
   let frozenSave = false; // beim Ersetzen des Spielstands: nichts mehr zurückschreiben
   function save() {
@@ -241,8 +242,103 @@
   $('setClose').addEventListener('click', home);
   applySettings();
 
-  // ---------- Kommandant (Skilltree) ----------
-  let skTab = 'p';
+  // ---------- Kommandant (Skilltree als Sternkarte) ----------
+  // Kommando in der Mitte, vier Äste in die Himmelsrichtungen; jeder Ast gabelt sich nach der Wurzel
+  // in zwei Pfade (− links, + rechts im Uhrzeigersinn), Brückenknoten sitzen zwischen den Ästen.
+  const SK_COL = { p: '#3ef0ff', a: '#ff8a3d', b: '#5dffb0', t: '#c3a6ff', x: '#ffd23f' };
+  const SK_AX = { p: -Math.PI / 2, a: 0, b: Math.PI / 2, t: Math.PI };
+  const SK_LAY = {
+    p_cal: [1, 0], p_pierce: [2, -1], p_mark: [3, -1], p_charge: [4.2, -1], p_poison: [2, 1], p_exec: [3, 0.8], p_vamp: [2.5, 2.2], p_sniper: [4.2, 0.8],
+    a_war: [1, 0], a_cluster: [2, -1], a_blades: [3, -1], a_drones: [4.2, -1], a_burn: [2, 1], a_frost: [3, 0.8], a_toxin: [2.5, 2.2], a_barrage: [4.2, 0.8],
+    b_plate: [1, 0], b_regen: [2, -1], b_emerg: [3, -1], b_phoenix: [4.2, -1], b_leech: [2, 1], b_reflect: [3, 1], b_stun: [4, 1], b_aegis: [5.2, 1],
+    t_charge: [1, 0], t_stasis: [2, -1], t_over: [3, -1], t_loop: [4.2, -1], t_quake: [2, 1], t_fund: [3, 1], t_call: [4, 1], t_hole: [5.2, 1],
+  };
+  const SK_ANCH = { x_seek: ['p_vamp', 'a_blades'], x_shrap: ['a_toxin', 'b_emerg'], x_proto: ['b_stun', 't_over'], x_beam: ['t_call', 'p_mark'] };
+  const SK_POS = {};
+  for (const id in SK_LAY) {
+    const [d, l] = SK_LAY[id], ax = SK_AX[id[0]], r = 30 + 72 * d, lat = 56 * l;
+    SK_POS[id] = { x: Math.cos(ax) * r - Math.sin(ax) * lat, y: Math.sin(ax) * r + Math.cos(ax) * lat };
+  }
+  for (const id in SK_ANCH) { const [a, b] = SK_ANCH[id].map(k => SK_POS[k]), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, k = 1.35; SK_POS[id] = { x: mx * k, y: my * k }; }
+  const skStars = (() => { let z = 7; const rnd = () => ((z = (z * 16807) % 2147483647) / 2147483647); const o = []; for (let i = 0; i < 140; i++) o.push(`<circle cx="${(rnd() * 1100 - 550).toFixed(0)}" cy="${(rnd() * 1100 - 550).toFixed(0)}" r="${(0.4 + rnd() * 1.1).toFixed(1)}" fill="#fff" opacity="${(0.15 + rnd() * 0.5).toFixed(2)}"/>`); return o.join(''); })();
+  const skView = { x: 0, y: -120, z: 1 };
+  let skSel = null, skViewSet = false;
+  const brName = b => (C.SK_BRANCH.find(x => x.id === b) || { name: 'Brücke' }).name;
+  function skApplyView() {
+    const svg = $('skSvg'), W = svg.clientWidth || 320, H = svg.clientHeight || 400;
+    skView.z = Math.max(0.35, Math.min(2.2, skView.z));
+    skView.x = Math.max(-480, Math.min(480, skView.x)); skView.y = Math.max(-480, Math.min(480, skView.y));
+    svg.setAttribute('viewBox', `${skView.x - W / 2 / skView.z} ${skView.y - H / 2 / skView.z} ${W / skView.z} ${H / skView.z}`);
+  }
+  function skFocus(br) {
+    if (br === 'all') {
+      const svg = $('skSvg'), xs = Object.values(SK_POS).map(p => p.x), ys = Object.values(SK_POS).map(p => p.y);
+      const x0 = Math.min(...xs) - 50, x1 = Math.max(...xs) + 50, y0 = Math.min(...ys) - 40, y1 = Math.max(...ys) + 50;
+      skView.x = (x0 + x1) / 2; skView.y = (y0 + y1) / 2; skView.z = Math.min((svg.clientWidth || 320) / (x1 - x0), (svg.clientHeight || 400) / (y1 - y0));
+    }
+    else { const ax = SK_AX[br]; skView.x = Math.cos(ax) * 175; skView.y = Math.sin(ax) * 175; skView.z = 0.85; }
+    skApplyView();
+  }
+  function skState(k) {
+    const l = C.skLv(meta, k.id), max = k.cap ? 1 : k.max;
+    return { l, max, full: l >= max, can: C.skCan(meta, k.id), open: C.skOpen(meta, k.id) };
+  }
+  function renderSkMap() {
+    const out = [skStars];
+    for (const r of [102, 246, 390]) out.push(`<circle r="${r}" fill="none" stroke="#ffffff" stroke-opacity=".05" stroke-dasharray="2 6"/>`);
+    const line = (a, b, col, lit, dash) => out.push(`<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="${col}" stroke-width="${lit ? 3 : 1.5}" stroke-opacity="${lit ? 0.9 : 0.25}" ${dash ? 'stroke-dasharray="4 5"' : ''} ${lit ? `style="filter:drop-shadow(0 0 4px ${col})"` : ''}/>`);
+    const O = { x: 0, y: 0 };
+    for (const k of C.SKILLS) {
+      const p = SK_POS[k.id]; if (!p) continue; const col = SK_COL[k.br];
+      if (k.link) for (const a of SK_ANCH[k.id]) line(SK_POS[a], p, col, C.skLv(meta, k.id) > 0, true);
+      else line(k.par ? SK_POS[k.par] : O, p, col, C.skLv(meta, k.id) > 0 && (!k.par || C.skLv(meta, k.par) > 0), false);
+    }
+    // Kommando
+    const R = C.rankOf(meta);
+    out.push(`<g class="skn" data-sk="hub"><circle r="30" fill="var(--deck)" stroke="#ffd23f" stroke-width="2" style="filter:drop-shadow(0 0 8px #ffd23f)"/><text y="-4" text-anchor="middle" font-size="9" fill="#ffd23f" letter-spacing="1">RANG</text><text y="12" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">${R.rank}</text></g>`);
+    for (const k of C.SKILLS) {
+      const p = SK_POS[k.id]; if (!p) continue;
+      const st = skState(k), col = SK_COL[k.br], rad = k.cap ? 21 : k.link ? 17 : 15;
+      const cls = ['skn', st.l ? 'own' : '', st.can ? 'can' : '', !st.l && !st.open ? 'lock' : '', skSel === k.id ? 'sel' : ''].join(' ');
+      const shape = k.link
+        ? `<rect class="bg" x="${-rad}" y="${-rad}" width="${rad * 2}" height="${rad * 2}" transform="rotate(45)" stroke="${col}" ${st.l ? `fill="${col}" fill-opacity=".28"` : ''}/>`
+        : k.cap ? `<polygon class="bg" points="${[0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 3 * i + Math.PI / 6; return (Math.cos(a) * rad).toFixed(1) + ',' + (Math.sin(a) * rad).toFixed(1); }).join(' ')}" stroke="${col}" ${st.l ? `fill="${col}" fill-opacity=".3"` : ''}/>`
+        : `<circle class="bg" r="${rad}" stroke="${col}" ${st.l ? `fill="${col}" fill-opacity=".18"` : ''}/>`;
+      const C2 = 2 * Math.PI * (rad + 4);
+      const ring = !k.cap && !k.link && st.max > 1 ? `<circle r="${rad + 4}" fill="none" stroke="${col}" stroke-opacity=".2" stroke-width="2.5"/><circle r="${rad + 4}" fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="${(C2 * st.l / st.max).toFixed(1)} ${C2.toFixed(1)}" transform="rotate(-90)"/>` : '';
+      const mid = k.cap || k.link ? (st.l ? '✓' : '') : `${st.l}/${st.max}`;
+      out.push(`<g class="${cls}" data-sk="${k.id}" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})" ${st.l ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}>
+        <circle class="halo" r="${rad + 9}" fill="none"/>${ring}${shape}
+        <text y="4" text-anchor="middle" font-size="${k.cap || k.link ? 12 : 10}" font-weight="700" fill="${st.l ? '#fff' : col}">${mid}</text>
+        <text y="${rad + 15}" text-anchor="middle" font-size="9.5" fill="${st.l ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${k.name}</text></g>`);
+    }
+    $('skSvg').innerHTML = out.join('');
+  }
+  function renderSkDet() {
+    const d = $('skDet'), k = skSel && C.SKILLS.find(x => x.id === skSel);
+    if (!k) {
+      d.style.setProperty('--c', '#ffd23f');
+      d.innerHTML = `<div class="hd"><b>Kommando</b><span class="tag">Sternkarte</span></div>
+        <small>Tippe einen Stern an. Jeder Ast gabelt sich in zwei Pfade, ein Knoten braucht seinen Vorgänger. Am Ende jedes Pfads wartet ein Schlussstein (ab ${C.SK_CAP_AT} Punkten im Ast, einer pro Ast). Brückenknoten zwischen zwei Ästen öffnen sich mit je ${C.SK_LINK_AT} Punkten in beiden.</small>
+        ${C.SK_BRANCH.map(b => `<small><span style="color:${SK_COL[b.id]}">${b.name}</span> – <span>${b.desc}</span></small>`).join('')}`;
+      return;
+    }
+    const st = skState(k), col = SK_COL[k.br];
+    d.style.setProperty('--c', col);
+    const tag = (k.link ? ['Brücke', ...k.link.map(brName)] : [brName(k.br), k.cap ? 'Schlussstein' : '']).concat(k.cap || k.link ? (st.l ? 'gewählt' : '') : `Stufe ${st.l}/${st.max}`).filter(Boolean);
+    let txt = k.cap || k.link ? `<small>${k.desc()}</small>` : st.l ? `<small>${k.desc(st.l)}</small>${st.full ? '' : `<small class="nx">Nächste Stufe: ${k.desc(st.l + 1)}</small>`}` : `<small>${k.desc(1)}</small>`;
+    let req = '';
+    if (!st.l && !st.open) {
+      if (k.link) req = `Braucht je ${C.SK_LINK_AT} Punkte in ${k.link.map(b => `${brName(b)} (${C.skBranchPts(meta, b)})`).join(' und ')}`;
+      else if (k.par && !C.skLv(meta, k.par)) req = `Braucht zuerst „${C.SKILLS.find(x => x.id === k.par).name}“`;
+      else if (k.cap) { const o = C.SKILLS.find(x => x.br === k.br && x.cap && x.id !== k.id && C.skLv(meta, x.id)); req = o ? `Im Ast ist schon „${o.name}“ gewählt` : `Braucht ${C.SK_CAP_AT} Punkte in ${brName(k.br)} (jetzt ${C.skBranchPts(meta, k.br)})`; }
+    } else if (!st.full && !st.can && C.skPoints(meta) < 1) req = 'Kein freier Skillpunkt';
+    if (req) txt += `<small class="req">${req}</small>`;
+    const btn = st.full ? '' : `<button id="skBuy" ${st.can ? '' : 'disabled'}>${k.cap || k.link ? 'Wählen' : st.l ? '+1 Stufe' : 'Lernen'}</button>`;
+    d.innerHTML = `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div>${txt}${btn}`;
+    const b = $('skBuy');
+    if (b) b.addEventListener('click', () => { if (C.skBuy(meta, k.id)) { meta.skLast = k.br === 'x' ? meta.skLast : k.br; A.play('buy'); if (runAlive()) run.recalc(); save(); renderSkills(); } });
+  }
   function renderSkills() {
     const R = C.rankOf(meta), pts = C.skPoints(meta);
     $('skRank').textContent = 'Rang ' + R.rank;
@@ -251,21 +347,37 @@
     $('skPts').innerHTML = `Freie Punkte: <b>${pts}</b> von ${R.rank}`;
     $('skReset').disabled = runAlive() || !C.skSpent(meta);
     $('skReset').textContent = runAlive() ? 'Zurücksetzen nach dem Lauf' : 'Punkte zurücksetzen';
-    $('skTabs').innerHTML = C.SK_BRANCH.map(b => `<button data-br="${b.id}" aria-selected="${b.id === skTab}">${b.name} ${C.skBranchPts(meta, b.id)}</button>`).join('');
-    $$('#skTabs [data-br]').forEach(b => b.addEventListener('click', () => { skTab = b.dataset.br; A.play('click'); renderSkills(); }));
-    const B = C.SK_BRANCH.find(b => b.id === skTab);
-    $('skBrDesc').textContent = B.desc;
-    const node = k => {
-      const l = C.skLv(meta, k.id), can = C.skCan(meta, k.id), max = k.cap ? 1 : k.max, full = l >= max;
-      const txt = k.cap ? k.desc() : l ? `${k.desc(l)}</small>${full ? '' : `<small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>`}<small hidden>` : k.desc(1);
-      return `<div class="sknode ${full ? 'full' : ''} ${!can && !l ? 'off' : ''} ${k.cap && l ? 'chosen' : ''}"><div><b>${k.name}</b><span class="lv">${k.cap ? (l ? 'gewählt' : '') : l + '/' + max}</span><small>${txt}</small></div>
-        <button data-sk="${k.id}" ${can ? '' : 'disabled'}>${k.cap ? (l ? '✓' : 'Wählen') : full ? 'MAX' : '+1'}</button></div>`;
-    };
-    $('skList').innerHTML = C.SKILLS.filter(k => k.br === skTab && !k.cap).map(node).join('');
-    $('skCapHead').textContent = `Schlussstein (ab ${C.SK_CAP_AT} Punkten im Ast, nur einer)`;
-    $('skCaps').innerHTML = C.SKILLS.filter(k => k.br === skTab && k.cap).map(node).join('');
-    $$('#skills [data-sk]').forEach(b => b.addEventListener('click', () => { if (C.skBuy(meta, b.dataset.sk)) { A.play('buy'); if (runAlive()) run.recalc(); save(); renderSkills(); } }));
+    $('skTabs').innerHTML = C.SK_BRANCH.map(b => `<button data-br="${b.id}" style="color:${SK_COL[b.id]}">${b.name} ${C.skBranchPts(meta, b.id)}</button>`).join('');
+    $$('#skTabs [data-br]').forEach(b => b.addEventListener('click', () => { A.play('click'); skFocus(b.dataset.br); }));
+    renderSkMap(); renderSkDet();
+    if (!skViewSet) { skViewSet = true; requestAnimationFrame(() => skFocus(meta.skLast || 'p')); } else skApplyView();
   }
+  (function skPanZoom() {
+    const svg = $('skSvg'), pts = new Map(); let moved = 0, pinch = 0;
+    const scale = () => (svg.clientWidth || 320) / (svg.viewBox.baseVal.width || 320);
+    svg.addEventListener('pointerdown', e => { svg.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); } });
+    svg.addEventListener('pointermove', e => {
+      const o = pts.get(e.pointerId); if (!o) return;
+      const n = { x: e.clientX, y: e.clientY };
+      if (pts.size === 1) { const sc = scale(); skView.x -= (n.x - o.x) / sc; skView.y -= (n.y - o.y) / sc; moved += Math.abs(n.x - o.x) + Math.abs(n.y - o.y); if (moved > 6) svg.classList.add('drag'); }
+      pts.set(e.pointerId, n);
+      if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); if (pinch) skView.z *= d / pinch; pinch = d; moved = 99; }
+      skApplyView();
+    });
+    const up = e => {
+      if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId); svg.classList.remove('drag');
+      if (pts.size === 0 && moved <= 6) {
+        const g = document.elementFromPoint(e.clientX, e.clientY); const n = g && g.closest && g.closest('[data-sk]');
+        skSel = n ? (n.dataset.sk === 'hub' ? null : n.dataset.sk) : skSel; if (n) A.play('click');
+        renderSkMap(); renderSkDet();
+      }
+      if (pts.size < 2) pinch = 0;
+    };
+    svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+    svg.addEventListener('wheel', e => { e.preventDefault(); skView.z *= e.deltaY < 0 ? 1.12 : 1 / 1.12; skApplyView(); }, { passive: false });
+    $('skFit').addEventListener('click', () => { A.play('click'); skFocus('all'); });
+    window.addEventListener('resize', () => { if (!$('skills').hidden) skApplyView(); });
+  })();
   $('skReset').addEventListener('click', () => { if (runAlive()) return; C.skReset(meta); A.play('click'); save(); renderSkills(); });
   $('cmdBtn').addEventListener('click', () => show('skills'));
   $('skClose').addEventListener('click', home);
