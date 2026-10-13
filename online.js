@@ -73,8 +73,16 @@
   // Wer ist gerade online? Je Gerät ein Eintrag, nach Spieler-ID zusammengefasst
   function who() {
     if (!channel) return [];
+    // Schlüssel der Präsenz ist die Spieler-ID; mehrere Einträge (Tabs, Geräte, alte Versionen) zu einem zusammenfassen:
+    // höchste Welle gewinnt, Profilangaben kommen aus dem Eintrag, der sie hat
     const seen = new Map();
-    for (const arr of Object.values(channel.presenceState())) for (const p of arr) { const k = p.pid || p.presence_ref; if (!seen.has(k) || (p.wave || 0) > (seen.get(k).wave || 0)) seen.set(k, p); }
+    for (const [key, arr] of Object.entries(channel.presenceState())) for (const p of arr) {
+      const k = p.pid || key, o = seen.get(k);
+      if (!o) { seen.set(k, Object.assign({}, p)); continue; }
+      const m = Object.assign({}, o, p.pid ? p : {});
+      m.wave = Math.max(o.wave || 0, p.wave || 0); if (!m.name) m.name = o.name || p.name;
+      seen.set(k, m);
+    }
     return [...seen.values()];
   }
 
