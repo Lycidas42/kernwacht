@@ -1458,6 +1458,25 @@
     }
 
     // Großansicht für das Labor: nur die Kanone, Turm schwenkt langsam
+    // Porträt für das Kompendium: ein Schiff (oder der Körper eines Riesen) mittig in w×h CSS-Pixeln
+    function portrait(e, t, w, h) {
+      const dpr = Math.min(2, window.devicePixelRatio || 1), cw = Math.round(w * dpr), ch = Math.round(h * dpr);
+      if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cw, ch);
+      ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      try {
+        if (e.giant) {
+          const k = Math.min(w / 600, h / 470);
+          ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * w / 2, dpr * h / 2);
+          drawGiantBody(Object.assign({ phase: 0, flash: 0 }, e), 0, 120, BOSS_COL[(e.sector || 1) - 1], t);
+        } else {
+          const k = Math.min(w, h) / (e.r * (e.type === 'boss' ? 3.6 : 4.2));
+          ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * w / 2, dpr * h / 2); ctx.rotate(Math.PI / 2);
+          drawShip(e, t, false);
+        }
+      } catch (err) { /* Porträt ist Zierde */ }
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+    }
     function preview(run, t) {
       const r = cv.getBoundingClientRect(); if (!r.width) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1), cw = Math.round(r.width * dpr), ch = Math.round(r.height * dpr);
@@ -1475,7 +1494,7 @@
       run.aim = aim0; parts.length = 0;
     }
 
-    return { resize, toWorld, pushFx, step, draw, clear, view, preview, cannonLook, setDmgNums: v => { dmgNums = v; }, setFxMode: v => { fxMode = v || 'clear'; } };
+    return { resize, toWorld, pushFx, step, draw, clear, view, preview, portrait, cannonLook, setDmgNums: v => { dmgNums = v; }, setFxMode: v => { fxMode = v || 'clear'; } };
   }
 
   // Zahlenformat (de)
