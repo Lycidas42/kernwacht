@@ -175,7 +175,8 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #autoCfgBox .acnote { font-size: .7rem; color: var(--ink-dim); line-height: 1.35; }
 #autoCfgBox .acsl { display: grid; grid-template-columns: 64px 1fr 42px; gap: 10px; align-items: center; font-size: .78rem; }
 #autoCfgBox .acsl b { font-family: var(--font-num); text-align: right; color: var(--heal); font-weight: 500; }
-#list { flex: 1; overflow-y: auto; padding: 4px 16px 12px; display: grid; gap: 2px; align-content: start; }
+#listWrap { flex: 1; min-height: 0; overflow-y: auto; padding-top: 6px; }
+#list { padding: 4px 16px 12px; display: grid; gap: 2px; align-content: start; }
 .row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 5px 0 5px 9px; border-left: 2px solid var(--line); }
 .row.locked { opacity: .45; }
 .row .nm { font-weight: 600; font-size: .9rem; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
@@ -781,6 +782,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <button id="autoAll" aria-pressed="true" title="Alle Auto-Käufe an- oder ausschalten">AUTO AN</button>
       <button id="autoCfgBtn" aria-expanded="false" aria-label="Auto-Kauf einstellen" title="Auto-Kauf einstellen">⚙</button>
     </div>
+    <div id="listWrap">
     <div id="autoCfgBox" hidden>
       <div class="acrow"><span>Kaufweise</span><div class="seg" id="acMode"><button data-v="smart">Klug</button><button data-v="cheap">Günstigstes</button></div></div>
       <small class="acnote" id="acModeTxt"></small>
@@ -791,6 +793,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <small class="acnote">Jeder Bereich bekommt seinen Anteil der Energie und kauft davon nur Upgrades mit AUTO. Manuelle Käufe zählen mit.</small>
     </div>
     <div id="list"></div>
+    </div>
   </div>
 </div>
 
