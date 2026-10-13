@@ -869,6 +869,7 @@
     // Skills mit eigenem Takt: Felder, Drohnen, Bombardement, Schwarzes Loch, Aegis, Ladeschuss
     skillTick(dt) {
       const s = this.s, K = s.K; if (!K) return;
+      for (const e of this.enemies) if (e.kres) e.kres = Math.max(0, e.kres - 0.4 * dt);
       for (const e of this.enemies) if (e.pdps > 0 && e.hp > 0) { this.hurt(e, e.pdps * dt, false, 'dot'); e.pdps *= Math.max(0, 1 - dt / 3); }
       for (const f of this.fires) for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - f.x, p.y - f.y) < f.r + e.r) this.hurt(e, f.dps * dt, false, 'dot'); }
       this.fires = this.fires.filter(f => f.until > this.time);
@@ -916,6 +917,12 @@
       }
       if (K('b_aegis')) { this.aegisT += dt; if (this.aegisT >= 15) { this.aegisT = 0; this.aegis = s.maxHp * 0.25; if (this.fxOn) this.fx.push({ k: 'aegis', t: 0 }); } }
     }
+    // Rückstoß mit Abnutzung: jeder Stoß macht das Schiff kurz unempfindlicher, und niemand wird aus der Reichweite geschoben
+    push(e, amt) {
+      if (e.type === 'boss' || e.hp <= 0) return;
+      const k = e.kres || 0; amt /= 1 + k; e.kres = Math.min(4, k + 0.35);
+      const lim = Math.max(e.dist, this.s.range - 20); e.dist = Math.min(e.dist + amt, lim);
+    }
     // Gift: Schaden pro Sekunde, klingt über 3 s ab, Treffer stapeln
     poison(e, dps) { if (e.hp <= 0) return; e.pdps = Math.min((e.pdps || 0) + dps, dps * 15); }
 
@@ -923,7 +930,7 @@
     fireNova() {
       this.novaT = this.time + 12 / (this.s.rateAll || 1);
       const d = this.s.gunDmg * this.s.mod.nova;
-      for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, d, false, 'mod', 'nova'); if (e.hp > 0 && e.type !== 'boss') e.dist += 30; }
+      for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, d, false, 'mod', 'nova'); if (e.hp > 0) this.push(e, 30); }
       if (this.fxOn) this.fx.push({ k: 'nova', t: 0, r: this.s.range });
     }
 
@@ -1103,7 +1110,7 @@
           if (this.time - (e.guardHit || 0) > 2) e.guard = Math.min(e.guardMax, e.guard + e.guardMax * 0.15 * dt);
         }
         if (e.stunUntil > this.time) continue; // betäubt: keine Bewegung, kein Angriff
-        if (s.K('b_stun') && e.dist <= contact + 2 && !(e.stunCd > this.time) && !e.bomb && e.type !== 'runner') { e.stunUntil = this.time + 1; e.stunCd = this.time + 3; e.dist += 18; if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'stun', x: p.x, y: p.y, t: 0 }); } continue; }
+        if (s.K('b_stun') && e.dist <= contact + 2 && !(e.stunCd > this.time) && !e.bomb && e.type !== 'runner') { e.stunUntil = this.time + 1; e.stunCd = this.time + 3; this.push(e, 18); if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'stun', x: p.x, y: p.y, t: 0 }); } continue; }
         const slow = e.slowUntil > this.time ? 1 - e.slow : 1;
         // Beschuss im Anflug: Jäger und Kanonenboote feuern, sobald sie nah genug sind
         const gun = GUNS[e.type];
@@ -1192,7 +1199,7 @@
             const others = this.enemies.filter(o => o !== t && o.hp > 0).map(o => ({ o, d: Math.hypot(this.pos(o).x - p.x, this.pos(o).y - p.y) })).filter(x => x.d < 110).sort((a, b) => a.d - b.d).slice(0, 2);
             for (const x of others) { this.hurt(x.o, b.dmg * 0.5, false, 'gun', 'chain'); if (this.fxOn) { const q = this.pos(x.o); this.fx.push({ k: 'chain', x1: p.x, y1: p.y, x2: q.x, y2: q.y, t: 0 }); } }
           }
-          if (s.knock && t.hp > 0 && t.kbT <= this.time && t.type !== 'boss') { t.kbT = this.time + 0.8; t.dist += s.knock * (t.type === 'brute' ? 0.4 : 1); }
+          if (s.knock && t.hp > 0 && t.kbT <= this.time) { t.kbT = this.time + 0.8; this.push(t, s.knock * (t.type === 'brute' ? 0.4 : 1)); }
           // Durchschlag: Geschoss fliegt in derselben Richtung weiter zum nächsten Schiff auf der Linie
           if (b.pierce > 0 && d > 0.01) {
             const ux = dx / d, uy = dy / d; let nx = null, best = 1e9;
@@ -1297,7 +1304,7 @@
             R.hit[e.id] = 1;
             this.hurt(e, s.shockDmg, false, 'shock');
             if (s.K('a_frost')) { e.slow = Math.max(e.slowUntil > this.time ? e.slow : 0, 0.3 * (e.type === 'boss' ? 0.4 : 1)); e.slowUntil = Math.max(e.slowUntil || 0, this.time + 2); }
-            if (e.hp > 0 && e.type !== 'boss') e.dist += 14;
+            if (e.hp > 0) this.push(e, 14);
           }
         }
         if (R.r >= R.max) this.ring = null;
@@ -1642,6 +1649,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.6.0'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.6.1'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
