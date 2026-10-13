@@ -165,6 +165,7 @@ window.KW_EN = {
   'Besondere Läufe: der Tageslauf mit gleichen Wellen für alle, Challenges mit Handicap und Bosskämpfe.': 'Special runs: the daily run with the same waves for everyone, handicapped challenges and boss fights.',
   'Bergbau auf den Planeten und der Hangar für das Aussehen deiner Kanone.': 'Mining on the planets and the hangar for the look of your cannon.',
   'Name fehlt': 'No name yet', 'Gib dir einen Namen, damit du in den Highscores erscheinst': 'Give yourself a name to appear in the highscores', 'Profil ›': 'Profile ›', 'Profil und Optionen': 'Profile and options',
+  'Kommandant ›': 'Commander ›', 'Kernfusion ›': 'Core fusion ›', 'Tageslauf ›': 'Daily run ›', 'Module ›': 'Modules ›', 'Erfolge ›': 'Achievements ›', 'Bergbau ›': 'Mining ›', 'Hangar ›': 'Hangar ›',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',

@@ -959,15 +959,15 @@
     const todo = [];
     const add = (cond, txt, area, btn) => { if (cond) todo.push({ txt, area, btn }); };
     add(!meta.name && (meta.runs || 0) >= 1, 'Gib dir einen Namen, damit du in den Highscores erscheinst', 'Profil', 'mMeProf');
-    add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kanone', 'cmdBtn');
-    add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kanone', 'fusBtn');
-    add(!$('dailyBtn').hidden && !(d && d.bonus), 'Tageslauf-Bonus wartet', 'Modi', 'dailyBtn');
-    add($('labBtn').classList.contains('dot'), 'Im Labor gibt es etwas zu kaufen', 'Kanone', 'labBtn');
-    add($('modBtn').classList.contains('dot') && !$('modBtn').hidden, 'Neue Modulfunde', 'Kanone', 'modBtn');
-    add($('achBtn').classList.contains('dot'), 'Neue Erfolgsstufe', 'Mehr', 'achBtn');
-    add($('mineBtn').classList.contains('new') && !$('mineBtn').hidden, 'Ein Lager im Bergbau ist voll', 'Welt', 'mineBtn');
-    add($('hangBtn').classList.contains('new') && !$('hangBtn').hidden, 'Neue Teile im Hangar', 'Welt', 'hangBtn');
-    $('mTodo').innerHTML = todo.slice(0, 3).map(x => `<button data-todo="${x.btn}"><i></i>${x.txt}<span>${beginner && x.btn === 'labBtn' ? 'Labor' : x.area} ›</span></button>`).join('');
+    add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kommandant', 'cmdBtn');
+    add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kernfusion', 'fusBtn');
+    add(!$('dailyBtn').hidden && !(d && d.bonus), 'Tageslauf-Bonus wartet', 'Tageslauf', 'dailyBtn');
+    add($('labBtn').classList.contains('dot'), 'Im Labor gibt es etwas zu kaufen', 'Labor', 'labBtn');
+    add($('modBtn').classList.contains('dot') && !$('modBtn').hidden, 'Neue Modulfunde', 'Module', 'modBtn');
+    add($('achBtn').classList.contains('dot'), 'Neue Erfolgsstufe', 'Erfolge', 'achBtn');
+    add($('mineBtn').classList.contains('new') && !$('mineBtn').hidden, 'Ein Lager im Bergbau ist voll', 'Bergbau', 'mineBtn');
+    add($('hangBtn').classList.contains('new') && !$('hangBtn').hidden, 'Neue Teile im Hangar', 'Hangar', 'hangBtn');
+    $('mTodo').innerHTML = todo.slice(0, 3).map(x => `<button data-todo="${x.btn}"><i></i>${x.txt}<span>${x.area} ›</span></button>`).join('');
     $$('#mTodo [data-todo]').forEach(b => b.addEventListener('click', () => { A.play('click'); $(b.dataset.todo).click(); }));
     setPage(mPage);
   }
