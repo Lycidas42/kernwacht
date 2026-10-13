@@ -383,7 +383,7 @@ window.KW_EN = {
   "Jäger, Flitzer, Koloss": "Fighter, Runner, Colossus",
   "Die Grundtypen: normal, schnell, zäh. Kanonenboote schießen aus der Distanz.": "The basic types: normal, fast, tough. Gunboats fire from a distance.",
   "Mutterschiff": "Mothership",
-  "Schwebt auf Abstand und wechselt zwischen Salven, Jägerstaffeln, Bomben, Schild und Laser. Der Laser bricht ab, wenn du genug Schaden machst. Nach einer Weile greift es den Wall an und zieht sich danach wieder zurück. Die Leiste oben zeigt seine Lebenspunkte.": "Hovers at a distance and alternates between salvos, fighter squadrons, bombs, shield and laser. The laser breaks if you deal enough damage. After a while it attacks the wall, then pulls back again. The bar at the top shows its HP.",
+  "Schwebt auf Abstand und wechselt zwischen Salven, Jägerstaffeln, Bomben, Schild und Laser. Der Laser bricht ab, wenn du genug Schaden machst. Nach einer Weile greift es den Wall an und zieht sich danach wieder zurück. Die Leiste oben zeigt seine Lebenspunkte. Je länger der Kampf dauert, desto wütender wird es: sein Schaden steigt jede Minute um den Grundwert.": "Hovers at a distance and alternates between salvos, fighter squadrons, bombs, shield and laser. The laser breaks if you deal enough damage. After a while it attacks the wall, then pulls back again. The bar at the top shows its HP. The longer the fight lasts, the angrier it gets: its damage rises by its base value every minute.",
   "Schildträger": "Shield bearers",
   "Tragen einen Frontschild, der erst gebrochen werden muss und sich ohne Treffer wieder auflädt. Dauerfeuer und Flächenschaden helfen.": "Carry a front shield that must be broken first and recharges without hits. Sustained fire and area damage help.",
   "Phantom": "Phantom",
