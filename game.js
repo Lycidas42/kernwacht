@@ -1528,7 +1528,7 @@
     $('pColors').innerHTML = AV_COLORS.map((c, i) => `<button class="colbtn" data-col="${i}" aria-pressed="${i === pDraft.color}" style="--c:${c}" aria-label="Farbe ${i + 1}"></button>`).join('');
     $$('#pAvatars [data-av]').forEach(b => b.addEventListener('click', () => { pDraft.avatar = +b.dataset.av; A.play('click'); renderProfile(); }));
     $$('#pColors [data-col]').forEach(b => b.addEventListener('click', () => { pDraft.color = +b.dataset.col; A.play('click'); renderProfile(); }));
-    $('pStats').innerHTML = [['Rekord', C.record(meta)], ['Läufe', fmt(meta.runs)], ['Abschüsse', fmt(meta.kills)], ['Fusionen', meta.fusions || 0], ['Challenge-Stufen', chalSum()], ['Erfolgsstufen', C.achPoints(meta)], ['Kristalle gesamt', fmt(meta.totalCrystals || 0)]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+    $('pStats').innerHTML = [['Rekord', C.record(meta)], ['Läufe', fmt(meta.runs)], ['Abschüsse', fmt(meta.kills)], ['Fusionen', meta.fusions || 0], ['Kernfragmente gesamt', fmt(fragTotal())], ['Challenge-Stufen', chalSum()], ['Erfolgsstufen', C.achPoints(meta)], ['Kristalle gesamt', fmt(meta.totalCrystals || 0)]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
     renderCloud();
   }
   $('pName').addEventListener('input', () => { pDraft.name = $('pName').value; });

@@ -244,6 +244,7 @@ window.KW_EN = {
   'Erscheint in den Highscores und in der Liste der Spieler, die gerade online sind. Du kannst ihn jederzeit im Profil ändern.': 'Shown in the highscores and in the list of players online. You can change it any time in your profile.',
   'Los geht’s': 'Let’s go', 'Erst mal ohne Namen spielen': 'Play without a name for now', 'Ich spiele schon auf einem anderen Gerät ›': 'I already play on another device ›', 'Name eingeben oder „ohne Namen“ wählen': 'Enter a name or choose “without a name”',
   '{0} Fusionen': '{0} fusions', '{0} Fusion': '{0} fusion',
+  'Kernfragmente gesamt': 'Total core fragments',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',
