@@ -55,6 +55,7 @@
     current = name;
     for (const k of OV) $(k).hidden = k !== name;
     if (name === 'menu' || name === 'over') syncPollBanner();
+    if (name === 'poll') $('pollPop').hidden = true;
     if (name === 'lab') renderLab();
     if (name === 'menu') renderMenu();
     if (name === 'board') renderBoard();
@@ -180,7 +181,7 @@
     if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
     ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
-    renderJump(); $$('#over .jumpbox').forEach(b => (b.hidden = true));
+    renderJump();
     submitScore(); cloudAuto();
     renderRoadmap();
     setTimeout(() => show('over'), early ? 0 : 900);
@@ -871,7 +872,6 @@
       el.querySelector('button').addEventListener('click', () => { if (C.metaBuy(meta, u)) { A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab(); } });
       list.appendChild(el);
     }
-    $('labStart').textContent = runAlive() ? 'Zurück zum Lauf' : 'Lauf starten';
   }
 
   function labBuy(pick) {
@@ -893,7 +893,24 @@
   });
 
   // ---------- Menü, Sprungtor ----------
+  // Bestenliste auf der Startseite: Top 3, eigener Platz und wer direkt davor liegt
+  let lbTeaseT = 0;
+  async function renderLbTeaser(force) {
+    const el = $('mLb');
+    if (!O.configured || meta.adminTainted) { el.hidden = true; return; }
+    if (!force && Date.now() - lbTeaseT < 60e3) return; lbTeaseT = Date.now();
+    const rec = C.record(meta), [top, pl] = await Promise.all([O.board('best_ever', 3), O.place(rec).catch(() => null)]);
+    if (!top || !top.length) { el.hidden = true; return; }
+    const me = O.myId();
+    let h = `<div class="hd"><span>Bestenliste · Rekord</span><small>alle ansehen ›</small></div>`;
+    if (pl && pl.place) h += `<div class="me"><span>Dein Platz</span> <b>${pl.place}</b> <span>von ${pl.total}</span></div>`;
+    if (pl && pl.ahead && pl.place > 1) h += `<div class="gap">Noch ${pl.ahead.wave - rec + 1} Wellen bis an ${esc(pl.ahead.name)} vorbei</div>`;
+    h += top.map((r, i) => `<div class="row${r.id === me ? ' mine' : ''}"><i>${i + 1}</i>${avatarSvg(r.avatar, r.color, 18)}<em>${esc(r.name)}${r.lvl ? ` <small class="lbrk">${r.lvl}</small>` : ''}</em><b>Welle ${r.best_ever}</b></div>`).join('');
+    el.innerHTML = h; el.hidden = false;
+  }
+  $('mLb').addEventListener('click', () => { lbTab = 'rec'; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x.dataset.lb === 'rec' ? 'true' : 'false')); A.play('click'); show('board'); });
   function renderMenu() {
+    renderLbTeaser();
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
     const max = C.maxStartWave(meta);
     renderJump();
@@ -1772,10 +1789,19 @@
       el.hidden = !polls.length;
       if (!polls.length) return;
       const p = open[0] || polls[0];
+      el.classList.toggle('new', !!open.length);
       el.innerHTML = `<span>${open.length ? 'Neue Umfrage' : 'Umfrage'}</span><b>${esc(p.question)}</b><small>${open.length ? 'Tippen zum Abstimmen' : 'Ergebnis ansehen'}</small>`;
       el.onclick = () => { pollCur = p; show('poll'); };
     });
+    // Einblendung oben: jede offene Umfrage einmal, bis abgestimmt oder „Später“
+    meta.pollLater = meta.pollLater || {};
+    const pop = open.find(p => !meta.pollLater[p.id]), box = $('pollPop');
+    if (!pop || current === 'poll') { box.hidden = true; return; }
+    $('ppQ').textContent = pop.question; box.hidden = false;
+    $('ppGo').onclick = () => { box.hidden = true; pollCur = pop; if (runAlive() && !current) setPaused(true); A.play('click'); show('poll'); };
+    $('ppLater').onclick = () => { box.hidden = true; meta.pollLater[pop.id] = 1; save(); A.play('click'); };
   }
+  setInterval(() => { if (!document.hidden) fetchPolls(); }, 10 * 60e3);
   async function renderPoll() {
     const p = pollCur; if (!p) return;
     $('pqText').textContent = p.question;
@@ -1797,7 +1823,7 @@
   $('pqClose').addEventListener('click', home);
 
   if (O.configured) {
-    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); } });
+    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); if (current === 'menu') renderLbTeaser(true); } });
     O.onCount(n => { $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online'; });
     setInterval(fetchPolls, 5 * 60e3);
   }
@@ -1909,7 +1935,6 @@
   // ---------- Bedienung ----------
   $('startBtn').addEventListener('click', () => startRun());
   $('againBtn').addEventListener('click', () => startRun(lastMode));
-  $('labStart').addEventListener('click', () => { if (runAlive()) { show(null); setPaused(false); } else startRun(); });
   $('labBtn').addEventListener('click', () => show('lab'));
   $('labBtn2').addEventListener('click', () => show('lab'));
   $('labBtn3').addEventListener('click', () => show('lab'));
@@ -1918,7 +1943,7 @@
   let resetArmed = 0;
   $('resetBtn').addEventListener('click', () => {
     const b = $('resetBtn');
-    if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = 0; b.textContent = 'Spielstand löschen'; }, 4000); b.textContent = 'Wirklich alles auf diesem Gerät löschen? Nochmal tippen'; return; }
+    if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = 0; b.textContent = 'Löschen'; }, 4000); b.textContent = 'Wirklich? Nochmal tippen'; return; }
     clearTimeout(resetArmed); frozenSave = true; run = null;
     put(KEY, null); put(RKEY, null); location.reload();
   });

@@ -434,6 +434,28 @@ textarea { resize: vertical; min-height: 70px; }
 #board .lbtabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 #board .lbtabs button { padding: 0 2px; font-size: .64rem; letter-spacing: .03em; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pollbanner { display: grid; gap: 2px; text-align: left; border: 1px solid color-mix(in srgb, var(--energy) 60%, var(--line)); background: color-mix(in srgb, var(--energy) 8%, transparent); border-radius: 4px; padding: 10px 12px; }
+.pollbanner.new { border-color: var(--energy); box-shadow: 0 0 18px color-mix(in srgb, var(--energy) 30%, transparent); position: relative; }
+.pollbanner.new::after { content: ""; position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--hot, #ff4f9a); box-shadow: 0 0 8px var(--hot, #ff4f9a); animation: ppPulse 1.6s ease-in-out infinite; }
+@keyframes ppPulse { 50% { opacity: .3; } }
+.pollpop { position: fixed; left: 50%; top: calc(10px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(420px, calc(100% - 24px)); z-index: 60; display: grid; gap: 6px; padding: 12px 14px; border-radius: 8px; background: color-mix(in srgb, var(--deck) 94%, var(--energy)); border: 1px solid var(--energy); box-shadow: 0 8px 30px #0008, 0 0 24px color-mix(in srgb, var(--energy) 25%, transparent); animation: ppIn .35s ease-out; }
+.pollpop .pp-k { font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; color: var(--energy); font-weight: 700; }
+.pollpop b { font-size: .95rem; line-height: 1.3; }
+.pollpop .pp-a { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 4px; }
+.pollpop .cta, .pollpop .sec { height: 40px; font-size: .8rem; }
+@keyframes ppIn { from { transform: translate(-50%, -30px); opacity: 0; } }
+.setrow .danger { border: 1px solid var(--hostile); border-radius: 4px; padding: 8px 12px; text-decoration: none; flex: 0 0 auto; }
+.lbteaser { display: grid; gap: 6px; text-align: left; border: 1px solid color-mix(in srgb, var(--core) 45%, var(--line)); border-radius: 6px; padding: 12px; background: linear-gradient(160deg, color-mix(in srgb, var(--core) 7%, transparent), transparent); margin-top: 12px; width: 100%; color: var(--ink); }
+.lbteaser .hd { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.lbteaser .hd span { font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; color: var(--core); font-weight: 700; }
+.lbteaser .hd small { font-size: .74rem; color: var(--ink-dim); }
+.lbteaser .me { font-size: .95rem; } .lbteaser .me b { color: var(--energy); font-family: var(--font-num); }
+.lbteaser .gap { font-size: .76rem; color: var(--ink-dim); }
+.lbteaser .row { display: grid; grid-template-columns: 1.6em auto 1fr auto; gap: 8px; align-items: center; font-size: .82rem; }
+.lbteaser .row { border: 0; padding: 0; margin: 0; }
+.lbteaser .row i { font-style: normal; color: var(--ink-dim); font-family: var(--font-num); }
+.lbteaser .row em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lbteaser .row b { font-family: var(--font-num); color: var(--core); font-weight: 500; }
+.lbteaser .row.mine em, .lbteaser .row.mine b { color: var(--energy); }
 .pollbanner span { font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--energy); font-weight: 700; }
 .pollbanner b { font-size: .92rem; }
 .pollbanner small { color: var(--ink-dim); font-size: .74rem; }
@@ -756,6 +778,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <!-- Start: das Wichtigste auf einen Blick -->
       <section class="mpage" data-page="start">
         <div class="mtop"><h1 id="title">Kern<span>wacht</span></h1><div class="mrank" id="mRankBox" hidden>Rang<b id="mRank">0</b></div></div>
+        <button class="pollbanner" hidden></button>
         <p class="mintro" id="mIntro">Deine Kanone hält, bis sie fällt. Jeder Fall bringt Kristalle, und im Labor wird die nächste Kanone stärker.</p>
         <div class="stats">
           <div class="stat"><div class="l">Bestwelle</div><div class="v num" id="mBest">0</div></div>
@@ -763,7 +786,6 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
           <div class="stat" id="mFragBox" hidden><div class="l">Fragmente</div><div class="v num frag" id="mFrag">0</div></div>
         </div>
         <span id="mRuns" hidden></span><p class="metaline" id="fragLine" hidden></p>
-        <button class="pollbanner" hidden></button>
         <div class="note" id="offlineNote" hidden></div>
         <div class="hero">
           <div class="jumpbox" hidden>
@@ -776,6 +798,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
           </div>
           <button class="cta" id="startBtn">Lauf starten</button>
         </div>
+        <button class="lbteaser" id="mLb" hidden></button>
         <div class="roadmap" hidden></div>
         <div class="todo" id="mTodo"></div>
       </section>
@@ -882,24 +905,8 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="extra" id="oExtra" hidden></div>
     <button class="pollbanner" hidden></button>
     <div class="roadmap" hidden></div>
-    <div class="jumpbox" hidden>
-      <h3>Startwelle (Sprungtor)</h3>
-      <div class="stepper">
-        <button class="jm" aria-label="Frühere Startwelle">−</button>
-        <div class="val"><b class="jv">Welle 1</b><small class="ji"></small></div>
-        <button class="jp" aria-label="Spätere Startwelle">+</button>
-      </div>
-    </div>
     <div class="actions">
       <button class="cta" id="labBtn2">Ins Labor</button>
-      <div class="actions two">
-        <button class="sec mod-btn" id="modBtn2">Module</button>
-        <button class="sec fus-btn" id="fusBtn2">Kernfusion</button>
-      </div>
-      <div class="actions two">
-        <button class="sec daily-btn" id="dailyBtn2">Tageslauf</button>
-        <button class="sec chal-btn" id="chalBtn2">Challenge</button>
-      </div>
       <div class="actions two">
         <button class="sec" id="homeBtn">Hauptmenü</button>
         <button class="sec" id="againBtn">Sofort neu starten</button>
@@ -925,23 +932,9 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <div class="cvlegend" id="cvLegend"></div>
     </details>
     <div id="labList"></div>
-    <div class="jumpbox" hidden>
-      <h3>Startwelle (Sprungtor)</h3>
-      <div class="stepper">
-        <button class="jm" aria-label="Frühere Startwelle">−</button>
-        <div class="val"><b class="jv">Welle 1</b><small class="ji"></small></div>
-        <button class="jp" aria-label="Spätere Startwelle">+</button>
-      </div>
-    </div>
     <div class="actions">
-      <button class="cta" id="labStart">Lauf starten</button>
-      <div class="actions two">
-        <button class="sec mod-btn" id="modBtn3">Module</button>
-        <button class="sec fus-btn" id="fusBtn3">Kernfusion</button>
-      </div>
       <button class="sec" id="labClose">Zurück</button>
     </div>
-    <button class="danger" id="resetBtn">Spielstand löschen</button>
   </div>
 </div>
 
@@ -1076,14 +1069,11 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 </div>
 <div class="ov" id="settings" hidden>
   <div class="card">
-    <h2>Einstellungen</h2>
-    <h3>Ton</h3>
-    <div class="actions two">
-      <button class="sec" id="sfxBtn" aria-pressed="true">Ton an</button>
-      <button class="sec" id="musicBtn" aria-pressed="true">Musik an</button>
-    </div>
-    <div class="vols"><label>Ton <input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></label><label>Musik <input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></label></div>
-    <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
+    <h2>Optionen</h2>
+    <h3>Klang</h3>
+    <div class="pz-row"><button class="sw" id="sfxBtn" aria-pressed="true">Ton</button><input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></div>
+    <div class="pz-row"><button class="sw" id="musicBtn" aria-pressed="true">Musik</button><input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></div>
+    <button class="pz-link trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
     <h3>Anzeige</h3>
     <div class="setrow"><div>Zahlenformat<small id="numEx"></small></div><div class="seg" data-set="numFmt"><button data-v="short">K · M · B · T</button><button data-v="sci">1,2e15</button></div></div>
     <div class="setrow"><div>Effekte<small>„Klar“ dämpft Explosionen und Treffereffekte, damit Gegner gut sichtbar bleiben</small></div><div class="seg" data-set="fx"><button data-v="full">Voll</button><button data-v="clear">Klar</button><button data-v="min">Minimal</button></div></div>
@@ -1091,6 +1081,8 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="setrow"><div>Tipps im Spiel<small>Kurze Hinweise beim ersten Kontakt mit neuen Dingen</small></div><div class="seg" data-set="tips"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <h3>Sprache</h3>
     <div class="setrow"><div>Sprache des Spiels<small>Englisch und Deutsch, jederzeit umschaltbar.</small></div><div class="seg" data-set="lang"><button data-v="de">Deutsch</button><button data-v="en">English</button></div></div>
+    <h3>Spielstand</h3>
+    <div class="setrow"><div>Spielstand auf diesem Gerät löschen<small>Alles auf diesem Gerät wird zurückgesetzt. Ein Cloud-Spielstand im Profil bleibt erhalten.</small></div><button class="danger" id="resetBtn">Löschen</button></div>
     <div class="actions"><button class="sec" id="setClose">Zurück</button></div>
   </div>
 </div>
@@ -1141,6 +1133,11 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 </div>
 
 <div id="toast" class="toast" hidden></div>
+<div id="pollPop" class="pollpop" role="dialog" aria-live="polite" hidden>
+  <span class="pp-k">Neue Umfrage</span>
+  <b id="ppQ"></b>
+  <div class="pp-a"><button class="cta" id="ppGo">Abstimmen</button><button class="sec" id="ppLater">Später</button></div>
+</div>
 
 <div class="ov" id="profile" hidden>
   <div class="card">
@@ -1160,7 +1157,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <button class="sec" id="cAuto" aria-pressed="true">Automatisch sichern: an</button>
 
       <h3>Auf anderem Gerät weiterspielen</h3>
-      <p>Erzeuge hier einen Code und gib ihn auf dem anderen Gerät unter „Profil &amp; Spielstand“ ein. Er gilt 10 Minuten. Danach sind beide Geräte derselbe Spieler.</p>
+      <p>Erzeuge hier einen Code und gib ihn auf dem anderen Gerät unter „Profil“ ein. Er gilt 10 Minuten. Danach sind beide Geräte derselbe Spieler.</p>
       <button class="sec pairbtn" id="cPair">Code für anderes Gerät erzeugen</button>
       <div class="pairout" id="pairOut" hidden>
         <div class="paircode num" id="pairCode"></div>

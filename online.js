@@ -101,6 +101,18 @@
     if (error && col !== 'lvl') ({ data, error } = await q(''));
     return error ? null : data.map(r => Object.assign(r, { name: r.name || anon(r.id), anon: !r.name }));
   }
+  // Eigener Platz in der Rekordliste: Anzahl der Spieler mit höherem Rekord + 1, dazu Gesamtzahl und der Spieler direkt davor
+  async function place(rec) {
+    if (!(await start())) return null;
+    const [a, b, c] = await Promise.all([
+      client.from('players').select('id', { count: 'exact', head: true }).gt('best_ever', rec | 0),
+      client.from('players').select('id', { count: 'exact', head: true }).gt('best_ever', 0),
+      client.from('players').select('id,name,best_ever').gt('best_ever', rec | 0).order('best_ever', { ascending: true }).limit(1),
+    ]);
+    if (a.error || b.error) return null;
+    const ahead = !c.error && c.data && c.data[0] ? { name: c.data[0].name || anon(c.data[0].id), wave: c.data[0].best_ever } : null;
+    return { place: rec > 0 ? (a.count || 0) + 1 : null, total: b.count || 0, ahead };
+  }
   async function dailyBoard(day, limit) {
     if (!(await start())) return null;
     const q = f => client.from('daily_scores').select('player_id,wave,kills,players(name,avatar,color' + f + ')').eq('day', day).order('wave', { ascending: false }).order('kills', { ascending: false }).limit(60);
@@ -146,7 +158,7 @@
 
   root.KWOnline = {
     configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
-    profile, stats, player, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, polls, vote, pollResults,
+    profile, stats, player, place, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, polls, vote, pollResults,
     onCount: f => listeners.push(f), get count() { return count; },
   };
 })(window);
