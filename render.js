@@ -42,7 +42,7 @@
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
     const ICON_PATH = {}; for (const k in ICONS) ICON_PATH[k] = new Path2D(ICONS[k]);
-    const LIFE = { leap: 2.2, rush: 1.6, exec: 0.45, reflect: 0.3, emerg: 0.9, phoenix: 1.4, stun: 0.6, drone: 0.12, barrage: 0.6, hole: 0.6, aegis: 0.7, thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { leap: 2.2, rush: 2.8, exec: 0.45, reflect: 0.3, emerg: 0.9, phoenix: 1.4, stun: 0.6, drone: 0.12, barrage: 0.6, hole: 0.6, aegis: 0.7, thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -1252,7 +1252,7 @@
           ctx.font = `800 ${Math.round(Math.min(W, H) * (f.k === 'leap' ? 0.075 : 0.05))}px ${FONT_UI()}`;
           ctx.fillText(f.k === 'leap' ? 'WELLENSPRUNG' : f.on ? 'DURCHMARSCH' : 'DURCHMARSCH ENDET', W / 2, H * 0.32 - k * 12);
           ctx.font = `600 ${Math.round(Math.min(W, H) * 0.036)}px ${FONT_UI()}`; ctx.fillStyle = PAL.dim;
-          ctx.fillText(f.k === 'leap' ? `Welle ${f.from} → ${f.to}` : f.on ? 'Mühelos: Wellen kommen gestaucht' : 'Ab hier wieder normal', W / 2, H * 0.32 + Math.min(W, H) * 0.06 - k * 12);
+          ctx.fillText(f.k === 'leap' ? `Welle ${f.from} → ${f.to}` : f.on ? 'Mühelos: Wellen kommen gestaucht' : !f.why ? 'Ab hier wieder normal' : f.why.why === 'hull' ? `Welle ${f.why.w}: Hülle nur noch ${f.why.hp} %` : f.why.why === 'field' ? `Welle ${f.why.w}: Schiffe blieben in Reichweite` : `Welle ${f.why.w}: ${f.why.boss || 'Boss'} hielt ${f.why.dur} s`, W / 2, H * 0.32 + Math.min(W, H) * 0.06 - k * 12);
           ctx.globalAlpha = 1;
         } else if (f.k === 'wave') {
           ctx.globalAlpha = Math.min(1, (1 - k) * 2);

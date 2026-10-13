@@ -2217,7 +2217,7 @@
       } else {
         const rec = run.wave > meta.best && meta.best > 0;
         const allRec = C.record(meta);
-        $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : run.rush ? 'Durchmarsch' : run.catchUp() ? 'Aufholen ×2' : rec ? 'Neue Bestwelle' : 'Rekord ' + allRec;
+        $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : run.rush ? 'Durchmarsch' : run.rushWhyAt && run.wave - run.rushWhyAt.w <= 3 ? (run.rushWhyAt.why === 'hull' ? 'Durchmarsch aus: Schaden' : run.rushWhyAt.why === 'field' ? 'Durchmarsch aus: Feld voll' : 'Durchmarsch aus: Boss zäh') : run.catchUp() ? 'Aufholen ×2' : rec ? 'Neue Bestwelle' : 'Rekord ' + allRec;
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
