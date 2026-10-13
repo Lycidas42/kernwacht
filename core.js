@@ -239,7 +239,7 @@
     return meta.cph ? Math.max(OFFLINE_SHARE * meta.cph, est * 0.5) : est;
   }
 
-  const MINE_FUSE = 10; // Sekunden, bis eine unberührte Mine von selbst losfliegt
+  const MINE_FUSE = 10; // Sekunden, bis eine unberührte Mine von selbst detoniert
   const SOURCES = ['gun', 'rocket', 'cryo', 'mine', 'shock', 'blade', 'strike', 'mod', 'dot', 'skill'];
   const UPG_BY_ID = {}; RUN_UPG.forEach(u => (UPG_BY_ID[u.id] = u));
   const MIX = w => {
@@ -1437,21 +1437,24 @@
         this.mineT += dt;
         if (this.mineT >= s.mineCd && this.mines.length < s.mineMax) {
           this.mineT = 0;
-          const x0 = (Math.random() * 2 - 1) * FIELD_W, y0 = -FIELD_H;
-          const a = Math.atan2(y0, x0), r = WALL_R + 25 + Math.random() * Math.max(10, s.range - WALL_R - 25);
-          this.mines.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, arm: 0.6, age: 0 });
+          // Boss in Wurfweite: die neue Mine fliegt direkt auf ihn, sonst landet sie auf einer Anflugbahn
+          const boss = this.enemies.find(e => e.type === 'boss' && e.hp > 0 && e.dist - e.r <= s.range + 40);
+          if (boss) this.mines.push({ x: 0, y: -10, arm: 0, age: 0, fly: true, tid: boss.id });
+          else {
+            const x0 = (Math.random() * 2 - 1) * FIELD_W, y0 = -FIELD_H;
+            const a = Math.atan2(y0, x0), r = WALL_R + 25 + Math.random() * Math.max(10, s.range - WALL_R - 25);
+            this.mines.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, arm: 0.6, age: 0 });
+          }
         }
         for (const m of this.mines) {
           m.arm -= dt; m.age += dt; if (m.arm > 0) continue;
-          // Zündzeit abgelaufen: Mine fliegt auf ein Mutterschiff (sonst auf das Schiff, das der Hülle am nächsten ist)
-          if (!m.fly && m.age >= MINE_FUSE && this.enemies.some(e => e.hp > 0)) m.fly = true;
+          // Zündzeit abgelaufen: die Mine detoniert an Ort und Stelle und macht Platz für eine neue
+          if (!m.fly && m.age >= MINE_FUSE) m.done = true;
           if (m.fly) {
-            let tg = m.tid && this.enemies.find(e => e.id === m.tid && e.hp > 0);
-            if (!tg) {
-              for (const e of this.enemies) if (e.hp > 0 && (!tg || (e.type === 'boss') > (tg.type === 'boss') || ((e.type === 'boss') === (tg.type === 'boss') && e.dist < tg.dist))) tg = e;
-              m.tid = tg ? tg.id : 0;
-            }
-            if (tg) {
+            // geworfene Mine: fliegt auf ihren Boss; ist er weg, detoniert sie dort, wo sie gerade ist
+            const tg = this.enemies.find(e => e.id === m.tid && e.hp > 0);
+            if (!tg) m.done = true;
+            else {
               const p = this.pos(tg), dx = p.x - m.x, dy = p.y - m.y, d = Math.hypot(dx, dy), v = 320 * dt;
               if (d <= v + tg.r * 0.6) { m.x = p.x; m.y = p.y; m.done = true; }
               else { m.x += dx / d * v; m.y += dy / d * v; }
@@ -1761,6 +1764,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.9.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.9.2'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, bossKind, P };
 })(typeof window !== 'undefined' ? window : globalThis);
