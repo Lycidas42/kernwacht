@@ -480,6 +480,7 @@ window.KW_EN = {
   "+1 Durchschlag für die Kanone": "+1 pierce for the cannon",
   "Markierte Ziele erleiden {0} mehr Schaden aus allen Quellen, auch Mutterschiffe": "Marked targets take {0} more damage from all sources, motherships too",
   "Kanonentreffer vergiften: {0} des Treffers pro Sekunde, klingt in 3 s ab, stapelt": "Cannon hits poison: {0} of the hit per second, fades over 3 s, stacks",
+  "Kanonentreffer vergiften: {0} des Treffers pro Sekunde, klingt in 3 s ab, stapelt. Dazu {1} % der Lebenspunkte pro Sekunde (Mutterschiffe {2} %)": "Cannon hits poison: {0} of the hit per second, fades over 3 s, stacks. Plus {1} % of max HP per second (motherships {2} %)",
   "Jeder Kanonentreffer repariert {0} % der Hülle": "Every cannon hit repairs {0} % of the hull",
   "Kanonentreffer zerstören Schiffe unter {0} Lebenspunkten sofort (keine Mutterschiffe)": "Cannon hits instantly destroy ships below {0} HP (not motherships)",
   "Alle 6 s feuert die Kanone einen geladenen Schuss: 12× Schaden, durchschlägt alles auf seiner Linie": "Every 6 s the cannon fires a charged shot: 12× damage, piercing everything in its line",
