@@ -602,6 +602,24 @@
   }
   $('resumeBtn').addEventListener('click', () => { show(null); setPaused(false); buildList(); });
 
+  // ---------- Kaufknöpfe: Tippen kauft eine Stufe, Halten kauft immer schneller weiter ----------
+  // Erst nach kurzem Halten ohne Wischen (sonst wäre Scrollen über die Liste ein Kauf); die Liste darf sich dabei neu aufbauen
+  let holdT = 0, holdOn = false, holdEnd = 0, holdXY = null;
+  function stopHold() { clearTimeout(holdT); holdT = 0; if (holdOn) holdEnd = Date.now(); holdOn = false; holdXY = null; }
+  addEventListener('pointerup', stopHold); addEventListener('pointercancel', stopHold); addEventListener('blur', stopHold);
+  addEventListener('pointermove', e => { if (holdXY && !holdOn && Math.hypot(e.clientX - holdXY[0], e.clientY - holdXY[1]) > 10) stopHold(); });
+  function holdBuy(btn, fn) {
+    btn.addEventListener('pointerdown', e => {
+      if (e.button || btn.disabled) return;
+      stopHold(); holdXY = [e.clientX, e.clientY];
+      let d = 260;
+      const tick = () => { holdOn = true; if (!fn()) { stopHold(); return; } if (navigator.vibrate) try { navigator.vibrate(4); } catch (er) {} d = Math.max(30, d * 0.82); holdT = setTimeout(tick, d); };
+      holdT = setTimeout(tick, 420);
+    });
+    btn.addEventListener('click', () => { if (holdOn || Date.now() - holdEnd < 350) return; fn(); });
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+  }
+
   // ---------- Upgrade-Liste ----------
   const VAL = {
     dmg: s => fmt(s.gunDmg), rate: s => dec(s.rate, 2) + '/s', range: s => Math.round(s.range),
@@ -623,7 +641,7 @@
         <button class="buy num"></button>`;
       const [autoB, buyB] = el.querySelectorAll('button');
       autoB.addEventListener('click', () => { meta.auto[u.id] = !meta.auto[u.id]; A.play('click'); save(); refresh(); });
-      buyB.addEventListener('click', () => { if (run && run.buy(u)) { A.play('buy'); refresh(); } });
+      holdBuy(buyB, () => { if (!(run && run.buy(u))) return false; A.play('buy'); refresh(); return true; });
       list.appendChild(el);
       rows.push({ u, el, lvl: el.querySelector('small'), val: el.querySelector('.val'), autoB, buyB });
     }
@@ -883,7 +901,7 @@
       }
       el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small>${rec && rec.u === u ? '<span class="tag">Empfohlen</span>' : ''}</div><div class="ds">${u.desc}${extra}</div></div>
         <button class="buy num ${mx ? 'max' : 'k-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? (u.unlock ? 'OK' : 'MAX') : fmt(c)}</button>`;
-      el.querySelector('button').addEventListener('click', () => { if (C.metaBuy(meta, u)) { A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab(); } });
+      holdBuy(el.querySelector('button'), () => { if (!C.metaBuy(meta, u)) return false; A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab(); return true; });
       list.appendChild(el);
     }
   }
