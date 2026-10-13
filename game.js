@@ -128,10 +128,10 @@
       ex.push(`<div class="loot r${now}">Beute: <b>${M.name}</b> <span class="dim">(Fund ${R[d.rar].name})</span> → ${txt}</div>`);
     }
     for (const u of C.ROADMAP) if (u.w > recBefore && u.w <= C.record(meta)) ex.unshift(`<div class="unl">Freigeschaltet: ${u.label}</div>`);
-    // Beute-Übersicht: wie viele Mutterschiffe, warum ggf. keine Module
-    if (res.noLoot === 'admin') ex.push('<div>Lauf mit Admin-Eingriffen: Mutterschiffe lassen keine Module fallen.</div>');
-    else if (res.bossKills && !(res.loot || []).length) ex.push(`<div>${res.bossKills} Mutterschiff${res.bossKills === 1 ? '' : 'e'} besiegt, diesmal ohne Beute. Beim nächsten steigt die Chance um ${10 * (meta.dry || 0)} Prozentpunkte.</div>`);
-    else if (!res.bossKills && C.record(meta) >= C.MODULES_AT && res.wave < 30) ex.push('<div>Module gibt es erst von Mutterschiffen ab Welle 30.</div>');
+    // Beute-Übersicht: wie viele Bosse, warum ggf. keine Module
+    if (res.noLoot === 'admin') ex.push('<div>Lauf mit Admin-Eingriffen: Bosse lassen keine Module fallen.</div>');
+    else if (res.bossKills && !(res.loot || []).length) ex.push(`<div>${res.bossKills} Boss${res.bossKills === 1 ? '' : 'e'} besiegt, diesmal ohne Beute. Beim nächsten steigt die Chance um ${10 * (meta.dry || 0)} Prozentpunkte.</div>`);
+    else if (!res.bossKills && C.record(meta) >= C.MODULES_AT && res.wave < 30) ex.push('<div>Module gibt es erst von Bossen ab Welle 30.</div>');
     if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
     ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
@@ -219,9 +219,9 @@
     { id: 'mark', when: r => r.time > 4, txt: '<b>Tipp: Ziele markieren</b><br>Tippe ein Schiff an. Die Kanone schießt dann zuerst darauf, bis es zerstört ist.' },
     { id: 'buy', when: r => r.time > 12, txt: '<b>Tipp: Upgrades</b><br>Abschüsse bringen Energie. Unten kaufst du damit Upgrades, „AUTO“ kauft für dich.' },
     { id: 'strike', when: r => r.charge >= 1, txt: '<b>Orbitalschlag geladen</b><br>Tippe ins Feld, um genau dort einzuschlagen, oder auf den Knopf für einen automatischen Treffer.' },
-    { id: 'boss', when: r => r.enemies.some(e => e.type === 'boss'), txt: '<b>Mutterschiff!</b><br>Solange es lebt, kommt keine neue Welle. Die Leiste oben zeigt seine Lebenspunkte.' },
+    { id: 'boss', when: r => r.enemies.some(e => e.type === 'boss'), txt: '<b>Boss!</b><br>Solange er lebt, kommt keine neue Welle. Die Leiste oben zeigt seine Lebenspunkte und seine nächste Fähigkeit.' },
     { id: 'freeze', when: r => r.abilityReady('freeze'), txt: '<b>Stasis bereit</b><br>Der Knopf rechts friert alle Gegner kurz ein. Gut, wenn die Hülle knapp wird.' },
-    { id: 'over', when: r => r.abilityReady('over'), txt: '<b>Überladung bereit</b><br>Der Knopf rechts erhöht kurz die Feuerrate stark, ideal gegen Mutterschiffe.' },
+    { id: 'over', when: r => r.abilityReady('over'), txt: '<b>Überladung bereit</b><br>Der Knopf rechts erhöht kurz die Feuerrate stark, ideal gegen Bosse.' },
     { id: 'mender', when: r => r.enemies.some(e => e.type === 'mender'), txt: '<b>Heiler</b><br>Repariert Schiffe in der Nähe, solange sie nicht beschossen werden. Die Kanone nimmt Heiler automatisch zuerst.' },
     { id: 'bulwark', when: r => r.enemies.some(e => e.type === 'bulwark'), txt: '<b>Schildträger</b><br>Der Frontschild muss erst brechen und lädt sich ohne Treffer wieder auf. Dauerfeuer hilft.' },
     { id: 'phantom', when: r => r.enemies.some(e => e.type === 'phantom'), txt: '<b>Phantom</b><br>Tarnt sich zeitweise. Das Modul Zielerfassung macht Tarnung wirkungslos.' },
@@ -673,7 +673,7 @@
     $('stMods').innerHTML = eq.length
       ? '<h4>Ausgerüstete Module · Beitrag zum Schaden</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span>${modShare(t, total)}<br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
         + '<p class="stnote">Kettenblitz, Kältebruch, Überspannung und Zielerfassung verstärken die Kanone; ihr Anteil steckt dort mit drin. Splitter, Dornenwall und Nova stehen unter „Module (direkt)“.</p>'
-      : (C.record(meta) >= C.MODULES_AT ? '<h4>Module</h4><p>Keine Module ausgerüstet. Mutterschiffe lassen sie fallen.</p>' : `<h4>Module</h4><p>Ab Rekordwelle ${C.MODULES_AT} lassen Mutterschiffe Module fallen.</p>`);
+      : (C.record(meta) >= C.MODULES_AT ? '<h4>Module</h4><p>Keine Module ausgerüstet. Bosse lassen sie fallen.</p>' : `<h4>Module</h4><p>Ab Rekordwelle ${C.MODULES_AT} lassen Bosse Module fallen.</p>`);
   }
 
   // ---------- Fähigkeiten ----------
@@ -710,7 +710,7 @@
     return false;
   }
   // Orbitalschlag: Ist er geladen, schlägt ein Tipp ins Feld genau dort ein. Der Knopf löst sofort automatisch aus
-  // (Mutterschiff bzw. dichteste Gruppe). Lange drücken schaltet „Feld“ ab, dann markiert ein Tipp ins Feld nur Ziele.
+  // (Boss bzw. dichteste Gruppe). Lange drücken schaltet „Feld“ ab, dann markiert ein Tipp ins Feld nur Ziele.
   function strikeNow() {
     if (!canArm('strike')) { A.play('hurt'); return; }
     armed = null;
@@ -966,7 +966,7 @@
       slots.appendChild(d);
     }
     const bw = Math.max(30, Math.floor(Math.max(meta.best, 30) / 10) * 10);
-    $('dropLine').innerHTML = `Beutechance je Mutterschiff ab Welle 30: <b>${Math.round(C.dropChance(30) * 100)} %</b> bei Welle 30 · <b>${Math.round(C.dropChance(bw) * 100)} %</b> bei Welle ${bw} · bis <b>85 %</b>. Das erste Mutterschiff ab Welle 30 bringt immer ein Modul. Jedes Mutterschiff ohne Beute erhöht die Chance beim nächsten um 10 Prozentpunkte${meta.dry ? ` (gerade <b>+${10 * meta.dry} %</b>)` : ''}. Läufe mit Admin-Eingriffen, Herausforderungen und Tagesläufe bringen keine Module.`;
+    $('dropLine').innerHTML = `Beutechance je Boss ab Welle 30: <b>${Math.round(C.dropChance(30) * 100)} %</b> bei Welle 30 · <b>${Math.round(C.dropChance(bw) * 100)} %</b> bei Welle ${bw} · bis <b>85 %</b>. Das erste Boss ab Welle 30 bringt immer ein Modul. Jeder Boss ohne Beute erhöht die Chance beim nächsten um 10 Prozentpunkte${meta.dry ? ` (gerade <b>+${10 * meta.dry} %</b>)` : ''}. Läufe mit Admin-Eingriffen, Herausforderungen und Tagesläufe bringen keine Module.`;
     const list = $('modList'); list.innerHTML = '';
     for (const sec of C.SECTORS) {
       const types = Object.keys(C.MODULES).filter(t => C.MODULES[t].sector === sec.n);
@@ -978,7 +978,7 @@
         el.style.gridTemplateColumns = '1fr auto';
         el.innerHTML = m
           ? `<div><div class="nm">${R_.iconSvg(t, m.rar, 20)}${M.name}<span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span><small>Fund ${m.copies}/10${m.mast ? ' · Meister ' + m.mast + ' (+' + 5 * m.mast + ' %)' : ''}</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
-          : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Mutterschiffen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
+          : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Bossen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
         if (m) el.addEventListener('click', () => {
           if (on) meta.equip = eq.filter(x => x !== t);
           else if (eq.length < C.MODULE_SLOTS) meta.equip = eq.concat(t);
@@ -1615,7 +1615,7 @@
   $('pauseBtn').addEventListener('click', () => { if (runAlive()) setPaused(!paused); });
   // Nächste Welle vorzeitig rufen (mit Energie-Bonus für die gesparte Zeit)
   function callWave() { if (!runAlive() || paused || current || !run.canCallWave()) { A.play('hurt'); return; } run.callWave(); }
-  // Automatisch rufen: sobald die aktuelle Welle komplett gestartet ist (kein Mutterschiff)
+  // Automatisch rufen: sobald die aktuelle Welle komplett gestartet ist (kein Boss)
   function syncAutoCall() { const on = !!meta.autoCall; $$('.autocall').forEach(b => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.textContent = on ? 'Wellen automatisch rufen: an' : 'Wellen automatisch rufen: aus'; }); $('callBtn').classList.toggle('auto', on); }
   $$('.autocall').forEach(b => b.addEventListener('click', () => { meta.autoCall = !meta.autoCall; save(); syncAutoCall(); A.play('click'); }));
   syncAutoCall();
@@ -1653,7 +1653,7 @@
     else if (run.markAt(w.x, w.y)) A.play('mark');
   });
 
-  const MARK_NAME = { grunt: 'Jäger', runner: 'Flitzer', brute: 'Koloss', shooter: 'Kanonenboot', boss: 'Mutterschiff', mender: 'Heiler', bulwark: 'Schildträger', splitter: 'Splitter', shard: 'Splitter', phantom: 'Phantom', bomb: 'Bombe' };
+  const MARK_NAME = { grunt: 'Jäger', runner: 'Flitzer', brute: 'Koloss', shooter: 'Kanonenboot', boss: 'Boss', mender: 'Heiler', bulwark: 'Schildträger', splitter: 'Splitter', shard: 'Splitter', phantom: 'Phantom', bomb: 'Bombe' };
   // ---------- Schleife ----------
   const SOUND_OF = { loot: 'loot', rlaunch: 'rlaunch', cryo: 'cryo', laserhit: 'laserhit', nova: 'nova', eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
   let last = performance.now(), uiT = 0, saveT = 0, autoT = 0, dpsT = 0, lastShots = 0;
@@ -1696,18 +1696,24 @@
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
       $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';
       $('wavebar').classList.toggle('hold', !!run.holding);
-      // Lebensleiste des Mutterschiffs (stärkstes lebendes, falls mehrere)
+      // Lebensleiste des Bosses (stärkstes lebendes, falls mehrere)
       let boss = null;
       for (const e of run.enemies) if (e.type === 'boss' && e.hp > 0 && (!boss || e.hp > boss.hp)) boss = e;
       const bb = $('bossBar');
       if (bb.hidden !== !boss) bb.hidden = !boss;
       if (boss) {
         const pct = Math.max(0, boss.hp / boss.maxHp * 100);
-        bb.lastElementChild.firstElementChild.style.width = pct + '%';
+        bb.querySelector('.bar i').style.width = pct + '%';
+        // nächste Fähigkeit mit Countdown
+        const nx = C.BOSS_ACT_NAME[run.bossNext(boss)] || '', left = Math.max(0, boss.actT), soon = left < 1;
+        const nt = `Nächste Fähigkeit: <b>${nx}</b> in ${left.toFixed(1).replace('.', ',')} s`;
+        if (bb._nt !== nt) { bb._nt = nt; $('bossNext').innerHTML = nt; }
+        $('bossNextBar').style.width = Math.min(100, (1 - left / (boss.actMax || 2.5)) * 100) + '%';
+        bb.querySelector('.bossnext').classList.toggle('soon', soon);
         const sh = boss.shieldUntil > run.time;
         bb.classList.toggle('shield', sh);
         $('bossPct').textContent = (pct < 1 ? pct.toFixed(1) : Math.ceil(pct)) + ' %' + (sh ? ' · Schild' : '');
-        const bn = boss.kind ? C.BOSS_KINDS[boss.kind].name + (boss.lord ? ' · Phase ' + ((boss.phase || 0) + 1) : '') : 'Mutterschiff';
+        const bn = boss.kind ? C.BOSS_KINDS[boss.kind].name + (boss.lord ? ' · Phase ' + ((boss.phase || 0) + 1) : '') : 'Boss';
         if ($('bossName').textContent !== bn) $('bossName').textContent = bn;
       }
       $('callBtn').disabled = !run.canCallWave();

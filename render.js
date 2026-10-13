@@ -145,7 +145,7 @@
       } else if (e.kind && drawBoss(e, c, r, t, sd, fl)) {
         // eigener Boss gezeichnet
       } else {
-        // Mutterschiff
+        // Boss
         for (const o of [-0.55, 0, 0.55]) flame(-r * 0.9, r * o, r * 1.2 * fl, r * 0.14, '#ff9af7', t, sd + o * 3);
         ctx.beginPath(); ctx.ellipse(0, 0, r * 1.15, r * 0.95, 0, 0, 7); fillHull(); glow(c, 2.4);
         ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 0.95); ctx.lineTo(-r * 0.7, -r * 1.45); ctx.lineTo(-r * 1.0, -r * 1.35); ctx.lineTo(-r * 0.75, -r * 0.8);
@@ -471,7 +471,7 @@
     // ---------- Effekte ----------
     let dmgNums = true;
     function pushFx(f) {
-      // Schadenszahlen begrenzen, damit große Gefechte lesbar bleiben (Krits und Mutterschiff bevorzugt)
+      // Schadenszahlen begrenzen, damit große Gefechte lesbar bleiben (Krits und Boss bevorzugt)
       if (f.k === 'dmg' && !dmgNums) return;
       if (f.k === 'dmg') { let n = 0; for (const x of fx) if (x.k === 'dmg') n++; if (n >= (f.crit ? 10 : 5)) return; }
       f.life = LIFE[f.k] || 0.5;
@@ -594,7 +594,7 @@
       // Schiffe
       for (const e of run.enemies) {
         const p = run.pos(e);
-        // Schiffe zeigen in Flugrichtung; Mutterschiff und haltende Schützen zur Kanone
+        // Schiffe zeigen in Flugrichtung; Boss und haltende Schützen zur Kanone
         const facing = e.type === 'boss' || e.hd == null || (e.stop && e.dist <= e.stop) ? e.a + Math.PI : e.hd;
         const cloak = run.cloaked(e);
         if (e.type === 'mender') { ctx.beginPath(); ctx.arc(p.x, p.y, 90, 0, 7); ctx.setLineDash([3, 9]); ctx.strokeStyle = SHIP.mender; ctx.globalAlpha = 0.12 + 0.06 * Math.sin(t * 0.004 + e.seed); ctx.lineWidth = 1; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1; } // dezenter Heilradius
@@ -853,7 +853,7 @@
           ctx.globalAlpha = Math.min(1, (1 - k) * 2);
           ctx.fillStyle = f.boss ? SHIP.boss : PAL.core; ctx.textAlign = 'center';
           ctx.font = `700 ${Math.round(Math.min(W, H) * 0.08)}px ${FONT_UI()}`;
-          ctx.fillText(f.boss ? (f.bossName || 'Mutterschiff').toUpperCase() : 'WELLE ' + f.w, W / 2, H * 0.4 - k * 10);
+          ctx.fillText(f.boss ? (f.bossName || 'Boss').toUpperCase() : 'WELLE ' + f.w, W / 2, H * 0.4 - k * 10);
           if (f.kind && !f.sector) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`; ctx.fillStyle = f.kind === 'Schwarm' ? '#ffb066' : f.kind === 'Panzerverband' ? '#ff8a8a' : '#e0ff6b'; ctx.fillText(f.kind.toUpperCase(), W / 2, H * 0.4 + Math.min(W, H) * 0.06 - k * 10); }
           if (f.sector) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`; ctx.fillStyle = BIOME[f.sector.n - 1].star; ctx.fillText('SEKTOR ' + f.sector.n + ' · ' + f.sector.name.toUpperCase(), W / 2, H * 0.4 + Math.min(W, H) * 0.06 - k * 10); }
           ctx.globalAlpha = 1;
@@ -863,7 +863,7 @@
         ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 0.006);
         ctx.fillStyle = SHIP.boss; ctx.textAlign = 'center';
         ctx.font = `700 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`;
-        { const b = run.enemies.find(e => e.type === 'boss' && e.hp > 0); ctx.fillText(((b && b.kind && C.BOSS_KINDS[b.kind].name) || 'Mutterschiff').toUpperCase() + ' BESIEGEN', W / 2, H * 0.2); }
+        { const b = run.enemies.find(e => e.type === 'boss' && e.hp > 0); ctx.fillText(((b && b.kind && C.BOSS_KINDS[b.kind].name) || 'Boss').toUpperCase() + ' BESIEGEN', W / 2, H * 0.2); }
         ctx.globalAlpha = 1;
       }
     }

@@ -125,6 +125,7 @@
     bastion: { name: 'Großträger Bastion', hp: 2, r: 32, lord: true, acts: ['hangar', 'salvo', 'bomb'], ph2: ['shield'], ph3: ['laser'],
       parts: [{ k: 'turret', fwd: 20, lat: -31 }, { k: 'turret', fwd: 20, lat: 31 }, { k: 'turret', fwd: -18, lat: -33 }, { k: 'turret', fwd: -18, lat: 33 }] },
   };
+  const BOSS_ACT_NAME = { salvo: 'Salve', broadside: 'Breitseite', spawn: 'Jägerstaffel', hangar: 'Hangar', bomb: 'Bombe', mines: 'Minenteppich', shield: 'Schild', laser: 'Laser', cloak: 'Tarnung', bulwarks: 'Schildträger', nova: 'Nova', mend: 'Reparatur' };
   const BOSS_ROSTER = { 1: ['gunboat', 'layer', 'frigate', 'lancer', 'bastion'] };
   function bossKind(w) {
     if (w % 10 || w > 250) return null;
@@ -132,7 +133,7 @@
     return ro ? ro[(w / 10 - 1) % 5] : null;
   }
 
-  // ---------- Boss-Module: Beute der Mutterschiffe, je Sektor eigene Typen ----------
+  // ---------- Boss-Module: Beute der Bosse, je Sektor eigene Typen ----------
   // Wirkung = Grundwert × Seltenheit × (1 + 15 % je zusätzlichem Fund, max. 10 Funde)
   const MODULES = {
     chain:     { sector: 1, name: 'Kettenblitz',       desc: v => `${pctS(v)} Chance, dass ein Treffer auf 2 Schiffe überspringt`, base: 0.10 },
@@ -184,7 +185,7 @@
     return 'kopie';
   }
   const MODULE_SLOTS = 3;
-  // Beutechance steigt mit der Welle des Mutterschiffs: 20 % bei Welle 30 bis max. 85 %
+  // Beutechance steigt mit der Welle des Bosses: 20 % bei Welle 30 bis max. 85 %
   const dropChance = w => Math.max(0, Math.min(0.85, 0.2 + (w - 30) * 0.005));
 
   // Meilensteine: einmalige Kristalle für neue Bestwellen (25, 50, 75 …), je Fusionszyklus
@@ -279,11 +280,11 @@
   const GATES = { u_freeze: 15, m_freeze: 15, u_blade: 20, u_over: 25, m_over: 25, u_jump: 25, m_jump: 25, u_mine: 35 };
   const MODULES_AT = 30, FUSION_AT = 50;
   const ROADMAP = [
-    { w: 10, label: 'Erstes Mutterschiff' },
+    { w: 10, label: 'Erster Boss' },
     { w: 15, label: 'Stasisfeld im Labor, Tageslauf' },
     { w: 20, label: 'Orbitklingen im Labor' },
     { w: 25, label: 'Überladung, Sprungtor und Bergbau' },
-    { w: 30, label: 'Boss-Module: Mutterschiffe lassen Beute fallen' },
+    { w: 30, label: 'Boss-Module: Bosse lassen Beute fallen' },
     { w: 35, label: 'Minenwerfer im Labor' },
     { w: 40, label: 'Herausforderungen: Läufe mit Handicap für dauerhafte Boni' },
     { w: 50, label: 'Kernfusion' },
@@ -363,7 +364,7 @@
     { id: 'best',   name: 'Vorstoß',          what: 'Höchste Welle',          goals: [25, 50, 100, 150, 200, 300, 400],     bonus: 'hp',     step: 0.03, bname: 'Strukturpunkte' },
     { id: 'kills',  name: 'Jägerschreck',     what: 'Abschüsse',              goals: [1e3, 1e4, 1e5, 1e6, 1e7],             bonus: 'rate',   step: 0.02, bname: 'Feuerrate' },
     { id: 'crys',   name: 'Kristallhort',     what: 'Kristalle verdient',     goals: [1e4, 1e6, 1e8, 1e10, 1e12],           bonus: 'crys',   step: 0.03, bname: 'Kristalle' },
-    { id: 'bosses', name: 'Mutterschiffjäger', what: 'Mutterschiffe besiegt', goals: [10, 50, 250, 1e3, 5e3],               bonus: 'boss',   step: 0.04, bname: 'Schaden gegen Mutterschiffe' },
+    { id: 'bosses', name: 'Bossjäger', what: 'Bosse besiegt', goals: [10, 50, 250, 1e3, 5e3],               bonus: 'boss',   step: 0.04, bname: 'Schaden gegen Bosse' },
     { id: 'mods',   name: 'Sammler',          what: 'Modulkopien gesammelt',  goals: [10, 25, 50, 75, 100],                 bonus: 'mod',    step: 0.02, bname: 'Modulwirkung' },
     { id: 'fus',    name: 'Kernschmelze',     what: 'Kernfusionen',           goals: [1, 3, 5, 10, 20],                     bonus: 'frag',   step: 0.04, bname: 'Fusionsfragmente' },
     { id: 'daily',  name: 'Stammgast',        what: 'Tagesläufe',             goals: [5, 20, 50, 100],                      bonus: 'loot',   step: 0.03, bname: 'Energie' },
@@ -425,10 +426,10 @@
   const SKILLS = [
     { id: 'p_cal',    br: 'p', max: 3, name: 'Kalibrierung',     desc: l => `+${pc(0.06 * l)} Kanonenschaden` },
     { id: 'p_pierce', br: 'p', par: 'p_cal', max: 1, name: 'Wolframkern',      desc: () => '+1 Durchschlag für die Kanone' },
-    { id: 'p_mark',   br: 'p', par: 'p_pierce', max: 2, name: 'Schwachstelle',    desc: l => `Markierte Ziele erleiden ${pc(0.2 * l)} mehr Schaden aus allen Quellen, auch Mutterschiffe` },
-    { id: 'p_poison', br: 'p', par: 'p_cal', max: 3, name: 'Giftgeschosse',    desc: l => `Kanonentreffer vergiften: ${pc(0.1 * l)} des Treffers pro Sekunde, klingt in 3 s ab, stapelt. Dazu ${(0.05 * l).toFixed(2).replace('.', ',')} % der Lebenspunkte pro Sekunde (Mutterschiffe ${(0.01 * l).toFixed(2).replace('.', ',')} %)` },
+    { id: 'p_mark',   br: 'p', par: 'p_pierce', max: 2, name: 'Schwachstelle',    desc: l => `Markierte Ziele erleiden ${pc(0.2 * l)} mehr Schaden aus allen Quellen, auch Bosse` },
+    { id: 'p_poison', br: 'p', par: 'p_cal', max: 3, name: 'Giftgeschosse',    desc: l => `Kanonentreffer vergiften: ${pc(0.1 * l)} des Treffers pro Sekunde, klingt in 3 s ab, stapelt. Dazu ${(0.05 * l).toFixed(2).replace('.', ',')} % der Lebenspunkte pro Sekunde (Bosse ${(0.01 * l).toFixed(2).replace('.', ',')} %)` },
     { id: 'p_vamp',   br: 'p', par: 'p_poison', max: 3, name: 'Vampirgeschosse',  desc: l => `Jeder Kanonentreffer repariert ${(0.03 * l).toFixed(2).replace('.', ',')} % der Hülle` },
-    { id: 'p_exec',   br: 'p', par: 'p_poison', max: 3, name: 'Hinrichtung',      desc: l => `Kanonentreffer zerstören Schiffe unter ${pc(0.05 * l)} Lebenspunkten sofort (keine Mutterschiffe)` },
+    { id: 'p_exec',   br: 'p', par: 'p_poison', max: 3, name: 'Hinrichtung',      desc: l => `Kanonentreffer zerstören Schiffe unter ${pc(0.05 * l)} Lebenspunkten sofort (keine Bosse)` },
     { id: 'p_charge', br: 'p', par: 'p_mark', cap: 1, name: 'Ladeschuss',       desc: () => 'Alle 6 s feuert die Kanone einen geladenen Schuss: 12× Schaden, durchschlägt alles auf seiner Linie' },
     { id: 'p_sniper', br: 'p', par: 'p_exec', cap: 1, name: 'Scharfschütze',    desc: () => '+30 % Kanonenschaden und +0,5× Krit-Schaden' },
     { id: 'a_war',    br: 'a', max: 3, name: 'Sprengköpfe',      desc: l => `+${pc(0.1 * l)} Schaden von Raketen, Kryowerfer, Minen, Schockwelle und Klingen` },
@@ -458,7 +459,7 @@
     { id: 'x_shrap',  br: 'x', max: 1, link: ['a', 'b'], name: 'Splitterpanzer', desc: () => 'Treffer an der Hülle schleudern Splitter auf die 3 nächsten Schiffe (je 1× Kanonenschaden)' },
     { id: 'x_proto',  br: 'x', max: 1, link: ['b', 't'], name: 'Notfallprotokoll', desc: () => 'Einmal pro Welle: fällt die Hülle unter 30 %, friert ein Stasisfeld alle Gegner 3 s ein' },
     { id: 'x_beam',   br: 'x', max: 1, link: ['t', 'p'], name: 'Leitstrahl', desc: () => 'Der Orbitalschlag vergiftet getroffene Schiffe (20 % des Schlagschadens pro Sekunde) und markiert das stärkste, wenn noch nichts markiert ist' },
-    { id: 't_hole',   br: 't', par: 't_call', cap: 1, name: 'Schwarzes Loch',   desc: () => 'Alle 20 s zieht ein Wirbel Schiffe 3 s lang zusammen und beschädigt sie (keine Mutterschiffe)' },
+    { id: 't_hole',   br: 't', par: 't_call', cap: 1, name: 'Schwarzes Loch',   desc: () => 'Alle 20 s zieht ein Wirbel Schiffe 3 s lang zusammen und beschädigt sie (keine Bosse)' },
   ];
   const SK_BY_ID = {}; SKILLS.forEach(k => (SK_BY_ID[k.id] = k));
   const SK_CAP_AT = 8; // Punkte im Ast für den Schlussstein
@@ -497,7 +498,7 @@
     ice:  { b: 'hp',   step: 0.04, name: 'Strukturpunkte', c0: 400 },
     lava: { b: 'rateAll', step: 0.03, name: 'Feuerrate aller Waffen', c0: 300 },
     red:  { b: 'loot', step: 0.02, name: 'Energie im Lauf', c0: 200 },
-    void: { b: 'boss', step: 0.05, name: 'Schaden gegen Mutterschiffe', c0: 150 },
+    void: { b: 'boss', step: 0.05, name: 'Schaden gegen Bosse', c0: 150 },
   };
   const researchCost = (l, id) => Math.ceil(((RESEARCH[id] && RESEARCH[id].c0) || 500) * Math.pow(1.25, l));
   const researchLv = (m, id) => (m.mine && m.mine.res && m.mine.res[id]) || 0;
@@ -730,9 +731,9 @@
 
     waveBonusAmount(w) { return this.s.waveBonus ? waveEnergy(w || this.wave) * this.s.loot * this.s.waveBonus : 0; }
 
-    // Nächste Welle vorzeitig rufen: geht, sobald alle Schiffe der aktuellen Welle gestartet sind und kein Mutterschiff lebt.
+    // Nächste Welle vorzeitig rufen: geht, sobald alle Schiffe der aktuellen Welle gestartet sind und kein Boss lebt.
     // Bonus: Energie für die übersprungene Wartezeit
-    // Jederzeit möglich, außer solange ein Mutterschiff lebt oder noch kommt. Noch nicht gestartete Schiffe der
+    // Jederzeit möglich, außer solange ein Boss lebt oder noch kommt. Noch nicht gestartete Schiffe der
     // aktuellen Welle bleiben in der Warteschlange, es wird also nichts übersprungen; mehrfaches Rufen stapelt Wellen.
     canCallWave() { return !this.dead && !this.bossAlive(); }
     callWave() {
@@ -791,13 +792,13 @@
       this.queue = list;
       this.spawnGap = boss ? 1 : SPAWN_LEN / list.length;
       this.spawnT = 0;
-      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Mutterschiff' }).name : null, kind: WT.name, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
+      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Boss' }).name : null, kind: WT.name, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
     }
 
     // Neues Schiff an Weltposition (x, y) erzeugen
     spawnAt(type, x0, y0, o) {
       const d = ENEMY[type], w = this.wave;
-      // Frühe Mutterschiffe schwächer, volle Stärke ab etwa Welle 60
+      // Frühe Bosse schwächer, volle Stärke ab etwa Welle 60
       const wm = type === 'boss' || type === 'bomb' || !this.waveMod ? { hp: 1, rw: 1, dmg: 1, spd: 1, big: 1 } : this.waveMod;
       const tw = this.twist();
       const hp = d.hp * hpScale(w) * wm.hp * (type === 'boss' ? Math.min(1, 0.22 + w / 80) : 1) * ((tw && tw.ehp) || 1) * (this.isChal ? P.chalHp : 1) / (1 + (this.isChal ? 0.4 : 0.17) * ((this.s && this.s.mod && this.s.mod.crysmod) || 0)); // Leerenresonator
@@ -811,7 +812,7 @@
       if (type === 'mender') e.stop = Math.max(110, Math.min(d.stop, this.s.range - 30)); // Heiler bleiben in Kanonenreichweite
       if (type === 'boss') {
         e.stop = Math.max(115, Math.min(210, this.s.range - 20));
-        e.actT = 2.5; e.hoverT = 0; e.shieldUntil = 0; e.a0 = e.a; e.acts = 0; e.sector = sectorOf(w).n; e.phase = 0;
+        e.actT = e.actMax = 2.5; e.hoverT = 0; e.shieldUntil = 0; e.a0 = e.a; e.acts = 0; e.sector = sectorOf(w).n; e.phase = 0;
         e.rw += this.bossRwAdd || 0; this.bossRwAdd = 0;
         const kind = o && o.kind !== undefined ? o.kind : bossKind(w), K = BOSS_KINDS[kind];
         if (K) {
@@ -861,7 +862,7 @@
       const eff = Math.min(d, e.hp);
       this.dealt[src || 'gun'] += eff;
       // Orbitalschlag lädt nur über zugefügten Schaden: gemessen an einem typischen Schiff der Welle,
-      // beim Mutterschiff an seinen Lebenspunkten (ein ganzes Mutterschiff lädt mehrere Schläge)
+      // beim Boss an seinen Lebenspunkten (ein ganzer Boss lädt mehrere Schläge)
       if (!this.s.noGun && e.type !== 'bomb' && e.maxHp > 0 && src !== 'strike' && !(this.time < this.strikeLock)) { // der Schlag selbst lädt nicht, kurz danach lädt nichts
         const per = e.type === 'boss' ? eff / e.maxHp * P.strikeBoss : e.host ? eff / e.host.maxHp * P.strikeBoss : eff / (this.refHp || e.maxHp) * P.strikeDmg / STRIKE_KILLS;
         this.charge = Math.min(1, this.charge + per * (1 + ((this.s.mod && this.s.mod.leech) || 0) / 2) * (this.s.chargeK || 1));
@@ -888,7 +889,7 @@
           if (this.admin) this.noLoot = 'admin';
           else if (this.mode) this.noLoot = 'mode';
           else if (modOk) {
-            // Pech-Ausgleich: jedes Mutterschiff ohne Beute erhöht die Chance beim nächsten um 10 Prozentpunkte
+            // Pech-Ausgleich: jeder Boss ohne Beute erhöht die Chance beim nächsten um 10 Prozentpunkte
             const ch = dropChance(this.wave) + 0.1 * (this.meta.dry || 0);
             if (first && !this.loot.length || Math.random() < ch) {
               const drop = rollModule(this.wave); this.loot.push(drop); this.meta.dry = 0;
@@ -1023,7 +1024,7 @@
       if (best) { this.focus = best; this.focusUntil = Infinity; } // Markierung hält, bis das Ziel zerstört oder ein anderes gewählt ist
       return best;
     }
-    // Bester Punkt für den Orbitalschlag: das Mutterschiff, sonst die Stelle mit den meisten Lebenspunkten im Wirkradius
+    // Bester Punkt für den Orbitalschlag: der Boss, sonst die Stelle mit den meisten Lebenspunkten im Wirkradius
     strikeTarget() {
       const alive = this.enemies.filter(e => e.hp > 0 && e.dist < FIELD_H + 40);
       if (!alive.length) return null;
@@ -1073,9 +1074,10 @@
     get overActive() { return this.overUntil > this.time; }
     get rateNow() { return this.s.rate * (this.overActive ? ABIL.over.mult(this.abilityLv('over')) + 0.25 * ((this.s.K && this.s.K('t_over')) || 0) : 1); }
 
-    // Mutterschiff: schwebt in Reichweite und wechselt zwischen Fähigkeiten
-    bossAct(e) {
-      const w = this.wave, p = this.pos(e), BK = BOSS_KINDS[e.kind];
+    // Boss: schwebt in Reichweite und wechselt zwischen Fähigkeiten
+    bossNext(e) { if (!e.nextAct) { const a = this.bossActs(e); e.nextAct = a[e.acts % a.length]; } return e.nextAct; }
+    bossActs(e) {
+      const w = this.wave, BK = BOSS_KINDS[e.kind];
       let acts;
       if (BK) acts = BK.acts.concat(e.phase >= 1 && BK.ph2 || [], e.phase >= 2 && BK.ph3 || []);
       else {
@@ -1086,9 +1088,14 @@
         const extra = SECTORS[e.sector - 1].boss;
         if (extra) acts.push(extra, extra === 'mend' ? 'salvo' : extra); // Reparatur nur einmal im Zyklus
       }
-      let act = acts[e.acts % acts.length];
-      if (e.acts >= acts.length) act = acts[Math.floor(Math.random() * acts.length)];
+      return acts;
+    }
+    bossAct(e) {
+      const w = this.wave, p = this.pos(e), acts = this.bossActs(e);
+      // die nächste Fähigkeit steht schon fest (für die Anzeige); erst der Reihe nach, danach zufällig
+      let act = e.nextAct && acts.includes(e.nextAct) ? e.nextAct : acts[e.acts % acts.length];
       e.acts++;
+      e.nextAct = e.acts < acts.length ? acts[e.acts] : acts[Math.floor(Math.random() * acts.length)];
       if (act === 'salvo') {
         // gezielter Fächer auf die Kanone
         const n = 5 + Math.min(4, Math.floor(w / 25));
@@ -1176,7 +1183,7 @@
         }
         const contact = WALL_R + e.r * 0.3;
         if (e.type === 'boss') {
-          // Wut: je länger der Kampf dauert, desto härter schlägt das Mutterschiff zu (+100 % alle 90 s)
+          // Wut: je länger der Kampf dauert, desto härter schlägt der Boss zu (+100 % alle 90 s)
           e.fightT = (e.fightT || 0) + dt; if (e.dmg0 == null) e.dmg0 = e.dmg;
           e.dmg = e.dmg0 * (1 + e.fightT / P.bossWrath);
           // Herrscher: neue Phase unter 66 % und 33 % Lebenspunkten
@@ -1202,14 +1209,14 @@
               else { e.atkT -= dt; if (e.atkT <= 0) { e.atkT = 1; this.hitBase(e.dmg); } }
             }
             e.actT -= dt;
-            if (e.actT <= 0) { e.actT = Math.max(2.5, 4.5 - this.wave * 0.02); this.bossAct(e); }
+            if (e.actT <= 0) { e.actT = e.actMax = Math.max(2.5, 4.5 - this.wave * 0.02); this.bossAct(e); }
           }
           continue;
         }
         // Heiler: repariert Schiffe in der Nähe
         if (e.type === 'mender') {
           const p = this.pos(e);
-          // Heilung stapelt nicht (je Schiff nur ein Heiler pro Moment), Mutterschiffe bekommen nur einen Bruchteil
+          // Heilung stapelt nicht (je Schiff nur ein Heiler pro Moment), Bosse bekommen nur einen Bruchteil
           for (const o of this.enemies) if (o !== e && o.type !== 'mender' && o.hp > 0 && o.hp < o.maxHp && o.mendT !== this.time && !(this.time - (o.hitT || -9) < P.mendCalm)) {
             const q = this.pos(o); if (Math.hypot(q.x - p.x, q.y - p.y) >= 90) continue;
             o.mendT = this.time; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * (o.type === 'boss' ? P.mendBoss : P.mend) * dt);
@@ -1263,7 +1270,7 @@
       if (s.noGun) this.fireT = 0;
       if (this.fireT >= 1) {
         const inRange = this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.range && !this.cloaked(e)).sort((a, b) => (a.bomb ? a.dist - 1000 : a.dist) - (b.bomb ? b.dist - 1000 : b.dist));
-        // Bosskampf: nach Wellenende hat das Mutterschiff Vorrang, außer ein Schiff ist schon nah an der Kanone
+        // Bosskampf: nach Wellenende hat der Boss Vorrang, außer ein Schiff ist schon nah an der Kanone
         if (this.holding && !this.focus) {
           const boss = inRange.find(e => e.type === 'boss');
           if (boss && !inRange.some(e => e !== boss && e.dist < 95)) { inRange.splice(inRange.indexOf(boss), 1); inRange.unshift(boss); }
@@ -1292,8 +1299,8 @@
         if (d <= v + t.r) {
           b.done = true;
           const brittle = s.mod.cryoammo && t.slowUntil > this.time ? 1 + s.mod.cryoammo : 1;
-          // Präzision: markierte Ziele verlieren zusätzlich 1,2 % (Mutterschiffe 0,04 %) ihrer max. Lebenspunkte je Treffer
-          const pct = t !== this.focus ? 0 : t.maxHp * (t.type === 'boss' ? P.gunBossPct : P.gunFocusPct) * (b.pk || 1); // nur markierte Ziele, Mutterschiffe schwächer
+          // Präzision: markierte Ziele verlieren zusätzlich 1,2 % (Bosse 0,04 %) ihrer max. Lebenspunkte je Treffer
+          const pct = t !== this.focus ? 0 : t.maxHp * (t.type === 'boss' ? P.gunBossPct : P.gunFocusPct) * (b.pk || 1); // nur markierte Ziele, Bosse schwächer
           const eff = this.hurt(t, (b.dmg + pct) * brittle, b.crit, 'gun');
           if (eff > 0) {
             // Zusatzschaden den Modulen zurechnen: Anteil, der ohne das Modul fehlen würde
@@ -1563,7 +1570,7 @@
     m_cheap: { w: 0.45, why: 'Günstigere Upgrades im Lauf wirken auf alles.' },
     m_head:  { w: 0.5,  why: 'Vorsprung startet jeden Lauf mit fertigen Grundstufen.' },
     m_freeze:{ w: 0.35, why: 'Längere Stasis rettet brenzlige Momente.' },
-    m_over:  { w: 0.35, why: 'Stärkere Überladung hilft gegen Mutterschiffe.' },
+    m_over:  { w: 0.35, why: 'Stärkere Überladung hilft gegen Bosse.' },
     m_jump:  { w: m => (m.best >= 25 ? 0.7 : 0.1), why: 'Spätere Startwelle spart Zeit in jedem Lauf.' },
     u_shock: { w: 2.2,  why: 'Die Schockwelle trifft alle nahen Schiffe und stößt sie zurück.' },
     u_freeze:{ w: 1.6,  why: 'Stasis ist deine Notbremse, wenn es eng wird.' },
@@ -1764,6 +1771,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.9.2'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, bossKind, P };
+  const VERSION = '0.9.3'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, bossKind, P };
 })(typeof window !== 'undefined' ? window : globalThis);

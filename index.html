@@ -89,6 +89,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #bossBar .bossline b { font-size: 15px; color: #fff; letter-spacing: 0; }
 #bossBar .bar { height: 8px; background: rgba(255,255,255,.08); }
 #bossBar .bar i { background: linear-gradient(90deg, #ff3fa4, #ff8a3d); box-shadow: 0 0 10px #ff3fa4; transition: width .15s linear; }
+#bossBar .bossnext { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11px; color: #ffb3ea; letter-spacing: .04em; }
+#bossBar .bossnext span { white-space: nowrap; }
+#bossBar .bossnext b { color: #fff; }
+#bossBar .nbar { flex: 1; height: 3px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; }
+#bossBar .nbar i { display: block; height: 100%; background: #ffb3ea; }
+#bossBar .bossnext.soon .nbar i { background: #ff4040; box-shadow: 0 0 6px #ff4040; }
+#bossBar .bossnext.soon b { color: #ff8080; }
 #bossBar.shield { border-color: #7fe3ff; box-shadow: 0 0 14px rgba(120,220,255,.5); }
 #bossBar.shield .bar i { background: linear-gradient(90deg, #6fd6ff, #c8f4ff); box-shadow: 0 0 10px #6fd6ff; }
 #wavebar i { background: var(--ink-dim); }
@@ -548,7 +555,7 @@ textarea { resize: vertical; min-height: 70px; }
       <div class="hpline"><span>Kanone</span><span class="num" id="hpTxt">0 / 0</span></div>
       <div class="bar" id="hpbar"><i></i></div>
       <div class="mchip" id="mChip" hidden><b id="mfName"></b><span id="mfRule"></span></div>
-      <div id="bossBar" hidden><div class="bossline"><span id="bossName">Mutterschiff</span><b class="num" id="bossPct">100 %</b></div><div class="bar"><i></i></div></div>
+      <div id="bossBar" hidden><div class="bossline"><span id="bossName">Boss</span><b class="num" id="bossPct">100 %</b></div><div class="bar"><i></i></div><div class="bossnext"><span id="bossNext"></span><div class="nbar"><i id="bossNextBar"></i></div></div></div>
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>
     <div id="abil">
@@ -641,7 +648,7 @@ textarea { resize: vertical; min-height: 70px; }
       <li><b>Orbitalschlag</b> lädt sich durch zugefügten Schaden auf. Geladen trifft ein Tipp ins Feld genau dort, der Knopf trifft automatisch.</li>
       <li><b>Stasis und Überladung</b> schaltest du im Labor frei.</li>
       <li><b>Tastatur:</b> 1 bis 3 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. N ruft die nächste Welle.</li>
-      <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, auch mehrfach hintereinander (nicht während eines Mutterschiffs). Die gesparte Zeit bringt Bonus-Energie. Im Pausenmenü lässt sich das automatische Rufen einschalten.</li>
+      <li><b>Welle ▸▸</b> ruft die nächste Welle sofort, auch mehrfach hintereinander (nicht während eines Bosses). Die gesparte Zeit bringt Bonus-Energie. Im Pausenmenü lässt sich das automatische Rufen einschalten.</li>
     </ul>
     <div class="verline"><span id="verTxt"></span><button class="mini" id="updBtn">Nach Update suchen</button></div>
     <ul class="fair">
@@ -805,7 +812,7 @@ textarea { resize: vertical; min-height: 70px; }
 <div class="ov" id="modules" hidden>
   <div class="card">
     <h2>Module</h2>
-    <p>Mutterschiffe lassen Module fallen. Jeder Sektor hat eigene Typen, und jeder weitere Fund macht ein Modul stärker. Tippe ein Modul an, um es auszurüsten.</p>
+    <p>Bosse lassen Module fallen. Jeder Sektor hat eigene Typen, und jeder weitere Fund macht ein Modul stärker. Tippe ein Modul an, um es auszurüsten.</p>
     <p class="metaline" id="dropLine"></p>
     <div class="slots" id="modSlots"></div>
     <div id="modList"></div>
@@ -824,14 +831,14 @@ textarea { resize: vertical; min-height: 70px; }
     </details>
     <details class="gsec"><summary>Steuerung im Kampf</summary>
       <div class="gitem"><b>Markieren</b><p>Tippe ein Schiff an, um es zu markieren. Die Kanone schießt dann zuerst darauf und macht zusätzlichen Präzisionsschaden. Die Markierung hält, bis das Ziel zerstört ist; nochmal antippen hebt sie auf. Ohne Markierung nimmt die Kanone Heiler automatisch zuerst.</p></div>
-      <div class="gitem"><b>Orbitalschlag</b><p>Lädt sich durch zugefügten Schaden auf (Ring am Knopf unten rechts). Geladen trifft ein Tipp ins Feld genau dort und markiert das Ziel. Der Knopf selbst trifft automatisch das Mutterschiff oder die dichteste Gruppe. Lange drücken schaltet um, sodass nur der Knopf auslöst.</p></div>
+      <div class="gitem"><b>Orbitalschlag</b><p>Lädt sich durch zugefügten Schaden auf (Ring am Knopf unten rechts). Geladen trifft ein Tipp ins Feld genau dort und markiert das Ziel. Der Knopf selbst trifft automatisch der Boss oder die dichteste Gruppe. Lange drücken schaltet um, sodass nur der Knopf auslöst.</p></div>
       <div class="gitem"><b>Stasis</b><p>Wird im Labor freigeschaltet. Friert alle Gegner für kurze Zeit ein, deine Kanone schießt weiter. Ideal, wenn die Hülle knapp wird.</p></div>
-      <div class="gitem"><b>Überladung</b><p>Wird im Labor freigeschaltet. Erhöht die Feuerrate für einige Sekunden stark, ideal gegen Mutterschiffe.</p></div>
+      <div class="gitem"><b>Überladung</b><p>Wird im Labor freigeschaltet. Erhöht die Feuerrate für einige Sekunden stark, ideal gegen Bosse.</p></div>
       <div class="gitem"><b>Tastatur</b><p>1 Orbitalschlag, 2 Stasis, 3 Überladung, N nächste Welle, Esc abbrechen.</p></div>
     </details>
     <details class="gsec"><summary>Gegner</summary>
       <div class="gitem"><b>Jäger, Flitzer, Koloss</b><p>Die Grundtypen: normal, schnell, zäh. Kanonenboote schießen aus der Distanz.</p></div>
-      <div class="gitem"><b>Mutterschiff</b><p>Schwebt auf Abstand und wechselt zwischen Salven, Jägerstaffeln, Bomben, Schild und Laser. Der Laser bricht ab, wenn du genug Schaden machst. Nach einer Weile greift es den Wall an und zieht sich danach wieder zurück. Die Leiste oben zeigt seine Lebenspunkte. Je länger der Kampf dauert, desto wütender wird es: sein Schaden steigt alle 90 Sekunden um den Grundwert.</p></div>
+      <div class="gitem"><b>Boss</b><p>Schwebt auf Abstand und wechselt zwischen Salven, Jägerstaffeln, Bomben, Schild und Laser. Der Laser bricht ab, wenn du genug Schaden machst. Nach einer Weile greift er den Wall an und zieht sich danach wieder zurück. Die Leiste oben zeigt seine Lebenspunkte. Je länger der Kampf dauert, desto wütender wird er: sein Schaden steigt alle 90 Sekunden um den Grundwert.</p></div>
       <div class="gitem"><b>Schildträger</b><p>Tragen einen Frontschild, der erst gebrochen werden muss und sich ohne Treffer wieder auflädt. Dauerfeuer und Flächenschaden helfen.</p></div>
       <div class="gitem"><b>Phantom</b><p>Tarnt sich zeitweise. Die Zielerfassung macht Tarnung wirkungslos.</p></div>
       <div class="gitem"><b>Splitter</b><p>Zerfällt beim Abschuss in kleinere Splitter.</p></div>
@@ -841,7 +848,7 @@ textarea { resize: vertical; min-height: 70px; }
     <details class="gsec"><summary>Fortschritt</summary>
       <div class="gitem"><b>Labor</b><p>Dauerhafte Verbesserungen mit Kristallen. „Empfohlen kaufen“ wählt ein sinnvolles nächstes Upgrade.</p></div>
       <div class="gitem"><b>Sprungtor</b><p>Startet Läufe später, abhängig von deiner Bestwelle. Die übersprungenen Wellen bringen Startenergie und Kristalle.</p></div>
-      <div class="gitem"><b>Module</b><p>Mutterschiffe lassen ab Welle 30 Module fallen. Drei kannst du ausrüsten. Weitere Funde und höhere Seltenheit machen sie stärker; im Werte-Reiter siehst du ihren Beitrag zum Schaden.</p></div>
+      <div class="gitem"><b>Module</b><p>Bosse lassen ab Welle 30 Module fallen. Drei kannst du ausrüsten. Weitere Funde und höhere Seltenheit machen sie stärker; im Werte-Reiter siehst du ihren Beitrag zum Schaden.</p></div>
       <div class="gitem"><b>Kernfusion</b><p>Ab Bestwelle 50: setzt Labor, Kristalle und Bestwelle zurück und gibt Kernfragmente für dauerhafte Technik. Je weiter du kommst, desto mehr Fragmente, ab Welle 150 deutlich mehr.</p></div>
       <div class="gitem"><b>Challenge</b><p>Läufe mit Handicap ab Rekordwelle 40. Jede Stufe gibt einen dauerhaften Bonus. Module sind dort abgeschaltet, außer den Leere-Modulen aus Sektor 5.</p></div>
       <div class="gitem"><b>Tageslauf</b><p>Alle spielen dieselben Wellen mit Standard-Ausrüstung. Der erste Lauf am Tag bringt einen Kristallbonus.</p></div>

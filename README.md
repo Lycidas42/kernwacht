@@ -4,7 +4,7 @@ Idle Tower Defense im Neon-Look. Deine Kanone steht unten, Raumschiffe greifen v
 
 Challenges (ab Rekordwelle 40): Läufe mit Handicap wie „Ohne Abwehr“, „Hetzjagd“ oder „Nur Minen“, je 8 Stufen. Jede Stufe vervielfacht einen dauerhaften Bonus (×1,05 bis ×1,08), der auch die Kernfusion überdauert. Gestartet wird am zuletzt erreichten Stufenziel mit passender Startenergie.
 
-Erfolge: 11 Erfolge mit je 4–7 Stufen (Wellen, Höchste Welle, Abschüsse, Kristalle, Mutterschiffe, Modulkopien, Fusionen, Tagesläufe, Erz, Orbitalschläge, Challenge-Stufen). Jede Stufe gibt einen kleinen dauerhaften Bonus. Erfolgsstufen erscheinen im Profil und in der Bestenliste.
+Erfolge: 11 Erfolge mit je 4–7 Stufen (Wellen, Höchste Welle, Abschüsse, Kristalle, Bosse, Modulkopien, Fusionen, Tagesläufe, Erz, Orbitalschläge, Challenge-Stufen). Jede Stufe gibt einen kleinen dauerhaften Bonus. Erfolgsstufen erscheinen im Profil und in der Bestenliste.
 
 Tageslauf (ab Rekordwelle 15): Alle spielen am selben Tag dieselben Wellen mit derselben Standard-Ausrüstung und einer Tages-Besonderheit. Der erste Versuch am Tag bringt einen Kristallbonus, der beste Versuch kommt in die Tages-Bestenliste. Das ist die Vorstufe zum späteren Battle Mode.
 
@@ -12,7 +12,7 @@ Bergbau (ab Rekordwelle 25): Fünf Planeten mit eigener Optik und Eigenschaft. J
 
 Hangar: Farbe, Turmform, Fundament und Anbauteile der Kanone; neue Teile werden über den Fortschritt freigeschaltet. Musik: sechs generative Stücke (Synthwave, 8-Bit, Ambient, Techno, Episch, Lo-Fi) oder Zufall.
 
-Langzeit-Ziele: Alle 50 Wellen beginnt ein neuer Sektor mit eigenem Biom, neuem Gegnertyp und neuer Boss-Fähigkeit. Mutterschiffe lassen Module fallen (je Sektor eigene Typen). Ab Bestwelle 50 setzt die Kernfusion Labor und Kristalle zurück und bringt Kernfragmente für dauerhafte Technik, darunter Raketen- und Kryowerfer.
+Langzeit-Ziele: Alle 50 Wellen beginnt ein neuer Sektor mit eigenem Biom, neuem Gegnertyp und neuer Boss-Fähigkeit. Bosse lassen Module fallen (je Sektor eigene Typen). Ab Bestwelle 50 setzt die Kernfusion Labor und Kristalle zurück und bringt Kernfragmente für dauerhafte Technik, darunter Raketen- und Kryowerfer.
 
 Kein Shop, keine Werbung, keine Premiumwährung. Die Kurven sind auf faires Tempo ohne Kaufdruck ausgelegt.
 
@@ -30,7 +30,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | Datei | Inhalt |
 | --- | --- |
 | `index.html` | Markup und Styles |
-| `core.js` | Spielkern ohne DOM: Wellen, Gegner, Mutterschiff, Upgrades, Labor, Fähigkeiten, Balancing-Parameter (`P`) |
+| `core.js` | Spielkern ohne DOM: Wellen, Gegner, Boss, Upgrades, Labor, Fähigkeiten, Balancing-Parameter (`P`) |
 | `game.js` | Steuerung: Zustand, Bedienung, Speichern, Werte-Tab, Admin-Modus, Spielschleife |
 | `render.js` | Grafik (Canvas 2D): Schiffe, Kanone, Minen, Effekte |
 | `mine-view.js` | Bergbau-Ansicht: Planeten, Einrichtungen, Abbau per Tippen |
@@ -42,11 +42,11 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `sw.js` | Service Worker: online immer neueste Version, offline aus dem Cache |
 | `manifest.webmanifest`, `icons/` | PWA-Metadaten und App-Icons |
 | `tools/sim.js` | Simuliert Läufe mit einem Kauf-Bot und gibt die erreichten Wellen aus |
-| `tools/check.js` | Fortschritt über viele Läufe, dazu Sprungtor, Mutterschiff und Schaden pro Quelle |
+| `tools/check.js` | Fortschritt über viele Läufe, dazu Sprungtor, Boss und Schaden pro Quelle |
 | `tools/strategies.js` | Vergleicht Kaufstrategien (nur Angriff, ausgewogen, Abwehr); Varianten per `KW_P='{...}'` |
 | `tools/fusion.js` | Mehrere Fusionszyklen mit Bot: Läufe pro Zyklus, Fragmente, wie schnell die alte Bestwelle wieder erreicht wird |
 | `tools/curve.js` | Schnelle Fortschrittskurve des ersten Zyklus, Varianten per `KW_P` |
-| `tools/diag_boss.js` | Protokolliert einen Mutterschiff-Kampf bei einer Welle |
+| `tools/diag_boss.js` | Protokolliert einen Boss-Kampf bei einer Welle |
 | `tools/tune.js` | Zufallssuche über die Balancing-Parameter gegen eine Zielkurve |
 | `tools/shares.js` | Schadensanteile je Quelle in späten Läufen, mit verschiedenen Modulen |
 | `tools/challenges.js` | Herausforderungen und Tageslauf: welche Wellen ein Bot bei typischem Fortschritt schafft |
