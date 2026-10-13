@@ -70,21 +70,31 @@
 
   // ---------- Profil und Werte ----------
   const profile = (name, avatar, color) => rpc('kw_profile', { p_name: name || '', p_avatar: avatar | 0, p_color: color | 0 });
-  const stats = s => rpc('kw_stats', { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0 });
+  // Rang (p_lvl) erst nach der Migration „rang“ bekannt: schlägt der Aufruf fehl, ohne Rang wiederholen
+  let hasLvl = true;
+  const stats = s => {
+    const a = { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0 };
+    if (!hasLvl) return rpc('kw_stats', a);
+    return rpc('kw_stats', Object.assign({ p_lvl: s.lvl | 0 }, a)).catch(e => { if (/p_lvl|function|schema/i.test(e.message)) { hasLvl = false; return rpc('kw_stats', a); } throw e; });
+  };
   const daily = (day, wave, kills) => rpc('kw_daily', { p_day: day, p_wave: wave | 0, p_kills: kills | 0 });
 
   // Highscores: Spalte der Spielertabelle; Spieler ohne Namen erscheinen anonym (Kurzkennung aus der ID)
   const anon = id => 'Anonym ' + String(id || '').replace(/-/g, '').slice(0, 4).toUpperCase();
   async function board(col, limit) {
     if (!(await start())) return null;
-    const { data, error } = await client.from('players').select('id,name,avatar,color,' + col).gt(col, 0).order(col, { ascending: false }).limit(limit || 25);
+    const q = f => client.from('players').select('id,name,avatar,color,' + f + col).gt(col, 0).order(col, { ascending: false }).limit(limit || 25);
+    let { data, error } = await q(col === 'lvl' ? '' : 'lvl,');
+    if (error && col !== 'lvl') ({ data, error } = await q(''));
     return error ? null : data.map(r => Object.assign(r, { name: r.name || anon(r.id), anon: !r.name }));
   }
   async function dailyBoard(day, limit) {
     if (!(await start())) return null;
-    const { data, error } = await client.from('daily_scores').select('player_id,wave,kills,players(name,avatar,color)').eq('day', day).order('wave', { ascending: false }).order('kills', { ascending: false }).limit(60);
+    const q = f => client.from('daily_scores').select('player_id,wave,kills,players(name,avatar,color' + f + ')').eq('day', day).order('wave', { ascending: false }).order('kills', { ascending: false }).limit(60);
+    let { data, error } = await q(',lvl');
+    if (error) ({ data, error } = await q(''));
     if (error) return null;
-    return data.filter(r => r.players).slice(0, limit || 25).map(r => ({ id: r.player_id, name: r.players.name || anon(r.player_id), anon: !r.players.name, avatar: r.players.avatar, color: r.players.color, wave: r.wave }));
+    return data.filter(r => r.players).slice(0, limit || 25).map(r => ({ id: r.player_id, name: r.players.name || anon(r.player_id), anon: !r.players.name, avatar: r.players.avatar, color: r.players.color, lvl: r.players.lvl, wave: r.wave }));
   }
 
   // ---------- Cloud-Spielstand ----------

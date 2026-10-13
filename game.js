@@ -59,7 +59,7 @@
     if (name === 'menu') renderMenu();
     if (name === 'board') renderBoard();
     if (name === 'admin') renderAdmin();
-    if (name === 'pause') syncSoundBtns();
+    if (name === 'pause') { syncSoundBtns(); if (run) $('pauseSub').textContent = `Welle ${run.wave} · Rekord ${C.record(meta)}`; }
     if (name === 'fusion') renderFusion();
     if (name === 'modules') renderModules();
     if (name === 'chal') renderChal();
@@ -1162,8 +1162,8 @@
 
   // ---------- Ton ----------
   function syncSoundBtns() {
-    for (const id of ['sfxBtn', 'sfxBtn2']) { $(id).setAttribute('aria-pressed', meta.sfx ? 'true' : 'false'); $(id).textContent = meta.sfx ? 'Ton an' : 'Ton aus'; }
-    for (const id of ['musicBtn', 'musicBtn2']) { $(id).setAttribute('aria-pressed', meta.music ? 'true' : 'false'); $(id).textContent = meta.music ? 'Musik an' : 'Musik aus'; }
+    for (const id of ['sfxBtn', 'sfxBtn2']) { $(id).setAttribute('aria-pressed', meta.sfx ? 'true' : 'false'); if (!$(id).classList.contains('sw')) $(id).textContent = meta.sfx ? 'Ton an' : 'Ton aus'; }
+    for (const id of ['musicBtn', 'musicBtn2']) { $(id).setAttribute('aria-pressed', meta.music ? 'true' : 'false'); if (!$(id).classList.contains('sw')) $(id).textContent = meta.music ? 'Musik an' : 'Musik aus'; }
   }
   function toggleSfx() { meta.sfx = !meta.sfx; A.init(); A.setSfx(meta.sfx); A.play('click'); syncSoundBtns(); save(); }
   function toggleMusic() { meta.music = !meta.music; A.init(); A.setMusic(meta.music); syncSoundBtns(); save(); }
@@ -1202,7 +1202,7 @@
   const chalSum = () => C.CHALLENGES.reduce((a, c) => a + C.chalTier(meta, c.id), 0);
   function submitScore() {
     if (!O.configured || meta.adminTainted) return;
-    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta) }).catch(() => {});
+    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank }).catch(() => {});
   }
   const BOARDS = {
     rec:   { col: 'best_ever', name: 'Rekord',            fmt: r => 'Welle ' + r.best_ever },
@@ -1211,17 +1211,18 @@
     fus:   { col: 'fusions',   name: 'Fusionen',          fmt: r => r.fusions + '×' },
     chal:  { col: 'chal',      name: 'Challenge',         fmt: r => r.chal + ' Stufen' },
     ach:   { col: 'ach',       name: 'Erfolge',           fmt: r => r.ach + ' Stufen' },
+    lvl:   { col: 'lvl',       name: 'Rang',              fmt: r => 'Rang ' + r.lvl },
   };
   function boardRows(data, val) {
     const me = O.myId();
-    return data.map((r, i) => `<tr class="${r.id === me ? 'me' : ''}"><td>${i + 1}</td><td><span class="who">${avatarSvg(r.avatar, r.color, 22)}${esc(r.name)}</span></td><td>${val(r)}</td></tr>`).join('');
+    return data.map((r, i) => `<tr class="${r.id === me ? 'me' : ''}"><td>${i + 1}</td><td><span class="who">${avatarSvg(r.avatar, r.color, 22)}<span class="nm">${esc(r.name)}</span>${r.lvl ? `<small class="lbrk">${r.lvl}</small>` : ''}</span></td><td>${val(r)}</td></tr>`).join('');
   }
   let lbTab = 'rec';
   $$('[data-lb]').forEach(b => b.addEventListener('click', () => { lbTab = b.dataset.lb; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false')); A.play('click'); renderBoard(); }));
   async function renderBoard() {
     const st = $('lbStatus'), body = $('lbBody');
     body.innerHTML = '';
-    $('lbMe').innerHTML = `${avatarSvg(meta.avatar, meta.color, 30)}<div><b>${esc(meta.name || 'Ohne Namen')}</b><small>Rekord ${C.record(meta)} · ${fmt(meta.kills)} Abschüsse</small></div>`;
+    $('lbMe').innerHTML = `${avatarSvg(meta.avatar, meta.color, 30)}<div><b>${esc(meta.name || 'Ohne Namen')}</b><small>Rang ${C.rankOf(meta).rank} · Rekord ${C.record(meta)} · ${fmt(meta.kills)} Abschüsse</small></div>`;
     if (lbTab === 'day') { const d = dailyToday(); await renderDailyBoard(st, body); if (!O.configured && d && d.best) st.textContent += ` Dein Tagesbestes: Welle ${d.best}.`; return; }
     if (!O.configured) { st.textContent = 'Die Highscores sind noch nicht eingerichtet. Sie werden aktiv, sobald der Online-Dienst verbunden ist.'; return; }
     st.textContent = 'Wird geladen …';
@@ -1784,7 +1785,7 @@
   // Nächste Welle vorzeitig rufen (mit Energie-Bonus für die gesparte Zeit)
   function callWave() { if (!runAlive() || paused || current || !run.canCallWave()) { A.play('hurt'); return; } run.callWave(); }
   // Automatisch rufen: sobald die aktuelle Welle komplett gestartet ist (kein Boss)
-  function syncAutoCall() { const on = !!meta.autoCall; $$('.autocall').forEach(b => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.textContent = on ? 'Wellen automatisch rufen: an' : 'Wellen automatisch rufen: aus'; }); $('callBtn').classList.toggle('auto', on); }
+  function syncAutoCall() { const on = !!meta.autoCall; $$('.autocall').forEach(b => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (!b.classList.contains('sw')) b.textContent = on ? 'Wellen automatisch rufen: an' : 'Wellen automatisch rufen: aus'; }); $('callBtn').classList.toggle('auto', on); }
   $$('.autocall').forEach(b => b.addEventListener('click', () => { meta.autoCall = !meta.autoCall; save(); syncAutoCall(); A.play('click'); }));
   syncAutoCall();
   $('callBtn').addEventListener('click', callWave);
@@ -1800,7 +1801,7 @@
   // Tempo vom letzten Mal übernehmen
   if ([1, 2, 4].includes(meta.speed)) { speed = meta.speed; $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.speed === speed ? 'true' : 'false')); }
   // Nachrechnen an/aus
-  function syncCatchBtn() { const on = meta.catchup !== false; $('catchBtn').setAttribute('aria-pressed', on ? 'true' : 'false'); $('catchBtn').textContent = on ? 'Weiterlaufen im Hintergrund: an' : 'Weiterlaufen im Hintergrund: aus'; }
+  function syncCatchBtn() { const on = meta.catchup !== false; $('catchBtn').setAttribute('aria-pressed', on ? 'true' : 'false'); }
   $('catchBtn').addEventListener('click', () => { meta.catchup = meta.catchup === false; save(); syncCatchBtn(); A.play('click'); });
   syncCatchBtn();
   document.addEventListener('visibilitychange', () => {

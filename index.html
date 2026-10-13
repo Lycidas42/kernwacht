@@ -300,6 +300,20 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .sec[aria-pressed="false"] { color: var(--ink-dim); }
 .sec[aria-pressed="true"] { border-color: var(--heal); color: var(--heal); }
 .sec.warn { border-color: var(--hostile); color: var(--hostile); }
+.pz { gap: 12px; }
+.pz-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+#pauseSub { font-family: var(--mono, ui-monospace, monospace); font-size: .78rem; color: var(--ink-dim); letter-spacing: .04em; }
+.pz-sec { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px; }
+.pz-sec h4 { margin: 0 0 2px; font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+.pz-row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: center; }
+.sw { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 0 2px; background: none; border: 0; color: var(--ink); font-size: .9rem; text-align: left; }
+.sw::after { content: ""; flex: 0 0 auto; width: 36px; height: 20px; border-radius: 10px; border: 1px solid var(--line); background: radial-gradient(circle at 10px 50%, var(--ink-dim) 6px, transparent 7px); transition: background .15s, border-color .15s; }
+.sw[aria-pressed="true"]::after { border-color: var(--heal); background: radial-gradient(circle at 26px 50%, var(--heal) 6px, transparent 7px), color-mix(in srgb, var(--heal) 15%, transparent); }
+.sw[aria-pressed="false"] { color: var(--ink-dim); }
+.pz-link { background: none; border: 0; color: var(--ink-dim); font-size: .82rem; text-align: left; padding: 6px 2px; min-height: 32px; }
+.pz-link.trackbtn { color: var(--vio, #c3a6ff); }
+.pz-foot { display: flex; gap: 18px; border-top: 1px solid var(--line); padding-top: 6px; }
+.pz-foot .pz-link { text-decoration: underline; text-underline-offset: 3px; }
 .fair, .howto { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .8rem; color: var(--ink-dim); }
 .fair li::before { content: "+ "; color: var(--heal); font-family: var(--font-num); }
 .howto li b { color: var(--ink); font-weight: 600; }
@@ -417,6 +431,8 @@ textarea, .inrow input, #pName { width: 100%; background: var(--deck-2); color: 
 textarea { resize: vertical; min-height: 70px; }
 #cOther { font-family: var(--font-num); text-transform: uppercase; font-size: .8rem; }
 .lbtabs.three button { flex: 1; }
+#board .lbtabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+#board .lbtabs button { padding: 0 2px; font-size: .64rem; letter-spacing: .03em; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pollbanner { display: grid; gap: 2px; text-align: left; border: 1px solid color-mix(in srgb, var(--energy) 60%, var(--line)); background: color-mix(in srgb, var(--energy) 8%, transparent); border-radius: 4px; padding: 10px 12px; }
 .pollbanner span { font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--energy); font-weight: 700; }
 .pollbanner b { font-size: .92rem; }
@@ -432,6 +448,9 @@ textarea { resize: vertical; min-height: 70px; }
 .fb-btn { border-color: color-mix(in srgb, var(--energy) 50%, var(--line)); color: var(--energy); }
 .lb td:nth-child(2) { max-width: 0; width: 100%; }
 .lb .who { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb .who .nm { overflow: hidden; text-overflow: ellipsis; }
+.lbrk { flex: 0 0 auto; font-family: var(--font-num); font-size: .66rem; color: var(--energy, #ffd23f); border: 1px solid color-mix(in srgb, var(--energy, #ffd23f) 55%, transparent); border-radius: 3px; padding: 0 4px; line-height: 1.5; }
+.lbrk::before { content: "R "; opacity: .7; }
 
 .cannonview { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
 .cannonview summary { cursor: pointer; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
@@ -773,30 +792,31 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 </div>
 
 <div class="ov" id="pause" hidden>
-  <div class="card">
-    <h2 id="pauseTitle">Pause</h2>
-    <div class="actions">
-      <button class="cta" id="resumeBtn2">Weiterspielen</button>
-      <div class="actions two">
-        <button class="sec" id="labBtn3">Labor</button>
-        <button class="sec" id="lbBtn2">Highscores</button>
-      </div>
-      <div class="actions two">
-        <button class="sec" id="sfxBtn2" aria-pressed="true">Ton an</button>
-        <button class="sec" id="musicBtn2" aria-pressed="true">Musik an</button>
-      </div>
-    <div class="vols"><label>Ton <input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></label><label>Musik <input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></label></div>
-      <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
-      <div class="actions three">
-        <button class="sec prof-btn">Profil</button>
-        <button class="sec fb-btn">Feedback</button>
-        <button class="sec set-btn">Optionen</button>
-      </div>
-      <button class="sec" id="catchBtn" aria-pressed="true">Weiterlaufen im Hintergrund: an</button>
-      <button class="sec autocall" aria-pressed="false">Wellen automatisch rufen: aus</button>
-      <button class="sec warn" id="endBtn">Lauf beenden</button>
-      <button class="sec" id="admBtn" hidden>Admin</button>
+  <div class="card pz">
+    <div class="pz-head"><h2 id="pauseTitle">Pause</h2><span id="pauseSub"></span></div>
+    <button class="cta" id="resumeBtn2">Weiterspielen</button>
+    <div class="actions three">
+      <button class="sec" id="labBtn3">Labor</button>
+      <button class="sec" id="lbBtn2">Highscores</button>
+      <button class="sec prof-btn">Profil</button>
     </div>
+    <div class="pz-sec">
+      <h4>Klang</h4>
+      <div class="pz-row"><button class="sw" id="sfxBtn2" aria-pressed="true">Ton</button><input type="range" class="vol" data-vol="sfx" min="0" max="100" step="5" aria-label="Lautstärke Ton"></div>
+      <div class="pz-row"><button class="sw" id="musicBtn2" aria-pressed="true">Musik</button><input type="range" class="vol" data-vol="music" min="0" max="100" step="5" aria-label="Lautstärke Musik"></div>
+      <button class="pz-link trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
+    </div>
+    <div class="pz-sec">
+      <h4>Lauf</h4>
+      <button class="sw" id="catchBtn" aria-pressed="true">Weiterlaufen im Hintergrund</button>
+      <button class="sw autocall" aria-pressed="false">Wellen automatisch rufen</button>
+    </div>
+    <div class="pz-foot">
+      <button class="pz-link set-btn">Optionen</button>
+      <button class="pz-link fb-btn">Feedback</button>
+      <button class="pz-link" id="admBtn" hidden>Admin</button>
+    </div>
+    <button class="sec warn" id="endBtn">Lauf beenden</button>
   </div>
 </div>
 
@@ -893,6 +913,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="lbme"><div id="lbMe" class="who big"></div><button class="sec" id="lbProfile">Profil</button></div>
     <div class="lbtabs">
       <button data-lb="rec" aria-selected="true">Rekord</button>
+      <button data-lb="lvl" aria-selected="false">Rang</button>
       <button data-lb="day" aria-selected="false">Tageslauf</button>
       <button data-lb="kills" aria-selected="false">Abschüsse</button>
       <button data-lb="fus" aria-selected="false">Fusionen</button>
