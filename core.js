@@ -893,7 +893,8 @@
       // Durchmarsch: fiel die Welle mühelos (kaum Schaden, Feld leer, Boss schnell), laufen die nächsten Wellen gestaucht
       if (this.wave > 0 && !this.mode && !this.admin) {
         const hit = (this.taken || 0) - (this.takenW || 0), dur = this.time - (this.waveStartT || 0), bossW = this.wave % 10 === 0;
-        const easy = hit <= this.s.maxHp * P.rushHit && !this.enemies.some(e => e.hp > 0) && dur <= (bossW ? P.rushBossT : WAVE_LEN + 5);
+        // mühelos: kaum Schaden, und kein Schiff hält sich in Reichweite (noch anfliegende Schiffe zählen nicht), Boss schnell besiegt
+        const easy = hit <= this.s.maxHp * P.rushHit && !this.enemies.some(e => e.hp > 0 && e.dist <= this.s.range * 0.9) && dur <= (bossW ? P.rushBossT : WAVE_LEN + 5);
         this.easyRun = easy ? (this.easyRun || 0) + 1 : 0;
         const fast = !(this.meta.settings && this.meta.settings.rush === 'off');
         const was = this.rush; this.rush = fast && easy && this.wave + 1 < record(this.home) && (was || this.easyRun >= 2); // nur beim Aufholen unter dem Rekord; einmal an, bleibt er an, solange es mühelos bleibt
@@ -2193,6 +2194,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.25.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.25.2'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, fusionCostOld, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
