@@ -484,7 +484,8 @@
 
       // Minen
       for (const m of run.mines) drawMine(m, t, s, run);
-      // Brandfelder und Nachbeben (Skills)
+      // Brandfelder und Nachbeben (Skills) – nur im Feld oberhalb des Horizonts
+      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -4000, 6000, 4000); ctx.clip();
       for (const f of run.fires || []) {
         const left = Math.max(0, f.until - run.time), a = Math.min(1, left / 0.6);
         const col = f.k === 'quake' ? '255,120,220' : '255,140,40';
@@ -503,6 +504,7 @@
         for (let i = 0; i < 3; i++) { ctx.rotate(t * 0.004 + i * 2.1); ctx.beginPath(); ctx.arc(0, 0, 20 + i * 14, 0, 4.2); glow('#b98aff', 1.4, 0.6); }
         ctx.restore();
       }
+      ctx.restore();
 
       // Schockwellen-Ring
       if (run.ring) {
@@ -617,7 +619,8 @@
       if (run.aegis > 0) { ctx.beginPath(); ctx.arc(0, 0, C.WALL_R - 6, Math.PI, 0); glow('#7fe3ff', 1 + 2 * Math.min(1, run.aegis / (s.maxHp * 0.25)), 0.55); }
       if (run.time < run.invulnUntil) { ctx.beginPath(); ctx.arc(0, -4, 30, 0, 7); ctx.fillStyle = `rgba(255,240,180,${0.12 + 0.08 * Math.sin(t * 0.02)})`; ctx.fill(); glow('#ffe9a0', 2, 0.8); }
 
-      // Partikel
+      // Partikel und Effekte: nichts unterhalb des Horizonts (dort liegt die Steuerung)
+      ctx.save(); ctx.beginPath(); ctx.rect(-3000, -4000, 6000, 4000 + 30); ctx.clip();
       for (const p of parts) {
         const k = p.t / p.life; ctx.globalAlpha = Math.max(0, 1 - k);
         if (p.k === 'spark') { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04); ctx.strokeStyle = p.c; ctx.lineWidth = 1.6; ctx.stroke(); }
@@ -741,6 +744,7 @@
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }
       }
+      ctx.restore();
       if (ui.strikeArmed) {
         ctx.setLineDash([6, 6]);
         ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0); ctx.strokeStyle = PAL.hostile; ctx.globalAlpha = 0.25; ctx.lineWidth = 2; ctx.stroke(); ctx.globalAlpha = 1;

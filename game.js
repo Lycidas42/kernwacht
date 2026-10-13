@@ -1534,6 +1534,7 @@
   $('cv').addEventListener('pointerdown', ev => {
     if (!runAlive() || paused || current) return;
     const w = R.toWorld(ev.clientX, ev.clientY);
+    if (w.y > -4) return; // unterhalb des Horizonts (Kanone, Boden) gibt es nichts zu treffen
     if (armed) { if (armed === 'strike') run.markAt(w.x, w.y, true); if (fire(armed, w)) armed = null; }
     // Orbitalschlag geladen: Tippen ins Feld schlägt genau dort ein (außer im Modus „nur Knopf“)
     else if (meta.strikeMode !== 'btn' && canArm('strike')) { run.markAt(w.x, w.y, true); fire('strike', w); }

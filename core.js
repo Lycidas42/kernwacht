@@ -891,6 +891,7 @@
         if (this.barrageT >= 8) {
           const p = this.strikeTarget();
           if (p) {
+            p.y = Math.min(p.y, -60); // Einschlag immer im Feld, nie am Horizont
             this.barrageT = 0;
             for (const e of this.enemies) { const q = this.pos(e); if (e.hp > 0 && Math.hypot(q.x - p.x, q.y - p.y) < 60 + e.r) this.hurt(e, s.gunDmg * 5, false, 'skill'); }
             if (this.fxOn) this.fx.push({ k: 'barrage', x: p.x, y: p.y, t: 0 });
@@ -901,7 +902,7 @@
         this.holeT += dt;
         if (!this.hole && this.holeT >= 20) {
           const p = this.strikeTarget();
-          if (p) { this.holeT = 0; this.hole = { x: p.x, y: p.y, until: this.time + 3 }; if (this.fxOn) this.fx.push({ k: 'hole', x: p.x, y: p.y, t: 0 }); }
+          if (p) { this.holeT = 0; this.hole = { x: p.x, y: Math.min(p.y, -80), until: this.time + 3 }; if (this.fxOn) this.fx.push({ k: 'hole', x: p.x, y: p.y, t: 0 }); }
         }
         if (this.hole) {
           const H = this.hole;
@@ -909,7 +910,7 @@
             if (e.hp <= 0 || e.type === 'boss') continue;
             const p = this.pos(e), dx = H.x - p.x, dy = H.y - p.y, d = Math.hypot(dx, dy);
             if (d > 130) continue;
-            if (d > 6) { const v = Math.min(d, 90 * dt), x = p.x + dx / d * v, y = p.y + dy / d * v; e.a = Math.atan2(y, x); e.dist = Math.max(WALL_R + e.r, Math.hypot(x, y)); }
+            if (d > 6) { const v = Math.min(d, 90 * dt), x = p.x + dx / d * v, y = Math.min(-10, p.y + dy / d * v); e.a = Math.atan2(y, x); e.dist = Math.max(WALL_R + e.r, Math.hypot(x, y)); }
             this.hurt(e, s.gunDmg * 2 * dt, false, 'skill');
           }
           if (this.time > H.until) this.hole = null;
@@ -1649,6 +1650,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.6.2'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.6.3'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
