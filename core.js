@@ -802,6 +802,9 @@
       e.hitT = this.time; // unter Beschuss keine Reparatur
       const eff = Math.min(d, e.hp);
       this.dealt[src || 'gun'] += eff;
+      // Orbitalschlag lädt auch über zugefügten Schaden: ein Schiff voll beschädigt zählt wie ein halber Abschuss,
+      // ein Mutterschiff von voll auf null lädt 60 % (der Abschuss selbst bringt weiter seinen Anteil)
+      if (!this.s.noGun && e.type !== 'bomb' && e.maxHp > 0) this.charge = Math.min(1, this.charge + eff / e.maxHp * (e.type === 'boss' ? 0.6 : 0.5 / STRIKE_KILLS) * (1 + ((this.s.mod && this.s.mod.leech) || 0) / 2) * (this.s.chargeK || 1));
       if (tag) this.credit(tag, eff);
       e.hp -= d; e.flash = 0.08;
       if (this.fxOn && (crit || e.type === 'boss' || e.type === 'brute')) { const p = this.pos(e); this.fx.push({ k: 'dmg', x: p.x, y: p.y, t: 0, v: d, crit }); }
@@ -1650,6 +1653,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.6.3'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.6.4'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, P };
 })(typeof window !== 'undefined' ? window : globalThis);
