@@ -429,7 +429,7 @@
   const BOSS_COL = ['#ff4ff0', '#4fffc8', '#ff9a3c', '#ff4040', '#9fb6ff'];
   const fmtTime = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
   function renderBosses() {
-    const rec = C.record(meta), beat = meta.bossBeat || {}, times = meta.bossTime || {};
+    const rec = meta.best || 0, beat = meta.bossBeat || {}, times = meta.bossTime || {};
     meta.bossSel = meta.bossSel || {};
     let html = '';
     for (let z = 1; z <= 5; z++) {
@@ -449,7 +449,7 @@
     $('bossList').innerHTML = html;
     $$('#bossList [data-bsel]').forEach(el => el.addEventListener('change', () => { meta.bossSel[el.dataset.bsel] = +el.value; save(); renderBosses(); }));
     $$('#bossList [data-bgo]').forEach(b => b.addEventListener('click', () => {
-      const k = b.dataset.bgo, ws = C.bossWaves(k, Math.max(C.record(meta), 10)), w = ws.includes(meta.bossSel[k]) ? meta.bossSel[k] : ws[ws.length - 1];
+      const k = b.dataset.bgo, ws = C.bossWaves(k, Math.max(meta.best || 0, 10)), w = ws.includes(meta.bossSel[k]) ? meta.bossSel[k] : ws[ws.length - 1];
       if (runAlive()) return; A.play('click'); startRun({ kind: 'boss', boss: k, w });
     }));
   }
