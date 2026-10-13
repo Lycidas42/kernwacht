@@ -651,6 +651,7 @@
   $('autoAll').addEventListener('click', () => { meta.autoAll = !meta.autoAll; A.play('click'); save(); refresh(); });
   // Auto-Kauf: Energie nach Anteilen auf die Bereiche verteilen, im Bereich klug (Zugewinn je Energie) oder günstigstes zuerst
   const acfg = () => (meta.autoCfg = meta.autoCfg || { mode: 'smart', w: Object.assign({}, C.AUTO_W) });
+  { const w = meta.autoCfg && meta.autoCfg.w; if (w && w.atk === 50 && w.def === 35 && w.eco === 15) meta.autoCfg.w = Object.assign({}, C.AUTO_W); } // alte Vorgabe ersetzen
   const autoOn = u => !!meta.auto[u.id];
   function autoBuy() {
     if (!meta.autoAll) return;

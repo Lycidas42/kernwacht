@@ -159,13 +159,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 
 /* Werkbank */
 #bench { flex: 1 1 36%; min-height: 0; display: flex; flex-direction: column; background: var(--deck); border-top: 1px solid var(--line); }
-#tabs { display: flex; padding: 0 10px 0 12px; gap: 0; border-bottom: 1px solid var(--line); align-items: center; }
-#tabs [role=tab] { padding: 8px 5px 6px; font-weight: 600; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); border-bottom: 2px solid transparent; }
+#tabs { display: flex; padding: 0 8px 0 10px; gap: 0; border-bottom: 1px solid var(--line); align-items: center; }
+#tabs [role=tab] { padding: 8px 4px 6px; font-weight: 600; font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-dim); border-bottom: 2px solid transparent; }
 #tabs [role=tab][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--core); }
-#energyTotal { font-size: .92rem; margin-right: 6px; white-space: nowrap; }
+#status .pill.en { color: var(--energy); font-size: .82rem; font-weight: 600; border-color: color-mix(in srgb, var(--energy) 45%, var(--line)); }
 #autoAll { height: 26px; padding: 0 7px; border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-num); font-size: .68rem; color: var(--ink-dim); white-space: nowrap; }
 #autoAll[aria-pressed="true"] { color: var(--void); background: var(--heal); border-color: var(--heal); }
-#autoCfgBtn { height: 26px; width: 28px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-dim); font-size: .85rem; margin-left: 4px; }
+#autoCfgBtn { height: 26px; width: 28px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 4px; color: var(--ink-dim); font-size: .85rem; margin-left: 4px; }
 #autoCfgBtn[aria-expanded="true"] { color: var(--heal); border-color: var(--heal); }
 #autoCfgBox { display: grid; gap: 8px; padding: 10px 12px; margin: 0 10px 8px; border: 1px solid color-mix(in srgb, var(--heal) 40%, var(--line)); border-radius: 6px; background: #ffffff05; }
 #autoCfgBox[hidden] { display: none; }
@@ -765,6 +765,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div id="status">
       <div class="xpline" id="xpLine"><span id="xpAv" class="xpav"></span><span id="xpRank" class="stl">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
       <div class="hudrow stpills">
+        <div class="pill num e en" id="energyTotal" title="Energie für Upgrades">0</div>
         <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>
         <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
         <div class="pill num k" id="runK">0</div>
@@ -776,7 +777,6 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <button role="tab" data-tab="eco" aria-selected="false">Ertrag</button>
       <button role="tab" data-tab="stats" aria-selected="false">Werte</button>
       <span class="spacer"></span>
-      <span id="energyTotal" class="num e">0</span>
       <button id="autoAll" aria-pressed="true" title="Alle Auto-Käufe an- oder ausschalten">AUTO AN</button>
       <button id="autoCfgBtn" aria-expanded="false" aria-label="Auto-Kauf einstellen" title="Auto-Kauf einstellen">⚙</button>
     </div>
