@@ -76,7 +76,7 @@
     // ---------- Raumschiffe (lokale Achse +x = Flugrichtung) ----------
     function drawShip(e, t, frozen) {
       const fc = FAC_COL[e.fac || 1] && FAC_COL[e.fac][e.type];
-      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : e.type === 'boss' ? BOSS_COL[(e.sector || 1) - 1] : fc || SHIP[e.type], r = e.r, sd = e.seed;
+      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : e.pdps > 0 && e.type !== 'boss' ? '#8dff5a' : e.type === 'boss' ? BOSS_COL[(e.sector || 1) - 1] : fc || SHIP[e.type], r = e.r, sd = e.seed;
       if (fc && drawFaction(e, c, r, t, sd, frozen ? 0.25 : 1)) return;
       const fl = frozen ? 0.25 : 1;
       ctx.lineJoin = 'round';
@@ -489,9 +489,10 @@
         const left = Math.max(0, f.until - run.time), a = Math.min(1, left / 0.6);
         const col = f.k === 'quake' ? '255,120,220' : '255,140,40';
         const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
-        gr.addColorStop(0, `rgba(${col},${0.32 * a})`); gr.addColorStop(1, `rgba(${col},0)`);
+        gr.addColorStop(0, `rgba(${col},${0.5 * a})`); gr.addColorStop(1, `rgba(${col},0)`);
         ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fillStyle = gr; ctx.fill();
-        ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.7 + 0.08 * Math.sin(t * 0.02)), 0, 7); glow(`rgb(${col})`, 1, 0.35 * a);
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.7 + 0.08 * Math.sin(t * 0.02)), 0, 7); glow(`rgb(${col})`, 1.6, 0.6 * a);
+        if (Math.random() < 0.3) parts.push({ x: f.x + (Math.random() - 0.5) * f.r, y: f.y + (Math.random() - 0.5) * f.r, vx: 0, vy: -40, life: 0.5, t: 0, c: f.k === 'quake' ? '#ff9ae6' : '#ffb347', k: 'spark' });
       }
       if (run.hole) {
         // Schwarzes Loch: dunkler Kern, spiralige Ringe
@@ -550,8 +551,8 @@
           ctx.fillStyle = '#2a2560'; ctx.fillRect(p.x - w / 2, hy, w, 3);
           ctx.fillStyle = SHIP[e.type]; ctx.fillRect(p.x - w / 2, hy, w * Math.max(0, e.hp / e.maxHp), 3);
         }
-        if (e.pdps > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.25, 0, 7); glow('#8dff5a', 1.2, 0.35 + 0.25 * Math.sin(t * 0.01 + e.seed)); if (Math.random() < 0.08) parts.push({ x: p.x + (Math.random() - 0.5) * e.r, y: p.y, vx: 0, vy: -25, life: 0.5, t: 0, c: '#8dff5a', k: 'spark' }); }
-        if (e.stunUntil > run.time) { for (let i = 0; i < 3; i++) { const an = t * 0.008 + i * 2.1; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * e.r, p.y - e.r - 4 + Math.sin(an) * 3, 1.6, 0, 7); ctx.fillStyle = '#fff38a'; ctx.fill(); } }
+        if (e.pdps > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.4, 0, 7); ctx.fillStyle = 'rgba(141,255,90,0.10)'; ctx.fill(); glow('#8dff5a', 2, 0.5 + 0.3 * Math.sin(t * 0.01 + e.seed)); if (Math.random() < 0.25) parts.push({ x: p.x + (Math.random() - 0.5) * e.r, y: p.y, vx: 0, vy: -25, life: 0.5, t: 0, c: '#8dff5a', k: 'spark' }); }
+        if (e.stunUntil > run.time) { for (let i = 0; i < 3; i++) { const an = t * 0.008 + i * 2.1; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * e.r, p.y - e.r - 5 + Math.sin(an) * 3, 2.6, 0, 7); ctx.fillStyle = '#fff38a'; ctx.fill(); } ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.3, 0, 7); glow('#fff38a', 1.2, 0.5); }
         if (run.focus === e) {
           // Markiertes Ziel: Leitstrahl von der Kanone, pulsierender Ring, Eckklammern und Schriftzug
           const MK = '#ffd23f', R0 = e.r * 1.5 + 8, pul = 0.5 + 0.5 * Math.sin(t * 0.008);
