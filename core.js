@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, bossHp: 2, bossHpEarly: 1.5, bossDpsCheck: 0.04, bossBurst: 0.05, xpLow: 0.1,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2, bossHpEarly: 1.5, bossDpsCheck: 0.04, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -352,7 +352,9 @@
   function jumpShare(lvl) { return 0.3 + 0.05 * lvl; }
   function maxStartWave(meta, lvl) {
     if (!mlv(meta, 'u_jump')) return 1;
-    const lim = meta.best * jumpShare(lvl == null ? mlv(meta, 'm_jump') : lvl);
+    // nach einer Fusion: mindestens die Hälfte des Anteils, gemessen am Rekord über alle Fusionen (15 % bei Sprungweite 0)
+    const sh = jumpShare(lvl == null ? mlv(meta, 'm_jump') : lvl);
+    const lim = Math.max(meta.best * sh, record(meta) * sh * P.jumpRec);
     let w = Math.max(1, Math.floor(lim));
     if (w % 10 === 0) w -= 1;
     return w;
@@ -804,7 +806,7 @@
       // Bosskampf: nach der Bosswelle ist Schluss (gewonnen)
       if (this.mode && this.mode.kind === 'boss' && this.wave >= this.startWave) { this.won = true; this.dead = true; return; }
       if (this.wave > 0 && !this.skipCrystalsOnce) {
-        this.crystals += waveCrystals(this.wave) * this.s.crysMult;
+        this.crystals += waveCrystals(this.wave) * this.s.crysMult * (this.catchUp() ? P.catchCrys : 1);
         const bonus = this.waveBonusAmount();
         if (bonus > 0) { this.energy += bonus; if (this.fxOn) this.fx.push({ k: 'bonus', t: 0, v: bonus }); }
       }
@@ -1292,6 +1294,8 @@
         }
       }
     }
+    // Aufholmodus: normale Läufe unter der Hälfte des Rekords laufen doppelt so schnell und bringen doppelte Wellenkristalle
+    catchUp() { return !this.mode && !this.admin && this.wave < record(this.home) * P.catchAt; }
     bossNext(e) { if (!e.nextAct) { const a = this.bossActs(e); e.nextAct = a[e.acts % a.length]; } return e.nextAct; }
     bossActs(e) {
       const w = this.wave, BK = BOSS_KINDS[e.kind];
@@ -1385,7 +1389,9 @@
       if (this.dead) return;
       const s = this.s, frozen = this.frozen;
       this.time += dt;
-      this.waveT += dt * (this.isChal && this.rule === 'fast' ? P.chalFastWave : 1);
+      this.waveT += dt * (this.isChal && this.rule === 'fast' ? P.chalFastWave : 1) * (this.catchUp() ? P.catchSpeed : 1);
+      // Aufholen: Feld leer und alles gestartet → nächste Welle sofort
+      if (this.catchUp() && !this.queue.length && !this.enemies.some(e => e.hp > 0) && this.wave % 10 && this.waveT > 1) this.waveT = WAVE_LEN;
       for (const k in this.cd) this.cd[k] = Math.max(0, this.cd[k] - dt);
       this.spawnT += dt;
       while (this.queue.length && this.spawnT >= this.spawnGap) { if (this.enemies.length >= P.aliveCap) { this.spawnT = this.spawnGap; break; } this.spawnT -= this.spawnGap; this.spawn(this.queue.shift()); } // volles Feld: Nachschub wartet
@@ -2065,6 +2071,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.15.2'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.16.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

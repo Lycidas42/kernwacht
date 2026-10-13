@@ -1761,7 +1761,7 @@
         $('bestNo').textContent = txt; $('bestNo').classList.toggle('rec', !!hit);
       } else {
         const rec = run.wave > meta.best && meta.best > 0;
-        $('bestNo').textContent = rec ? 'NEUER REKORD' : 'Rekord ' + meta.best;
+        $('bestNo').textContent = rec ? 'NEUER REKORD' : 'Rekord ' + meta.best + (run.catchUp() ? ' · Aufholen ×2' : '');
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
