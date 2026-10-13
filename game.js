@@ -487,7 +487,7 @@
     st.textContent = 'Wird geladen …';
     const data = await O.dailyBoard(today(), 25);
     if (!data) { st.textContent = 'Die Tagesliste ist gerade nicht erreichbar.'; return; }
-    st.textContent = data.length ? (meta.name ? '' : 'Lege im Profil einen Namen fest, um hier zu erscheinen.') : 'Heute noch keine Einträge. Sei die oder der Erste.';
+    st.textContent = data.length ? (meta.name ? '' : 'Ohne Namen erscheinst du hier anonym. Im Profil kannst du einen Namen festlegen.') : 'Heute noch keine Einträge. Sei die oder der Erste.';
     body.innerHTML = boardRows(data, r => 'Welle ' + r.wave);
   }
   function submitDaily() {
@@ -1134,7 +1134,7 @@
     st.textContent = 'Wird geladen …';
     const B = BOARDS[lbTab], data = await O.board(B.col, 25);
     if (!data) { st.textContent = 'Die Highscores sind gerade nicht erreichbar.'; return; }
-    st.textContent = meta.adminTainted ? 'Dieser Spielstand hat Admin-Eingriffe und wird nicht eingetragen.' : !meta.name ? 'Lege im Profil einen Namen fest, um in den Highscores zu erscheinen.' : data.length ? '' : 'Noch keine Einträge.';
+    st.textContent = meta.adminTainted ? 'Dieser Spielstand hat Admin-Eingriffe und wird nicht eingetragen.' : !meta.name ? 'Ohne Namen erscheinst du hier anonym. Im Profil kannst du einen Namen festlegen.' : data.length ? '' : 'Noch keine Einträge.';
     body.innerHTML = boardRows(data, B.fmt);
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

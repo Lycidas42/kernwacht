@@ -109,6 +109,7 @@ window.KW_EN = {
   'Panzerplatte': 'Armor plate', 'Lanze': 'Lance', 'Minenschacht': 'Mine rack', 'Siegel': 'Seal', 'Prisma': 'Prism',
   'PANZERPLATTE AB': 'ARMOR PLATE OFF', 'LANZE ZERSTÖRT': 'LANCE DESTROYED', 'MINENSCHACHT ZERSTÖRT': 'MINE RACK DESTROYED', 'SIEGEL GEBROCHEN': 'SEAL BROKEN', 'PRISMA ZERSPLITTERT': 'PRISM SHATTERED',
   'Boss naht · Feld räumen': 'Boss incoming · clear the field',
+  'Ohne Namen erscheinst du hier anonym. Im Profil kannst du einen Namen festlegen.': 'Without a name you appear here anonymously. You can set a name in your profile.', 'Anonym {0}': 'Anonymous {0}',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',
