@@ -422,7 +422,7 @@ window.KW_EN = {
   "Kommandant: Rang {0}": "Commander: rank {0}",
   "+{0} Skillpunkt. Im Menü unter „Kommandant“.": "+{0} skill point. See “Commander” in the menu.",
   "+{0} Skillpunkte. Im Menü unter „Kommandant“.": "+{0} skill points. See “Commander” in the menu.",
-  "Jede überstandene Welle bringt Erfahrung, jeder Rang einen Skillpunkt. Der Rang bleibt auch bei der Kernfusion. Skills wirken in normalen Läufen und Challenges, nicht im Tageslauf.": "Every wave survived grants experience, every rank a skill point. Your rank survives core fusion. Skills work in normal runs and challenges, not in the daily run.",
+  "Jede überstandene Welle bringt Erfahrung, höhere Wellen mehr. Wellen unter der Hälfte deines Rekords bringen nur ein Zehntel. Jeder Rang bringt einen Skillpunkt. Der Rang bleibt auch bei der Kernfusion. Skills wirken in normalen Läufen und Challenges, nicht im Tageslauf.": "Every wave survived grants experience, higher waves more. Waves below half your record give only a tenth. Every rank gives a skill point. Your rank survives core fusion. Skills work in normal runs and challenges, not in the daily run.",
   "{0} / {1} Erfahrung bis Rang {2}": "{0} / {1} experience to rank {2}",
   "Freie Punkte: {0} von {1}": "Free points: {0} of {1}",
   "Freie Punkte:": "Free points:",
