@@ -68,7 +68,7 @@
       const r = cv.getBoundingClientRect(); if (!r.width) return false;
       DPR = Math.min(2, window.devicePixelRatio || 1);
       if (cv.width !== Math.round(r.width * DPR) || cv.height !== Math.round(r.height * DPR)) { cv.width = Math.round(r.width * DPR); cv.height = Math.round(r.height * DPR); }
-      W = r.width; H = r.height; R = Math.min(W * 0.3, H * 0.4); cx = W / 2; cy = H * 0.6;
+      W = r.width; H = r.height; R = Math.min(W * 0.29, H * 0.36); cx = W / 2; cy = H * 0.66;
       return true;
     }
     const stars = Array.from({ length: 70 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.2 + 0.2, p: Math.random() * 6 }));
@@ -90,54 +90,98 @@
       ctx.restore();
     }
 
-    // Einrichtungen am oberen Rand: Bohrtürme, Silo, Schmelze, Drohnen, Laser
+    // Einrichtungen: kleine Kolonie auf einer Plattform am oberen Planetenrand, wächst sichtbar mit dem Ausbau
+    // (lokales Koordinatensystem je Bauwerk: -y zeigt vom Planeten weg)
+    const at = (deg, lift, fn) => { const p = rim(deg, lift); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a + Math.PI / 2); fn(p); ctx.restore(); };
+    const ORE = '#ffc04d';
     function drawFacilities(P, pl, t, open) {
       if (!open) return;
-      const col = P.col;
-      // Bohrtürme: bis zu 5, je 6 Stufen ein weiterer
-      const drills = pl.d ? Math.min(5, 1 + Math.floor((pl.d - 1) / 6)) : 0;
-      const spots = [-118, -62, -140, -40, -90];
-      for (let i = 0; i < drills; i++) {
-        const p = rim(spots[i]); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a + Math.PI / 2);
-        const pump = Math.sin(t * 0.008 + i * 1.3) * 3;
-        ctx.beginPath(); ctx.moveTo(-9, 2); ctx.lineTo(-4, -26); ctx.lineTo(4, -26); ctx.lineTo(9, 2); ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#ff9a3c', 1.3);
-        ctx.beginPath(); ctx.moveTo(-6, -8); ctx.lineTo(6, -16); ctx.moveTo(6, -8); ctx.lineTo(-6, -16); glowStroke('#ff9a3c', 0.8, 0.6);
-        ctx.beginPath(); ctx.rect(-2.5, -30 + pump, 5, 22); ctx.fillStyle = HULL; ctx.fill(); glowStroke(col, 1.1);
-        ctx.beginPath(); ctx.arc(0, -29, 2, 0, 7); ctx.fillStyle = Math.sin(t * 0.01 + i) > 0 ? '#ff4f9a' : '#ffc04d'; ctx.fill();
-        ctx.restore();
-        if (Math.random() < 0.05) { const q = rim(spots[i], 6); parts.push({ x: q.x, y: q.y, vx: (Math.random() - 0.5) * 20, vy: -30 - Math.random() * 30, life: 1.2, t: 0, c: col, sz: 2 + Math.random() * 2 }); }
-      }
-      // Erzsilo
+      const col = P.col, any = pl.d || pl.lz || pl.sm;
+      if (!any) return;
+      const drills = pl.d ? Math.min(3, 1 + Math.floor((pl.d - 1) / 8)) : 0;
+      const DR = [-114, -136, -94];
+      const SILO = -70, SMELT = -50, LASER = -156;
+      // Plattform: Bogen aus Panzerplatten mit Stützen
+      const a0 = (pl.lz ? LASER - 10 : DR[0] - 18), a1 = (pl.sm ? SMELT + 12 : SILO + 12);
+      ctx.beginPath();
+      for (let d = a0; d <= a1; d += 2) { const q = rim(d, 5); ctx[d === a0 ? 'moveTo' : 'lineTo'](q.x, q.y); }
+      for (let d = a1; d >= a0; d -= 2) { const q = rim(d, -3); ctx.lineTo(q.x, q.y); }
+      ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke(hex(col, 0.9), 1.2, 0.8);
+      for (let d = a0 + 6; d < a1; d += 9) at(d, 4, () => { ctx.fillStyle = hex(col, 0.35); ctx.fillRect(-1, -1, 2, 2); });
+
+      // Förderleitung von den Bohrtürmen zum Silo, Erz läuft als Lichtpunkte hindurch
       if (pl.d) {
-        const p = rim(-100, -4); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a + Math.PI / 2);
-        const h = 16 + Math.min(14, (pl.s || 0) * 1.2), fill = Math.min(1, pl.fill || 0);
-        ctx.beginPath(); ctx.rect(-7, -h, 14, h + 2); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#c3a6ff', 1.2);
-        ctx.fillStyle = hex(col, 0.7); ctx.fillRect(-5, -h * fill + 1, 10, h * fill - 1);
-        ctx.beginPath(); ctx.ellipse(0, -h, 7, 2.5, 0, 0, 7); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#c3a6ff', 1);
-        ctx.restore();
+        const from = DR[Math.min(drills, 3) - 1] - 4, to = SILO - 6;
+        const lo = Math.min(from, DR[0]), hi = to;
+        ctx.beginPath(); for (let d = lo; d <= hi; d += 2) { const q = rim(d, 9); ctx[d === lo ? 'moveTo' : 'lineTo'](q.x, q.y); }
+        ctx.strokeStyle = HULL; ctx.lineWidth = 5; ctx.stroke(); glowStroke('#8a86c8', 1, 0.7);
+        const n = 4 + Math.min(6, pl.d >> 1), spd = 0.00025 * (1 + Math.min(3, pl.d * 0.15));
+        for (let i = 0; i < n; i++) { const k = (t * spd + i / n) % 1, q = rim(lo + (hi - lo) * k, 9); ctx.beginPath(); ctx.arc(q.x, q.y, 1.8, 0, 7); ctx.fillStyle = ORE; ctx.fill(); }
       }
-      // Schmelze mit Rauch
-      if (pl.sm) {
-        const p = rim(-76, -3); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a + Math.PI / 2);
-        ctx.beginPath(); ctx.moveTo(-10, 2); ctx.lineTo(-10, -12); ctx.lineTo(4, -12); ctx.lineTo(4, -22); ctx.lineTo(9, -22); ctx.lineTo(9, 2); ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#ff4f6a', 1.2);
-        ctx.beginPath(); ctx.arc(-4, -5, 3, 0, 7); ctx.fillStyle = `rgba(255,140,60,${0.6 + 0.4 * Math.sin(t * 0.01)})`; ctx.fill();
-        ctx.restore();
-        if (Math.random() < 0.08) { const q = rim(-70, 26); parts.push({ x: q.x, y: q.y, vx: 6 + Math.random() * 6, vy: -18 - Math.random() * 10, life: 1.8, t: 0, c: 'rgba(200,190,230,.35)', sz: 3 + Math.random() * 4, smoke: true }); }
+
+      // Bohrtürme: Gittermast mit drehendem Bohrkopf, wird mit jeder Stufe höher
+      for (let i = 0; i < drills; i++) {
+        const h = 30 + Math.min(26, (pl.d - i * 8) * 1.4), spin = t * 0.02 * (1 + i * 0.2);
+        at(DR[i], 2, () => {
+          // Bohrkopf im Boden
+          ctx.save(); ctx.beginPath(); ctx.rect(-6, 0, 12, 12); ctx.clip();
+          for (let k = 0; k < 4; k++) { const y = ((spin * 6 + k * 3) % 12); ctx.beginPath(); ctx.moveTo(-5, y); ctx.lineTo(5, y + 2); ctx.strokeStyle = hex(col, 0.7); ctx.lineWidth = 1; ctx.stroke(); }
+          ctx.restore();
+          // Gittermast
+          ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(-4, -h); ctx.lineTo(4, -h); ctx.lineTo(11, 0); ctx.closePath(); ctx.fillStyle = 'rgba(13,11,34,.85)'; ctx.fill(); glowStroke('#ff9a3c', 1.4);
+          ctx.beginPath(); const seg = 5; for (let k = 0; k < seg; k++) { const y0 = -h * k / seg, y1 = -h * (k + 1) / seg, w0 = 11 - 7 * k / seg, w1 = 11 - 7 * (k + 1) / seg; ctx.moveTo(-w0, y0); ctx.lineTo(w1, y1); ctx.moveTo(w0, y0); ctx.lineTo(-w1, y1); } glowStroke('#ff9a3c', 0.7, 0.55);
+          // Seilrolle und Gestänge
+          ctx.beginPath(); ctx.arc(0, -h - 3, 4, 0, 7); ctx.fillStyle = HULL; ctx.fill(); glowStroke(col, 1.1);
+          ctx.beginPath(); ctx.moveTo(0, -h - 3); ctx.lineTo(0, -2); ctx.strokeStyle = hex(col, 0.6); ctx.lineWidth = 1; ctx.stroke();
+          ctx.save(); ctx.translate(0, -h - 3); ctx.rotate(spin); ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.moveTo(0, -4); ctx.lineTo(0, 4); glowStroke(col, 0.8); ctx.restore();
+          ctx.beginPath(); ctx.arc(0, -h - 9, 2, 0, 7); ctx.fillStyle = Math.sin(t * 0.008 + i) > 0 ? '#ff4f9a' : '#ffc04d'; ctx.fill();
+        });
+        if (Math.random() < 0.12) { const q = rim(DR[i], 3); parts.push({ x: q.x + (Math.random() - 0.5) * 10, y: q.y, vx: (Math.random() - 0.5) * 40, vy: -20 - Math.random() * 40, life: 0.7, t: 0, c: Math.random() < 0.5 ? ORE : col, sz: 1.5 + Math.random() * 1.5 }); }
       }
-      // Lasermeißel: Turm oben links
-      if (pl.lz) {
-        const p = rim(-158, -2); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a + Math.PI / 2);
-        ctx.beginPath(); ctx.moveTo(-6, 2); ctx.lineTo(-3, -18); ctx.lineTo(3, -18); ctx.lineTo(6, 2); ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#3ef0ff', 1.2);
-        ctx.beginPath(); ctx.arc(0, -20, 3.5, 0, 7); ctx.fillStyle = '#3ef0ff'; ctx.fill();
+
+      // Erzsilo: Tank mit sichtbarem Füllstand, wird mit der Stufe größer; fast voll blinkt die Warnleuchte
+      if (pl.d) at(SILO, 2, () => {
+        const h = 30 + Math.min(24, (pl.s || 0) * 1.6), w = 13, fill = Math.min(1, pl.fill || 0), full = fill >= 0.9;
+        ctx.beginPath(); ctx.roundRect(-w, -h, w * 2, h, 4); ctx.fillStyle = HULL; ctx.fill();
+        const lg = ctx.createLinearGradient(0, -h * fill, 0, 0); lg.addColorStop(0, hex(col, 0.95)); lg.addColorStop(1, hex(col, 0.45));
+        ctx.save(); ctx.beginPath(); ctx.roundRect(-w + 3, -h + 3, w * 2 - 6, h - 5, 3); ctx.clip();
+        ctx.fillStyle = lg; ctx.fillRect(-w, -h * fill, w * 2, h * fill);
+        ctx.beginPath(); ctx.moveTo(-w, -h * fill); for (let x = -w; x <= w; x += 3) ctx.lineTo(x, -h * fill + Math.sin(t * 0.006 + x * 0.6) * 1.2); ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.5; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
         ctx.restore();
-      }
-      // Sammeldrohnen umkreisen den Planeten
-      for (let i = 0; i < (pl.dr || 0); i++) {
-        const a = t * 0.0009 * (1 + i * 0.13) + i * 1.3, x = cx + Math.cos(a) * R * 1.28, y = cy + Math.sin(a) * R * 0.5 - R * 0.35;
-        const behind = Math.sin(a) < -0.2 && Math.hypot(x - cx, y - cy) < R; if (behind) continue;
-        ctx.save(); ctx.translate(x, y); ctx.rotate(Math.cos(a) > 0 ? 0.2 : -0.2);
-        ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(0, -3); ctx.lineTo(6, 0); ctx.lineTo(0, 3); ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#5dffb0', 1);
-        ctx.beginPath(); ctx.arc(0, 0, 1.4, 0, 7); ctx.fillStyle = '#5dffb0'; ctx.fill();
+        ctx.beginPath(); ctx.roundRect(-w, -h, w * 2, h, 4); glowStroke(full ? '#ff4f6a' : '#c3a6ff', 1.3);
+        for (const y of [0.33, 0.66]) { ctx.beginPath(); ctx.moveTo(-w, -h * y); ctx.lineTo(w, -h * y); ctx.strokeStyle = 'rgba(195,166,255,.35)'; ctx.lineWidth = 1; ctx.stroke(); }
+        ctx.beginPath(); ctx.ellipse(0, -h, w, 4, 0, Math.PI, 0); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#c3a6ff', 1);
+        ctx.beginPath(); ctx.arc(0, -h - 5, 2.2, 0, 7); ctx.fillStyle = full ? (Math.sin(t * 0.015) > 0 ? '#ff4f6a' : '#3a1020') : '#5dffb0'; ctx.fill();
+      });
+
+      // Schmelze: Ofen mit glühender Öffnung und Schornstein
+      if (pl.sm) at(SMELT, 2, () => {
+        const lv = Math.min(5, pl.sm), hc = 20 + lv * 3;
+        ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-14, -16); ctx.quadraticCurveTo(-4, -26, 6, -16); ctx.lineTo(6, 0); ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#ff4f6a', 1.3);
+        ctx.beginPath(); ctx.rect(8, -hc - 6, 6, hc + 6); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#ff4f6a', 1.1);
+        const g = ctx.createRadialGradient(-4, -6, 0, -4, -6, 8); g.addColorStop(0, '#fff2c0'); g.addColorStop(0.5, '#ff8a3d'); g.addColorStop(1, 'rgba(255,80,30,0)');
+        ctx.beginPath(); ctx.arc(-4, -6, 6, Math.PI, 0); ctx.lineTo(2, -1); ctx.lineTo(-10, -1); ctx.closePath(); ctx.fillStyle = g; ctx.globalAlpha = 0.7 + 0.3 * Math.sin(t * 0.012); ctx.fill(); ctx.globalAlpha = 1;
+      });
+      if (pl.sm && Math.random() < 0.1) { const q = rim(SMELT + 3, 32 + Math.min(5, pl.sm) * 3); parts.push({ x: q.x, y: q.y, vx: 8 + Math.random() * 6, vy: -16 - Math.random() * 10, life: 2, t: 0, c: 'rgba(200,190,230,.35)', sz: 3 + Math.random() * 4, smoke: true }); }
+
+      // Lasermeißel: Antenne mit Spiegelschüssel und Emitter
+      if (pl.lz) at(LASER, 2, () => {
+        ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(-2, -20); ctx.lineTo(2, -20); ctx.lineTo(8, 0); ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#3ef0ff', 1.2);
+        ctx.save(); ctx.translate(0, -22); ctx.rotate(-0.5 + Math.sin(t * 0.001) * 0.2);
+        ctx.beginPath(); ctx.arc(0, 0, 11, Math.PI * 1.1, Math.PI * 1.9); glowStroke('#3ef0ff', 1.6);
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -12); ctx.strokeStyle = '#3ef0ff'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -12, 2.6, 0, 7); ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 0.01); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.restore();
+      });
+
+      // Sammeldrohnen pendeln zwischen Bohrturm und Silo und tragen Erz
+      if (pl.d) for (let i = 0; i < Math.min(6, pl.dr || 0); i++) {
+        const k = (t * 0.00035 * (1 + i * 0.17) + i * 0.37) % 1, back = k > 0.5, u = back ? (1 - k) * 2 : k * 2;
+        const A = rim(DR[0], 20), B = rim(SILO, 46), mx = (A.x + B.x) / 2, my = Math.min(A.y, B.y) - 22 - i * 5;
+        const x = (1 - u) * (1 - u) * A.x + 2 * (1 - u) * u * mx + u * u * B.x, y = (1 - u) * (1 - u) * A.y + 2 * (1 - u) * u * my + u * u * B.y;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(back ? Math.PI : 0);
+        ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(0, -3.5); ctx.lineTo(7, 0); ctx.lineTo(0, 3.5); ctx.closePath(); ctx.fillStyle = HULL; ctx.fill(); glowStroke('#5dffb0', 1);
+        if (!back) { ctx.beginPath(); ctx.rect(-2, 3, 4, 4); ctx.fillStyle = ORE; ctx.fill(); }
         ctx.restore();
       }
     }
@@ -167,7 +211,8 @@
       sh.addColorStop(0, 'rgba(255,255,255,.18)'); sh.addColorStop(0.5, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,10,.75)');
       ctx.fillStyle = sh; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
       if (P.look === 'lava') { ctx.globalAlpha = 0.15 + 0.1 * Math.sin(t * 0.003); ctx.fillStyle = '#ff6a20'; ctx.fillRect(cx - R, cy - R, R * 2, R * 2); ctx.globalAlpha = 1; }
-      if (!open) { ctx.fillStyle = 'rgba(10,8,30,.6)'; ctx.fillRect(cx - R, cy - R, R * 2, R * 2); }
+      ctx.fillStyle = 'rgba(10,8,30,.22)'; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+      if (!open) { ctx.fillStyle = 'rgba(10,8,30,.5)'; ctx.fillRect(cx - R, cy - R, R * 2, R * 2); }
       ctx.restore();
       ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.strokeStyle = hex(P.col, open ? 0.6 : 0.25); ctx.lineWidth = 1.2; ctx.stroke();
       drawFacilities(P, pl, t, open);
@@ -206,7 +251,7 @@
     }
     // Effekt eines Treffers: Laser vom Turm, Gesteinsbrocken, Zahl
     function burst(pt, P, n, vein) {
-      const src = rim(-158, 20);
+      const src = rim(-156, 32);
       beam = { x0: src.x, y0: src.y, x: pt.x, y: pt.y, t: 0 };
       for (let i = 0; i < (vein ? 22 : 9); i++) { const a = Math.random() * 6.28, v = 40 + Math.random() * 90; parts.push({ x: pt.x, y: pt.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 0.8, t: 0, c: vein ? '#ffc04d' : P.col, sz: 2 + Math.random() * 3 }); }
       texts.push({ x: pt.x, y: pt.y - 10, s: (vein ? 'Erzader! ' : '') + '+' + n, t: 0, vein });
