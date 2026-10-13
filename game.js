@@ -916,6 +916,7 @@
   function openOnline() { if (runAlive() && !current) setPaused(true); A.play('click'); show('online'); }
   $('onlinePill').addEventListener('click', openOnline);
   $('mOnline').addEventListener('click', openOnline);
+  $('pOnline').addEventListener('click', openOnline);
   $('onClose').addEventListener('click', home);
 
   // Bestenliste auf der Startseite: Top 3, eigener Platz und wer direkt davor liegt
@@ -1858,7 +1859,7 @@
     O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); if (current === 'menu') renderLbTeaser(true); } });
     O.onCount(n => {
       $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online';
-      const m = $('mOnline'); m.hidden = false; m.textContent = n === 1 ? 'Nur du bist gerade online' : n + ' Spieler gerade online';
+      for (const m of [$('mOnline'), $('pOnline')]) { m.hidden = false; m.textContent = n === 1 ? 'Nur du bist gerade online' : n + ' Spieler gerade online'; }
       if (current === 'online') renderOnline();
     });
     setInterval(fetchPolls, 5 * 60e3);
