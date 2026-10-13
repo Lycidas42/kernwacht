@@ -103,7 +103,8 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #status .num { font-size: .72rem; color: var(--ink-dim); white-space: nowrap; }
 #status .stpills { gap: 5px; }
 #status .pill { font-size: .72rem; }
-#bossInfo { display: grid; gap: 4px; }
+#bossInfo { display: grid; gap: 3px; text-shadow: 0 0 6px #000, 0 0 2px #000; }
+#bossInfo .bosschk span { background: rgba(10,8,30,.55); }
 #status #xpLine .stl { color: #ffd23f; }
 #bossBar .bossline { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #ffb3ea; margin-bottom: 4px; }
 #bossBar .bossline b { font-size: 15px; color: #fff; letter-spacing: 0; }
@@ -582,6 +583,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <div class="bar" id="wavebar"><i></i></div>
       <div class="mchip" id="mChip" hidden><b id="mfName"></b><span id="mfRule"></span></div>
       <div id="bossBar" hidden><span id="bossName">Boss</span><div class="bar"><i></i></div><b class="num" id="bossPct">100 %</b></div>
+      <div id="bossInfo" hidden><div class="bossnext"><span id="bossNext"></span><div class="nbar"><i id="bossNextBar"></i></div></div><div class="bosschk" id="bossChk"></div></div>
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>
     <div class="pill markpill" id="markPill" hidden>◎ Ziel</div>
@@ -618,7 +620,6 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
         <div class="pill num k" id="runK">0</div>
       </div>
-      <div id="bossInfo" hidden><div class="bossnext"><span id="bossNext"></span><div class="nbar"><i id="bossNextBar"></i></div></div><div class="bosschk" id="bossChk"></div></div>
     </div>
     <div id="tabs" role="tablist">
       <button role="tab" data-tab="atk" aria-selected="true">Angriff</button>
