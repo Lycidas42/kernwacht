@@ -131,6 +131,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #ctrl .callbtn:disabled { opacity: .35; }
 #ctrl .callbtn.auto { background: color-mix(in srgb, var(--energy) 18%, transparent); }
 #ctrl [aria-pressed="true"] { color: var(--void); background: var(--core); border-color: var(--core); }
+#hpDock { position: absolute; left: 50%; transform: translateX(-50%); bottom: 44px; width: min(46%, 220px); display: flex; align-items: center; gap: 6px; pointer-events: none; }
+#hpDock .bar { flex: 1; height: 7px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--heal) 35%, transparent); }
+#hpDock .num { font-size: 10px; color: var(--ink); text-shadow: 0 0 4px #000; white-space: nowrap; }
+#hpDock.low .bar { box-shadow: 0 0 0 1px var(--hostile), 0 0 10px var(--hostile); }
 #markPill { position: absolute; left: 10px; bottom: 58px; max-width: 40%; overflow: hidden; text-overflow: ellipsis; pointer-events: none; box-shadow: 0 0 10px rgba(255,210,63,.5); }
 #menuBtn { position: absolute; left: 10px; bottom: 10px; font-family: var(--font-ui); letter-spacing: .05em; }
 
@@ -587,6 +591,8 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>
     <div class="pill markpill" id="markPill" hidden>◎ Ziel</div>
+    <!-- eigene Lebensleiste direkt unter der Kanone -->
+    <div id="hpDock"><div class="bar" id="hpbar"><i></i></div><span class="num" id="hpTxt">0 / 0</span></div>
     <div id="abil">
       <button class="ab" id="ab-strike" style="--glow: var(--hostile)" aria-label="Orbitalschlag">
         <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#17143a" stroke="#3a3474" stroke-width="3"/><circle class="ring" cx="28" cy="28" r="25" fill="none" stroke="#ff4f9a" stroke-width="3" stroke-linecap="round" stroke-dasharray="157.1" stroke-dashoffset="157.1"/></svg>
@@ -613,7 +619,6 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
   <div id="bench">
     <!-- Statusleiste: Kanone, Rang, Kennzahlen und Boss-Details (oben im Feld bleibt Platz für den Boss) -->
     <div id="status">
-      <div class="strow"><span class="stl">Kanone</span><div class="bar" id="hpbar"><i></i></div><span class="num" id="hpTxt">0 / 0</span></div>
       <div class="xpline" id="xpLine"><span id="xpRank" class="stl">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
       <div class="hudrow stpills">
         <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>

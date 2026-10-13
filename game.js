@@ -1775,6 +1775,7 @@
         if (xl._t !== rt + tx) { xl._t = rt + tx; $('xpRank').textContent = rt; $('xpTxt').textContent = tx; $('xpbar').firstElementChild.style.width = Math.min(100, R.cur / R.need * 100) + '%'; }
         xl.classList.toggle('low', run.wave < C.record(meta) * C.P.xpLowAt); }
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
+      $('hpDock').classList.toggle('low', run.hp < run.s.maxHp * 0.3);
       $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';
       $('wavebar').classList.toggle('hold', !!run.holding);
       // Lebensleiste des Bosses (stärkstes lebendes, falls mehrere)

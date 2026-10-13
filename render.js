@@ -50,7 +50,7 @@
       W = r.width; H = r.height;
       cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
       view.s = Math.min(W / 500, (H - 110) / 440);
-      view.cx = W / 2; view.cy = H - 48 - 32 * view.s;
+      view.cx = W / 2; view.cy = H - 60 - 32 * view.s; // Platz für die Lebensleiste unter der Kanone
     }
     function toWorld(clientX, clientY) {
       const r = cv.getBoundingClientRect();
