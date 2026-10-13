@@ -265,8 +265,10 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .skdet button { justify-self: start; height: 34px; padding: 0 16px; border: 1px solid var(--c, #ffd23f); border-radius: 4px; color: var(--c, #ffd23f); font-weight: 700; margin-top: 4px; }
 .skdet button:disabled { opacity: .35; }
 .bzone { margin-top: 10px; } .bzone h3 { margin: 6px 0; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
-.bitem { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-left: 3px solid var(--c, #ff4ff0); border-radius: 4px; padding: 7px 10px; margin-bottom: 6px; }
-.bitem.off { opacity: .45; border-left-color: var(--line); }
+.bitem { display: grid; grid-template-columns: 56px 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-left: 3px solid var(--c, #ff4ff0); border-radius: 4px; padding: 7px 10px; margin-bottom: 6px; }
+.bitem.off { opacity: .55; border-left-color: var(--line); }
+.bitem .bxp { width: 56px; height: 56px; }
+.bitem.unseen .bxp { filter: brightness(0) drop-shadow(0 0 1px #6c68a8); opacity: .7; }
 .bitem b { font-size: .9rem; } .bitem small { display: block; font-size: .74rem; color: var(--ink-dim); margin-top: 2px; }
 .bitem .bgo { display: flex; gap: 6px; align-items: center; }
 .bitem select { background: var(--deck-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; height: 32px; font-family: var(--font-num); }

@@ -451,13 +451,14 @@
         const sel = ws.includes(meta.bossSel[k]) ? meta.bossSel[k] : ws[ws.length - 1];
         const bt = sel && times[k + '@' + sel];
         const chk = (B.chk || []).map(c => C.BOSS_CHECK[c]).join(', ');
-        html += `<div class="bitem ${ok ? '' : 'off'}" style="--c:${BOSS_COL[z - 1]}"><div><b>${ok || ws.length ? B.name : '???'}</b>${B.lord ? ' <span class="dim">· Herrscher</span>' : ''}
+        html += `<div class="bitem ${ok ? '' : 'off'}${ws.length ? '' : ' unseen'}" style="--c:${BOSS_COL[z - 1]}"><canvas class="cxp bxp" data-b="${k}"></canvas><div><b>${ok || ws.length ? B.name : '???'}</b>${B.lord ? ' <span class="dim">· Herrscher</span>' : ''}
           <small>${ok ? `Welle ${ws.join(', ')}${chk ? ' · prüft: ' + chk : ''}${bt ? ' · Bestzeit ' + fmtTime(bt) : ''}` : ws.length ? 'Noch nicht besiegt' : `Erscheint in Welle ${C.bossWaves(k, 260)[0]}`}</small></div>
           ${ok ? `<div class="bgo">${ws.length > 1 ? `<select data-bsel="${k}">${ws.map(w => `<option value="${w}" ${w === sel ? 'selected' : ''}>Welle ${w}</option>`).join('')}</select>` : ''}<button data-bgo="${k}">Kämpfen</button></div>` : ''}</div>`;
       }
       html += '</div>';
     }
     $('bossList').innerHTML = html;
+    cxWatch('#bossList canvas');
     $$('#bossList [data-bsel]').forEach(el => el.addEventListener('change', () => { meta.bossSel[el.dataset.bsel] = +el.value; save(); renderBosses(); }));
     $$('#bossList [data-bgo]').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.bgo, ws = C.bossWaves(k, Math.max(meta.best || 0, 10)), w = ws.includes(meta.bossSel[k]) ? meta.bossSel[k] : ws[ws.length - 1];
@@ -1427,7 +1428,6 @@
     meta.cxSeen = cxCount(); save();
     const rec = C.record(meta), el = $('cxList');
     $$('#cxTabs [data-cx]').forEach(b => b.setAttribute('aria-selected', b.dataset.cx === cxTab ? 'true' : 'false'));
-    cxVis.clear(); if (cxObs) cxObs.disconnect();
     let h = '', n = 0, tot = 0;
     if (cxTab === 'enemy') {
       const mx = k => Math.max(...CX_ENEMY.map(([t]) => C.ENEMY[t][k]));
@@ -1456,12 +1456,17 @@
     }
     el.innerHTML = h;
     $('cxSum').textContent = cxTab === 'weapon' ? `${n} von ${tot} freigeschaltet` : `${n} von ${tot} entdeckt`;
-    if (cxObs) $$('#cxList canvas').forEach(c => cxObs.observe(c)); else $$('#cxList canvas').forEach(c => cxVis.add(c));
+    cxWatch('#cxList canvas');
+  }
+  // Porträts animieren: nur sichtbare Leinwände, solange Kompendium oder Bosse offen sind
+  function cxWatch(sel) {
+    cxVis.clear(); if (cxObs) cxObs.disconnect();
+    if (cxObs) $$(sel).forEach(c => cxObs.observe(c)); else $$(sel).forEach(c => cxVis.add(c));
     if (!cxRaf) cxRaf = requestAnimationFrame(cxLoop);
   }
   const cxBuf = document.createElement('canvas');
   function cxLoop(t) {
-    if (current !== 'codex') { cxRaf = 0; return; }
+    if (current !== 'codex' && current !== 'bosses') { cxRaf = 0; return; }
     cxRaf = requestAnimationFrame(cxLoop);
     if (!cxR) cxR = window.KWRender.create(cxBuf);
     for (const c of cxVis) {
