@@ -66,6 +66,8 @@ nav button[aria-selected="true"] { border-color: var(--core); color: var(--core)
 .bar .t i { display: block; height: 100%; background: var(--core); box-shadow: 0 0 8px var(--core); }
 .bar .n { text-align: right; font-family: var(--font-num); font-size: .8rem; }
 .newpoll { display: grid; gap: 8px; }
+.voters { display: flex; flex-wrap: wrap; gap: 4px; margin: -2px 0 4px; padding-left: 2px; }
+.voter { font-size: .74rem; border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; color: var(--ink-dim); }
 table { width: 100%; border-collapse: collapse; font-size: .86rem; }
 th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th { font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; cursor: pointer; }
@@ -232,9 +234,17 @@ td.n, th.n { text-align: right; font-family: var(--font-num); }
     try {
       const ps = await call('kw_admin_polls') || [];
       if (!ps.length) { $('pollList').innerHTML = '<p class="dim">Noch keine Umfragen.</p>'; return; }
+      // Stimmen mit Spielernamen je Umfrage (fehlt die Funktion noch, bleibt es bei den Zahlen)
+      const votes = {};
+      await Promise.all(ps.map(async p => { try { votes[p.id] = await call('kw_admin_poll_votes', { p_id: p.id }) || []; } catch (e) { votes[p.id] = null; } }));
+      const anonName = id => 'Anonym ' + String(id || '').replace(/-/g, '').slice(0, 4).toUpperCase();
       $('pollList').innerHTML = ps.map(p => {
-        const tot = Number(p.total) || 0;
-        const bars = p.options.map((o, i) => { const n = Number((p.counts || {})[i] || 0), k = tot ? Math.round(n / tot * 100) : 0; return `<div class="bar"><span>${esc(o)}</span><span class="t"><i style="width:${k}%"></i></span><span class="n">${n} · ${k} %</span></div>`; }).join('');
+        const tot = Number(p.total) || 0, V = votes[p.id];
+        const bars = p.options.map((o, i) => {
+          const n = Number((p.counts || {})[i] || 0), k = tot ? Math.round(n / tot * 100) : 0;
+          const who = V ? V.filter(v => v.choice === i).map(v => `<span class="voter" title="Rekord ${v.best_ever || 0}${v.lvl ? ' · Rang ' + v.lvl : ''} · ${when(v.created_at)}">${esc(v.name || anonName(v.player_id))}</span>`).join('') : '';
+          return `<div class="bar"><span>${esc(o)}</span><span class="t"><i style="width:${k}%"></i></span><span class="n">${n} · ${k} %</span></div>${who ? `<div class="voters">${who}</div>` : ''}`;
+        }).join('');
         return `<div class="poll ${p.active ? '' : 'closed'}" data-id="${p.id}">
           <div class="fbhead"><span class="tag ${p.active ? 'idee' : 'verworfen'}">${p.active ? 'läuft' : 'beendet'}</span><b>${esc(p.question)}</b><span>${when(p.created_at)}</span><span class="num">${tot} Stimmen</span></div>
           ${bars}
