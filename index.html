@@ -329,6 +329,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .pz-foot { display: flex; gap: 18px; border-top: 1px solid var(--line); padding-top: 6px; }
 .pz-foot .pz-link { text-decoration: underline; text-underline-offset: 3px; }
 button.buy, [data-fac], [data-res] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+#runK { cursor: pointer; position: relative; } #runK.dot::after { content: ""; position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--hostile); box-shadow: 0 0 6px var(--hostile); }
 .fair, .howto { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .8rem; color: var(--ink-dim); }
 .fair li::before { content: "+ "; color: var(--heal); font-family: var(--font-num); }
 .howto li b { color: var(--ink); font-weight: 600; }
@@ -814,7 +815,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <div class="pill num e en" id="energyTotal" title="Energie für Upgrades">0</div>
         <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>
         <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
-        <div class="pill num k" id="runK">0</div>
+        <button class="pill num k" id="runK" title="Kristalle, die du sofort im Labor ausgeben kannst – antippen öffnet das Labor">0</button>
       </div>
     </div>
     <div id="tabs" role="tablist">
