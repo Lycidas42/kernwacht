@@ -917,9 +917,19 @@
     if (b.dataset.go === 'cannon' && b.dataset.direct) { show('lab'); return; }
     setPage(b.dataset.go);
   }));
+  function renderMe() {
+    const R = C.rankOf(meta), el = $('mMe');
+    el.classList.toggle('noname', !meta.name);
+    el.innerHTML = `${avatarSvg(meta.avatar, meta.color, 34)}<span class="who"><b>${esc(meta.name || 'Name fehlt')}</b><small>Rang ${R.rank}</small></span>`;
+  }
+  $('mMe').addEventListener('click', e => { e.stopPropagation(); A.play('click'); $('mMeMenu').hidden = !$('mMeMenu').hidden; });
+  $('mMeProf').addEventListener('click', () => { $('mMeMenu').hidden = true; pDraft = null; show('profile'); });
+  $('mMeSet').addEventListener('click', () => { $('mMeMenu').hidden = true; show('settings'); });
+  document.addEventListener('click', e => { if (!$('mMeMenu').hidden && !e.target.closest('#mMeMenu')) $('mMeMenu').hidden = true; });
   function renderHub() {
     const R = C.rankOf(meta), rec = C.record(meta);
-    $('mRank').textContent = R.rank; $('mRankBox').hidden = !R.rank;
+    renderMe();
+    $('mRank').textContent = R.rank;
     $('mFragBox').hidden = !(meta.fusions || meta.frag); $('mFrag').textContent = fmt(meta.frag || 0);
     $('mIntro').hidden = rec >= 20;
     // Kachel-Status
@@ -948,6 +958,7 @@
     // Zu tun: höchstens drei Einträge, Tipp springt an die richtige Stelle
     const todo = [];
     const add = (cond, txt, area, btn) => { if (cond) todo.push({ txt, area, btn }); };
+    add(!meta.name && (meta.runs || 0) >= 1, 'Gib dir einen Namen, damit du in den Highscores erscheinst', 'Profil', 'mMeProf');
     add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kanone', 'cmdBtn');
     add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kanone', 'fusBtn');
     add(!$('dailyBtn').hidden && !(d && d.bonus), 'Tageslauf-Bonus wartet', 'Modi', 'dailyBtn');
