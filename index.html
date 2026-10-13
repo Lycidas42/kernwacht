@@ -130,6 +130,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #ctrl .callbtn:disabled { opacity: .35; }
 #ctrl .callbtn.auto { background: color-mix(in srgb, var(--energy) 18%, transparent); }
 #ctrl [aria-pressed="true"] { color: var(--void); background: var(--core); border-color: var(--core); }
+#markPill { position: absolute; left: 10px; bottom: 58px; max-width: 40%; overflow: hidden; text-overflow: ellipsis; pointer-events: none; box-shadow: 0 0 10px rgba(255,210,63,.5); }
 #menuBtn { position: absolute; left: 10px; bottom: 10px; font-family: var(--font-ui); letter-spacing: .05em; }
 
 /* Fähigkeiten */
@@ -577,13 +578,13 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <div class="spacer"></div>
         <div class="pill admin" id="adminPill" hidden>ADMIN</div>
         <div class="pill online num" id="onlinePill" hidden>0</div>
-        <div class="pill markpill" id="markPill" hidden>◎ Ziel</div>
       </div>
       <div class="bar" id="wavebar"><i></i></div>
       <div class="mchip" id="mChip" hidden><b id="mfName"></b><span id="mfRule"></span></div>
       <div id="bossBar" hidden><span id="bossName">Boss</span><div class="bar"><i></i></div><b class="num" id="bossPct">100 %</b></div>
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>
+    <div class="pill markpill" id="markPill" hidden>◎ Ziel</div>
     <div id="abil">
       <button class="ab" id="ab-strike" style="--glow: var(--hostile)" aria-label="Orbitalschlag">
         <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#17143a" stroke="#3a3474" stroke-width="3"/><circle class="ring" cx="28" cy="28" r="25" fill="none" stroke="#ff4f9a" stroke-width="3" stroke-linecap="round" stroke-dasharray="157.1" stroke-dashoffset="157.1"/></svg>

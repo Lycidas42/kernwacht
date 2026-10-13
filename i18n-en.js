@@ -103,6 +103,7 @@ window.KW_EN = {
   'Geschütze {0}/{1}': 'Turrets {0}/{1}', 'Hangartore {0}/{1}': 'Hangar gates {0}/{1}', 'Schlote {0}/{1}': 'Vents {0}/{1}', 'Schwingen {0}/{1}': 'Wings {0}/{1}', 'Kopf {0}/{1}': 'Head {0}/{1}', 'Kern {0}/{1}': 'Core {0}/{1}', 'Tentakel {0}/{1}': 'Tentacles {0}/{1}', 'Augen {0}/{1}': 'Eyes {0}/{1}',
   'KERN GETROFFEN': 'CORE HIT', 'SCHWINGE ZERSTÖRT': 'WING DESTROYED', 'HANGARTOR ZERSTÖRT': 'HANGAR GATE DESTROYED', 'SCHLOT VERSIEGELT': 'VENT SEALED', 'KOPF GETROFFEN': 'HEAD HIT',
   'Bosskämpfe geben halbe Boss-Kristalle und die Erfahrung der Welle, aber keine Module.': 'Boss fights give half the boss crystals and the wave experience, but no modules.',
+  'Auge': 'Eye', 'Geschütz': 'Turret', 'Hangartor': 'Hangar gate', 'Schlot': 'Vent', 'Schwinge': 'Wing', 'Kopf': 'Head', 'Kern': 'Core', 'Wurmglied': 'Worm segment', 'Bauteil': 'Part', 'Tentakel': 'Tentacle',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',

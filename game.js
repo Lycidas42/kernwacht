@@ -1765,7 +1765,8 @@
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
-      { const mp = $('markPill'), f = run.focus && run.focus.hp > 0 ? run.focus : null; mp.hidden = !f; if (f) mp.textContent = '◎ ' + (MARK_NAME[f.type] || 'Ziel'); }
+      { const mp = $('markPill'), f = run.focus && run.focus.hp > 0 ? run.focus : null; mp.hidden = !f; if (f) { const PKN = { arm: 'Tentakel', tentacle: 'Tentakel', eye: 'Auge', turret: 'Geschütz', gate: 'Hangartor', vent: 'Schlot', gwing: 'Schwinge', head: 'Kopf', core: 'Kern', segment: 'Wurmglied', wing: 'Schwinge' };
+        const nm = f.type === 'part' ? (PKN[f.pk] || 'Bauteil') : f.type === 'boss' && f.kind ? C.BOSS_KINDS[f.kind].name : (MARK_NAME[f.type] || 'Ziel'); const tx = '◎ ' + nm; if (mp.textContent !== tx) mp.textContent = tx; } }
       $('myDmg').textContent = fmt(run.s.gunDmg);
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));
       $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
