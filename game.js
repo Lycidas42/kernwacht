@@ -208,9 +208,9 @@
   $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
 
   // ---------- Einstellungen ----------
-  const SET_DEF = { numFmt: 'short', dmgNums: 'on', tips: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
+  const SET_DEF = { fx: 'clear', numFmt: 'short', dmgNums: 'on', tips: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
   const setting = k => k === 'lang' ? ((window.KWI18n && KWI18n.lang) || 'de') : (meta.settings && meta.settings[k]) || SET_DEF[k];
-  function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); }
+  function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); R.setFxMode(setting('fx')); }
   function renderSettings() {
     $$('#settings .seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === setting(seg.dataset.set))));
     $('numEx').textContent = 'Beispiel: ' + fmt(27.9e12) + ' · ' + fmt(4.2e18);
@@ -1864,6 +1864,7 @@
       $('foeHp').textContent = fmt(C.enemyHp('grunt', run.wave) * ((run.waveMod && run.waveMod.hp) || 1));
       $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
       // Kommandant: Erfahrung bis zum nächsten Rang (gedämpft, wenn die Welle unter dem halben Rekord liegt)
+      { const av = (meta.avatar | 0) + ':' + (meta.color | 0); if ($('xpAv')._av !== av) { $('xpAv')._av = av; $('xpAv').innerHTML = avatarSvg(meta.avatar, meta.color, 20); } }
       { const R = C.rankOf(meta), xl = $('xpLine'), rt = 'Rang ' + R.rank, tx = fmt(R.cur) + ' / ' + fmt(R.need);
         if (xl._t !== rt + tx) { xl._t = rt + tx; $('xpRank').textContent = rt; $('xpTxt').textContent = tx; $('xpbar').firstElementChild.style.width = Math.min(100, R.cur / R.need * 100) + '%'; }
         xl.classList.toggle('low', run.wave < C.record(meta) * C.P.xpLowAt); }

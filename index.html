@@ -105,7 +105,9 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #status .pill { font-size: .72rem; }
 #bossInfo { display: grid; gap: 3px; text-shadow: 0 0 6px #000, 0 0 2px #000; }
 #bossInfo .bosschk span { background: rgba(10,8,30,.55); }
-#status #xpLine .stl { color: #ffd23f; }
+#status #xpLine .stl { color: #ffd23f; width: auto; }
+#status .xpav { display: inline-flex; flex: 0 0 auto; }
+#status .xpav svg { display: block; }
 #bossBar .bossline { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #ffb3ea; margin-bottom: 4px; }
 #bossBar .bossline b { font-size: 15px; color: #fff; letter-spacing: 0; }
 #bossBar .bar { height: 8px; background: rgba(255,255,255,.08); }
@@ -666,7 +668,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
   <div id="bench">
     <!-- Statusleiste: Kanone, Rang, Kennzahlen und Boss-Details (oben im Feld bleibt Platz für den Boss) -->
     <div id="status">
-      <div class="xpline" id="xpLine"><span id="xpRank" class="stl">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
+      <div class="xpline" id="xpLine"><span id="xpAv" class="xpav"></span><span id="xpRank" class="stl">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
       <div class="hudrow stpills">
         <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>
         <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
@@ -1003,6 +1005,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <button class="sec trackbtn" aria-label="Musikstück wechseln">Stück: Neon-Synthwave</button>
     <h3>Anzeige</h3>
     <div class="setrow"><div>Zahlenformat<small id="numEx"></small></div><div class="seg" data-set="numFmt"><button data-v="short">K · M · B · T</button><button data-v="sci">1,2e15</button></div></div>
+    <div class="setrow"><div>Effekte<small>„Klar“ dämpft Explosionen und Hintergrund, damit Gegner gut sichtbar bleiben</small></div><div class="seg" data-set="fx"><button data-v="full">Voll</button><button data-v="clear">Klar</button><button data-v="min">Minimal</button></div></div>
     <div class="setrow"><div>Schadenszahlen<small>Zahlen über getroffenen Schiffen</small></div><div class="seg" data-set="dmgNums"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <div class="setrow"><div>Tipps im Spiel<small>Kurze Hinweise beim ersten Kontakt mit neuen Dingen</small></div><div class="seg" data-set="tips"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <h3>Sprache</h3>

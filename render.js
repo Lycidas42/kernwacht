@@ -76,7 +76,7 @@
     // ---------- Raumschiffe (lokale Achse +x = Flugrichtung) ----------
     function drawShip(e, t, frozen) {
       const fc = FAC_COL[e.fac || 1] && FAC_COL[e.fac][e.type];
-      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : e.pdps > 0 && e.type !== 'boss' ? '#8dff5a' : e.type === 'boss' ? BOSS_COL[(e.sector || 1) - 1] : e.type === 'part' ? BOSS_COL[((e.host && e.host.sector) || 1) - 1] : fc || SHIP[e.type], r = e.r, sd = e.seed;
+      const c = e.flash > 0 ? '#ffffff' : frozen ? PAL.frost : e.pdps > 0 && e.type !== 'boss' && fxMode === 'full' ? '#8dff5a' : e.type === 'boss' ? BOSS_COL[(e.sector || 1) - 1] : e.type === 'part' ? BOSS_COL[((e.host && e.host.sector) || 1) - 1] : fc || SHIP[e.type], r = e.r, sd = e.seed;
       if (fc && drawFaction(e, c, r, t, sd, frozen ? 0.25 : 1)) return;
       const fl = frozen ? 0.25 : 1;
       ctx.lineJoin = 'round';
@@ -781,22 +781,33 @@
 
     // ---------- Effekte ----------
     let dmgNums = true;
+    // Effekte: 'full' wie bisher, 'clear' (Standard) gedämpft, 'min' fast nur Gegner und Treffer
+    let fxMode = 'clear';
+    const PK = () => (fxMode === 'full' ? 1 : fxMode === 'clear' ? 0.35 : 0.12);
+    const np = n => Math.max(1, Math.round(n * PK()));
+    const BLAST = { boom: 1, mine: 1, splinter: 1, chain: 1, cryo: 1, brittle: 1, thorn: 1, reflect: 1, nova: 1, barrage: 1, drone: 1, leech: 1, crysfx: 1, shieldhit: 1, wallhit: 1 };
     function pushFx(f) {
+      if (fxMode !== 'full' && BLAST[f.k]) {
+        // gedämpft: begrenzte Zahl gleichzeitiger Treffereffekte, kürzer
+        let n = 0; for (const x of fx) if (BLAST[x.k]) n++;
+        if (n >= (fxMode === 'clear' ? 14 : 6) && f.k !== 'nova') return;
+      }
+      if (f.k === 'dmg' && fxMode !== 'full' && !f.crit) return; // ohne „Voll“ nur Krits als Zahl
       // Schadenszahlen begrenzen, damit große Gefechte lesbar bleiben (Krits und Boss bevorzugt)
       if (f.k === 'dmg' && !dmgNums) return;
       if (f.k === 'dmg') { let n = 0; for (const x of fx) if (x.k === 'dmg') n++; if (n >= (f.crit ? 10 : 5)) return; }
-      f.life = LIFE[f.k] || 0.5;
+      f.life = (LIFE[f.k] || 0.5) * (fxMode !== 'full' && BLAST[f.k] ? 0.6 : 1);
       if (f.k === 'dmg') f.dx = (Math.random() - 0.5) * 16;
       if (f.k === 'wave' && f.sector) f.life = 3.2;
       if (f.k === 'boom') boom(f);
       if (f.k === 'leech' || f.k === 'crysfx') {
         const c = f.k === 'leech' ? PAL.heal : PAL.crystal;
-        for (let i = 0; i < 5; i++) { const dx = -f.x, dy = -8 - f.y, d = Math.hypot(dx, dy) || 1, v = 160 + Math.random() * 80; parts.push({ x: f.x + (Math.random() - 0.5) * 10, y: f.y + (Math.random() - 0.5) * 10, vx: dx / d * v, vy: dy / d * v, life: Math.min(1.2, d / v), t: 0, c, k: 'spark', nodrag: true }); }
+        for (let i = 0; i < np(5); i++) { const dx = -f.x, dy = -8 - f.y, d = Math.hypot(dx, dy) || 1, v = 160 + Math.random() * 80; parts.push({ x: f.x + (Math.random() - 0.5) * 10, y: f.y + (Math.random() - 0.5) * 10, vx: dx / d * v, vy: dy / d * v, life: Math.min(1.2, d / v), t: 0, c, k: 'spark', nodrag: true }); }
       }
-      if (f.k === 'cryo') for (let i = 0; i < 12; i++) { const a = Math.random() * 6.28, v = 50 + Math.random() * 90; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.45, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10, sz: 2 + Math.random() * 2.5 }); }
-      if (f.k === 'brittle') for (let i = 0; i < 6; i++) { const a = Math.random() * 6.28, v = 60 + Math.random() * 80; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: 8, sz: 1.5 + Math.random() * 2 }); }
+      if (f.k === 'cryo') for (let i = 0; i < np(12); i++) { const a = Math.random() * 6.28, v = 50 + Math.random() * 90; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.45, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10, sz: 2 + Math.random() * 2.5 }); }
+      if (f.k === 'brittle') for (let i = 0; i < np(6); i++) { const a = Math.random() * 6.28, v = 60 + Math.random() * 80; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: 8, sz: 1.5 + Math.random() * 2 }); }
       if (f.k === 'thorn') for (const p of f.pts) for (let i = 0; i < 3; i++) parts.push({ x: p.x, y: p.y, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 50, life: 0.3, t: 0, c: '#ff6a8a', k: 'spark' });
-      if (f.k === 'splinter') for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28, v = 80 + Math.random() * 100; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: '#ffb0b0', k: 'spark' }); }
+      if (f.k === 'splinter') for (let i = 0; i < np(10); i++) { const a = Math.random() * 6.28, v = 80 + Math.random() * 100; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: '#ffb0b0', k: 'spark' }); }
       if (f.k === 'mine') mineBoom(f);
       if (f.k === 'strike') shake = Math.max(shake, 0.35);
       if (f.k === 'freeze') {
@@ -808,14 +819,14 @@
     function boom(f) {
       const big = f.type === 'boss' ? 3.4 : f.type === 'brute' ? 1.6 : f.type === 'bomb' ? 2 : 1;
       const c = SHIP[f.type] || PAL.energy;
-      for (let i = 0; i < 14 * big; i++) { const a = Math.random() * 6.28, v = (40 + Math.random() * 120) * Math.sqrt(big); parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35 + Math.random() * 0.4, t: 0, c: Math.random() < 0.4 ? '#fff3c4' : c, k: 'spark' }); }
-      for (let i = 0; i < 4 * big; i++) { const a = Math.random() * 6.28, v = 20 + Math.random() * 60; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + Math.random() * 0.5, t: 0, c, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, sz: (f.r || 8) * (0.4 + Math.random() * 0.5) }); }
+      for (let i = 0; i < np(14 * big); i++) { const a = Math.random() * 6.28, v = (40 + Math.random() * 120) * Math.sqrt(big); parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35 + Math.random() * 0.4, t: 0, c: Math.random() < 0.4 ? '#fff3c4' : c, k: 'spark' }); }
+      for (let i = 0; i < np(4 * big); i++) { const a = Math.random() * 6.28, v = 20 + Math.random() * 60; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6 + Math.random() * 0.5, t: 0, c, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, sz: (f.r || 8) * (0.4 + Math.random() * 0.5) }); }
       if (f.type === 'boss') shake = 0.6;
       if (f.type === 'bomb') shake = Math.max(shake, 0.3);
     }
     function mineBoom(f) {
-      for (let i = 0; i < 22; i++) { const a = Math.random() * 6.28, v = 60 + Math.random() * 160; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.3 + Math.random() * 0.35, t: 0, c: Math.random() < 0.5 ? '#fff3c4' : PAL.energy, k: 'spark' }); }
-      for (let i = 0; i < 6; i++) { const a = Math.random() * 6.28, v = 10 + Math.random() * 25; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, life: 0.9 + Math.random() * 0.5, t: 0, c: '#7a6aa8', k: 'smoke', sz: 8 + Math.random() * 10 }); }
+      for (let i = 0; i < np(22); i++) { const a = Math.random() * 6.28, v = 60 + Math.random() * 160; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.3 + Math.random() * 0.35, t: 0, c: Math.random() < 0.5 ? '#fff3c4' : PAL.energy, k: 'spark' }); }
+      for (let i = 0; i < (fxMode === 'full' ? 6 : 1); i++) { const a = Math.random() * 6.28, v = 10 + Math.random() * 25; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, life: 0.9 + Math.random() * 0.5, t: 0, c: '#7a6aa8', k: 'smoke', sz: 8 + Math.random() * 10 }); }
       shake = Math.max(shake, 0.12);
     }
     function step(dt, live, run) {
@@ -827,7 +838,8 @@
       if (fx.length > 260) fx.splice(0, fx.length - 260);
       for (const p of parts) { p.t += fdt; p.x += p.vx * fdt; p.y += p.vy * fdt; const dr = p.nodrag ? 0 : p.k === 'smoke' ? 1.2 : 2.5; p.vx *= 1 - dr * fdt; p.vy *= 1 - dr * fdt; if (p.rot != null) p.rot += p.vr * fdt; }
       for (let i = parts.length - 1; i >= 0; i--) if (parts[i].t >= parts[i].life) parts.splice(i, 1);
-      if (parts.length > 800) parts.splice(0, parts.length - 800);
+      const PMAX = fxMode === 'full' ? 800 : fxMode === 'clear' ? 260 : 90;
+      if (parts.length > PMAX) parts.splice(0, parts.length - PMAX);
     }
     function clear() { fx.length = 0; parts.length = 0; }
 
@@ -848,7 +860,7 @@
       ctx.save(); ctx.translate(view.cx + sx, view.cy + sy); ctx.scale(view.s, view.s);
 
       // Peilraster und Boden
-      ctx.lineWidth = 1 / view.s; ctx.strokeStyle = B.grid; ctx.globalAlpha = 0.6;
+      ctx.lineWidth = 1 / view.s; ctx.strokeStyle = B.grid; ctx.globalAlpha = fxMode === 'full' ? 0.6 : 0.22;
       for (let r = 100; r <= 500; r += 100) { ctx.beginPath(); ctx.arc(0, 0, r, Math.PI, 0); ctx.stroke(); }
       for (let i = 1; i < 6; i++) { const a = Math.PI + i * Math.PI / 6; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 50, Math.sin(a) * 50); ctx.lineTo(Math.cos(a) * 520, Math.sin(a) * 520); ctx.stroke(); }
       ctx.globalAlpha = 1;
@@ -860,7 +872,7 @@
       ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0);
       ctx.fillStyle = 'rgba(255,209,102,0.05)'; ctx.fill();
       ctx.setLineDash([10, 7]); ctx.lineDashOffset = -t * 0.012;
-      ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0); glow(PAL.range, 2, 0.9);
+      ctx.beginPath(); ctx.arc(0, 0, s.range, Math.PI, 0); glow(PAL.range, fxMode === 'full' ? 2 : 1.3, fxMode === 'full' ? 0.9 : 0.6);
       ctx.setLineDash([]);
 
       drawScanner(run, t);
@@ -967,6 +979,12 @@
           ctx.fillText('LASER · SCHADEN BRICHT AB', p.x, p.y + e.r * 1.8 + 24);
         }
         e._now = run.time;
+        if (fxMode !== 'full' && e.type !== 'part' && !e.giant) {
+          // dunkler Hof: Gegner heben sich von Effekten und Hintergrund ab
+          const hr = e.r * (e.type === 'boss' ? 1.9 : 2.1);
+          const hg = ctx.createRadialGradient(p.x, p.y, e.r * 0.5, p.x, p.y, hr); hg.addColorStop(0, 'rgba(4,3,14,0.55)'); hg.addColorStop(1, 'rgba(4,3,14,0)');
+          ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(p.x, p.y, hr, 0, 7); ctx.fill();
+        }
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(facing); ctx.scale(1.5, 1.5);
         if (cloak) ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.01 + e.seed);
         drawShip(e, t, frozen || e.slowUntil > run.time); ctx.restore(); ctx.globalAlpha = 1;
@@ -996,7 +1014,11 @@
           ctx.fillStyle = '#2a2560'; ctx.fillRect(p.x - w / 2, hy, w, 3);
           ctx.fillStyle = SHIP[e.type]; ctx.fillRect(p.x - w / 2, hy, w * Math.max(0, e.hp / e.maxHp), 3);
         }
-        if (e.pdps > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.4, 0, 7); ctx.fillStyle = 'rgba(141,255,90,0.10)'; ctx.fill(); glow('#8dff5a', 2, 0.5 + 0.3 * Math.sin(t * 0.01 + e.seed)); if (Math.random() < 0.25) parts.push({ x: p.x + (Math.random() - 0.5) * e.r, y: p.y, vx: 0, vy: -25, life: 0.5, t: 0, c: '#8dff5a', k: 'spark' }); }
+        if (e.pdps > 0 && fxMode !== 'full') {
+          // Gift gedämpft: grüner Tropfen über dem Schiff, die Eigenfarbe bleibt
+          const dy = p.y - e.r * 1.5 - 6 - ((t * 0.02 + e.seed * 9) % 6);
+          ctx.beginPath(); ctx.moveTo(p.x, dy - 4); ctx.quadraticCurveTo(p.x + 3, dy, p.x, dy + 3); ctx.quadraticCurveTo(p.x - 3, dy, p.x, dy - 4); ctx.fillStyle = '#8dff5a'; ctx.fill();
+        } else if (e.pdps > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.4, 0, 7); ctx.fillStyle = 'rgba(141,255,90,0.10)'; ctx.fill(); glow('#8dff5a', 2, 0.5 + 0.3 * Math.sin(t * 0.01 + e.seed)); if (Math.random() < 0.25) parts.push({ x: p.x + (Math.random() - 0.5) * e.r, y: p.y, vx: 0, vy: -25, life: 0.5, t: 0, c: '#8dff5a', k: 'spark' }); }
         if (e.stunUntil > run.time) { for (let i = 0; i < 3; i++) { const an = t * 0.008 + i * 2.1; ctx.beginPath(); ctx.arc(p.x + Math.cos(an) * e.r, p.y - e.r - 5 + Math.sin(an) * 3, 2.6, 0, 7); ctx.fillStyle = '#fff38a'; ctx.fill(); } ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.3, 0, 7); glow('#fff38a', 1.2, 0.5); }
         if (run.focus === e) {
           // Markiertes Ziel: Leitstrahl von der Kanone, pulsierender Ring, Eckklammern und Schriftzug
@@ -1074,7 +1096,11 @@
       // Effekte im Feld
       for (const f of fx) {
         const k = f.t / f.life, a = Math.max(0, 1 - k);
-        if (f.k === 'boom') {
+        if (f.k === 'boom' && fxMode !== 'full') {
+          // gedämpft: nur ein dünner, kurzer Ring in der Farbe des Schiffs
+          const R = (f.r || 8) * (f.type === 'boss' ? 4 : 2.2);
+          ctx.beginPath(); ctx.arc(f.x, f.y, R * (0.5 + k), 0, 7); glow(SHIP[f.type] || PAL.energy, 1.2, a * 0.7);
+        } else if (f.k === 'boom') {
           const R = (f.r || 8) * (f.type === 'boss' ? 4 : 2.6);
           const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, R * (0.4 + k));
           g.addColorStop(0, `rgba(255,250,220,${a})`); g.addColorStop(0.35, `rgba(255,170,80,${a * 0.7})`); g.addColorStop(1, 'rgba(255,80,140,0)');
@@ -1090,7 +1116,7 @@
           glow('#d6f7ff', 2.2, a);
           ctx.beginPath(); ctx.arc(f.x2, f.y2, 8 * a + 2, 0, 7); glow('#d6f7ff', 1.2, a);
         } else if (f.k === 'splinter') {
-          ctx.beginPath(); ctx.arc(f.x, f.y, 45 * (0.3 + k), 0, 7); glow('#ffb0b0', 1.2, a * 0.8);
+          ctx.beginPath(); ctx.arc(f.x, f.y, 45 * (0.3 + k), 0, 7); glow('#ffb0b0', fxMode === 'full' ? 1.2 : 0.8, a * (fxMode === 'full' ? 0.8 : 0.45));
         } else if (f.k === 'thorn') {
           // Dornenwall: Stacheln am Schutzwall blitzen auf, Linien zu den getroffenen Schiffen
           const R0 = C.WALL_R;
@@ -1143,6 +1169,9 @@
           ctx.globalAlpha = Math.min(1, a * 1.6); ctx.fillStyle = col; ctx.font = `700 14px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText('MODUL: ' + C.MODULES[f.drop.type].name.toUpperCase(), f.x, f.y - 40 - k * 30);
           ctx.beginPath(); ctx.arc(f.x, f.y, 10 + k * 40, 0, 7); glow(col, 2, a); ctx.globalAlpha = 1;
+        } else if (f.k === 'mine' && fxMode !== 'full') {
+          const R = f.r || 45;
+          ctx.beginPath(); ctx.arc(f.x, f.y, R * (0.35 + 0.65 * k), 0, 7); ctx.fillStyle = `rgba(255,192,77,${0.08 * a})`; ctx.fill(); glow(PAL.energy, 1.4, a * 0.75);
         } else if (f.k === 'mine') {
           const R = f.r || 45;
           const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, R);
@@ -1179,7 +1208,7 @@
           ctx.beginPath(); ctx.arc(f.x, f.y, 30 + k * 10, 0, 7); glow(PAL.frost, 1.5, a * 0.7);
         } else if (f.k === 'dmg') {
           ctx.globalAlpha = a; ctx.fillStyle = f.crit ? PAL.energy : '#ffffff';
-          ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
+          ctx.font = `600 ${fxMode === 'full' ? (f.crit ? 13 : 11) : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
           const label = { armor: 'PANZERPLATTE AB', lance: 'LANZE ZERSTÖRT', rack: 'MINENSCHACHT ZERSTÖRT', seal: 'SIEGEL GEBROCHEN', prism: 'PRISMA ZERSPLITTERT', core: 'KERN GETROFFEN', gwing: 'SCHWINGE ZERSTÖRT', gate: 'HANGARTOR ZERSTÖRT', vent: 'SCHLOT VERSIEGELT', head: 'KOPF GETROFFEN', ink: 'TINTENWOLKE', grab: 'GREIFT DIE KANONE', grabwarn: 'GREIFARM', sweep: 'FEGT', eye: 'AUGE ZERSTÖRT', storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
@@ -1308,7 +1337,7 @@
           const x = ((a.x + t * 0.00001 * a.v * 60) % 1.2 - 0.1) * W, y = a.y * H;
           ctx.save(); ctx.translate(x, y); ctx.rotate(a.rot + t * 0.0002 * a.v * 40);
           ctx.beginPath(); for (let i = 0; i < a.n; i++) { const an = i / a.n * 6.28, rr = a.r * (0.7 + 0.3 * Math.sin(a.seed * 10 + i * 2.3)); ctx[i ? 'lineTo' : 'moveTo'](Math.cos(an) * rr, Math.sin(an) * rr); } ctx.closePath();
-          ctx.fillStyle = '#2a1a12'; ctx.fill(); ctx.strokeStyle = 'rgba(255,150,80,0.45)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
+          ctx.fillStyle = '#2a1a12'; ctx.fill(); ctx.strokeStyle = fxMode === 'full' ? 'rgba(255,150,80,0.45)' : 'rgba(255,150,80,0.16)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
         }
       } else if (sec === 4 && false) {
         const x = W * 0.18, y = H * 0.16, r = Math.min(W, H) * 0.22;
@@ -1404,11 +1433,14 @@
       ctx.save(); ctx.translate(m.x, m.y);
       if (warn) { ctx.beginPath(); ctx.arc(0, 0, 13, 0, 7); glow('#ffffff', 1.5, 0.7); }
       // Auslöseradius (gestrichelt) und Wirkradius (sehr dezent)
-      if (armed) { ctx.beginPath(); ctx.arc(0, 0, s.mineBlast, 0, 7); ctx.strokeStyle = PAL.energy; ctx.globalAlpha = 0.08; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1; }
-      ctx.setLineDash([2, 5]);
-      ctx.beginPath(); ctx.arc(0, 0, s.mineTrig + 6, 0, 7);
-      ctx.strokeStyle = PAL.energy; ctx.globalAlpha = armed ? 0.55 : 0.2; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.setLineDash([]);
+      const near = fxMode === 'full' || run.enemies.some(e => { const q = run.pos(e); return Math.hypot(q.x - m.x, q.y - m.y) < s.mineTrig + e.r + 40; });
+      if (armed && fxMode === 'full') { ctx.beginPath(); ctx.arc(0, 0, s.mineBlast, 0, 7); ctx.strokeStyle = PAL.energy; ctx.globalAlpha = 0.08; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1; }
+      if (near) {
+        ctx.setLineDash([2, 5]);
+        ctx.beginPath(); ctx.arc(0, 0, s.mineTrig + 6, 0, 7);
+        ctx.strokeStyle = PAL.energy; ctx.globalAlpha = armed ? 0.55 : 0.2; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.setLineDash([]);
+      }
       // Körper: Sechseck mit Zacken
       const spin = t * 0.0015 + m.x;
       ctx.rotate(spin);
@@ -1443,7 +1475,7 @@
       run.aim = aim0; parts.length = 0;
     }
 
-    return { resize, toWorld, pushFx, step, draw, clear, view, preview, cannonLook, setDmgNums: v => { dmgNums = v; } };
+    return { resize, toWorld, pushFx, step, draw, clear, view, preview, cannonLook, setDmgNums: v => { dmgNums = v; }, setFxMode: v => { fxMode = v || 'clear'; } };
   }
 
   // Zahlenformat (de)
