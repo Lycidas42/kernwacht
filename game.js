@@ -939,8 +939,21 @@
     el.innerHTML = h; el.hidden = false;
   }
   $('mLb').addEventListener('click', () => { lbTab = 'rec'; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x.dataset.lb === 'rec' ? 'true' : 'false')); A.play('click'); show('board'); });
+  // Bergbau auf der Startseite: Füllstand jedes Lagers, volle Lager hervorgehoben, neue Planeten
+  function renderMineTeaser() {
+    const el = $('mMine'), M = C.mineTick(meta), on = C.record(meta) >= C.MINE_AT || Object.keys(M.p).length > 0;
+    el.hidden = !on; if (!on) return;
+    const built = C.PLANETS.filter(P => M.p[P.id] && M.p[P.id].d), fresh = C.PLANETS.filter(P => C.planetOpen(meta, P) && !(M.p[P.id] && M.p[P.id].d));
+    let full = 0;
+    const rows = built.map(P => { const pl = M.p[P.id], k = Math.min(1, (pl.stock || 0) / C.mineCap(pl, P)), f = k >= 0.9; if (f) full++;
+      return `<div class="mrow${f ? ' full' : ''}" style="--pc:${P.col}"><i></i><em>${P.name}</em><span class="t"><b style="width:${Math.round(k * 100)}%"></b></span><small>${f ? 'voll' : Math.round(k * 100) + ' %'}</small></div>`; }).join('');
+    el.classList.toggle('full', full > 0);
+    el.innerHTML = `<div class="hd"><span>Bergbau</span><small>${full ? (full === 1 ? '1 Lager voll ›' : full + ' Lager voll ›') : 'öffnen ›'}</small></div>${rows}`
+      + (fresh.length ? `<div class="mnew">${built.length ? 'Neuer Planet bereit' : 'Erster Planet bereit'}: ${fresh.map(P => P.name).join(', ')}</div>` : '');
+  }
+  $('mMine').addEventListener('click', () => { A.play('click'); show('mine'); });
   function renderMenu() {
-    renderLbTeaser(); if (O.configured) presence();
+    renderLbTeaser(); renderMineTeaser(); if (O.configured) presence();
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
     const max = C.maxStartWave(meta);
     renderJump();

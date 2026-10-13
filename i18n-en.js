@@ -231,6 +231,7 @@ window.KW_EN = {
   'Gerade online': 'Online now', 'Gerade bist nur du online.': 'Only you are online right now.', '{0} Spieler gerade online.': '{0} players online now.', 'Gerade ist niemand verbunden.': 'Nobody is connected right now.',
   'Nur du bist gerade online': 'Only you are online', '{0} Spieler gerade online': '{0} players online', 'im Menü': 'in menu', 'Anonym': 'Anonymous',
   'Grün: gerade im Lauf. Tippe einen Spieler an, um sein Profil zu sehen.': 'Green: currently in a run. Tap a player to see their profile.',
+  'Bergbau': 'Mining', 'öffnen ›': 'open ›', '1 Lager voll ›': '1 storage full ›', '{0} Lager voll ›': '{0} storages full ›', 'voll': 'full', 'Neuer Planet bereit: {0}': 'New planet ready: {0}', 'Erster Planet bereit: {0}': 'First planet ready: {0}',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',
