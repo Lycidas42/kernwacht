@@ -117,43 +117,45 @@
   // ---------- Bosse: je Zone vier Wächter (Welle x10–x40) und ein riesiger Herrscher (x50) ----------
   // acts: Fähigkeiten im Wechsel; ph2/ph3: kommen beim Herrscher unter 66 % bzw. 33 % Lebenspunkten dazu.
   // parts: Bauteile mit eigenen Lebenspunkten (fwd/lat: Lage am Rumpf in Weltkoordinaten, hp: Anteil der Boss-LP)
+  const clampR = (v, a, b) => Math.max(a, Math.min(b, v));
   const BOSS_KINDS = {
     gunboat: { name: 'Kanonenboot', hp: 1, r: 23, acts: ['salvo', 'broadside', 'spawn'] },
     layer:   { name: 'Minenleger', hp: 1, r: 23, acts: ['mines', 'salvo', 'spawn'] },
     frigate: { name: 'Schildfregatte', chk: ['burst'], hp: 1.1, r: 23, acts: ['shield', 'salvo', 'spawn', 'broadside'] },
     lancer:  { name: 'Lanzenträger', chk: ['dps'], hp: 1, r: 23, acts: ['laser', 'salvo', 'broadside'] },
-    bastion: { name: 'Großträger Bastion', chk: ['def'], hp: 2, r: 32, lord: true, acts: ['hangar', 'salvo', 'bomb'], ph2: ['shield'], ph3: ['laser'],
-      parts: [{ k: 'turret', fwd: 20, lat: -31 }, { k: 'turret', fwd: 20, lat: 31 }, { k: 'turret', fwd: -18, lat: -33 }, { k: 'turret', fwd: -18, lat: 33 }] },
+    // Herrscher sind Riesen: Körper am oberen Rand, nicht anvisierbar; Schaden geht über die Bauteile (reach: Haltepunkt je nach Reichweite und Phase)
+    bastion: { name: 'Großträger Bastion', chk: ['def'], hp: 2, r: 60, lord: true, giant: true, acts: ['salvo', 'bomb', 'broadside'], ph2: ['shield'], ph3: ['laser'], reach: (R) => clampR(95 + Math.sqrt(Math.max(0, (R - 12) ** 2 - 120 ** 2)), 200, 430),
+      parts: [-120, -40, 40, 120].map(lat => ({ k: 'turret', lat, fwd: 95, hp: 0.06, bonus: 0.03, r: 11 })).concat([-80, 80].map(lat => ({ k: 'gate', lat, fwd: 72, hp: 0.08, bonus: 0.05, r: 14 }))) },
     // Zone 2 · Smaragdnebel: organisch, Tarnung, Tentakel
     ray:      { name: 'Nebelrochen', chk: ['dps'], hp: 1, r: 24, glide: 0.8, acts: ['cloak', 'salvo', 'broadside'] },
     jelly:    { name: 'Sporenqualle', chk: ['sustain'], hp: 1, r: 24, acts: ['spores', 'salvo', 'cloak'] },
     squid:    { name: 'Tentakler', hp: 1, r: 24, far: true, acts: ['salvo', 'spawn'], parts: [{ k: 'tentacle', lat: -16, delay: 0 }, { k: 'tentacle', lat: 16, delay: 2.5 }] },
     queen:    { name: 'Schwarmkönigin', chk: ['def'], hp: 1, r: 25, acts: ['swarm', 'shield', 'spawn'] },
     // Riesen-Oktopus: Mantel über die ganze Breite am oberen Rand, nur Arme und (ab Phase 2) Augen sind erreichbar
-    leviathan:{ name: 'Leviathan', hp: 2, r: 60, lord: true, giant: true, acts: ['salvo', 'spores'], ph2: ['swarm'], ph3: ['ink'],
-      parts: [{ k: 'eye', lat: -95, fwd: 62 }, { k: 'eye', lat: 95, fwd: 62 }].concat([-175, -125, -75, -25, 25, 75, 125, 175].map((lat, i) => ({ k: 'arm', lat, i }))) },
+    leviathan:{ name: 'Leviathan', hp: 2, r: 60, lord: true, giant: true, acts: ['salvo', 'spores'], ph2: ['swarm'], ph3: ['ink'], reach: (R, ph) => ph >= 1 ? clampR(R + 52, 260, 430) : 430,
+      parts: [{ k: 'eye', lat: -95, fwd: 62, hp: 0.08, bonus: 0.1, r: 16 }, { k: 'eye', lat: 95, fwd: 62, hp: 0.08, bonus: 0.1, r: 16 }].concat([-175, -125, -75, -25, 25, 75, 125, 175].map((lat, i) => ({ k: 'arm', lat, i }))) },
     // Zone 3 · Glutgürtel: Feuer und Gestein
     emberorb: { name: 'Glutorb', chk: ['sustain'], hp: 1, r: 22, acts: ['nova', 'salvo', 'fireball'] },
     worm:     { name: 'Magmawurm', hp: 1, r: 20, worm: true, acts: ['salvo', 'nova', 'spawn'], parts: [0, 1, 2].flatMap(i => [{ k: 'segment', i, side: -1 }, { k: 'segment', i, side: 1 }]) },
     bulwarkcr:{ name: 'Bollwerkkreuzer', chk: ['burst'], hp: 1.1, r: 25, acts: ['bulwarks', 'shield', 'broadside'] },
     forge:    { name: 'Schmiedeschiff', chk: ['dps'], hp: 1, r: 24, acts: ['laser', 'bomb', 'broadside'] },
-    titan:    { name: 'Vulkan-Titan', chk: ['def', 'sustain'], hp: 2, r: 36, lord: true, acts: ['lava', 'salvo', 'bomb'], ph2: ['nova'], ph3: ['laser'],
-      parts: [{ k: 'turret', fwd: 22, lat: -36 }, { k: 'turret', fwd: 22, lat: 36 }, { k: 'turret', fwd: -20, lat: -38 }, { k: 'turret', fwd: -20, lat: 38 }] },
+    titan:    { name: 'Vulkan-Titan', chk: ['def', 'sustain'], hp: 2, r: 60, lord: true, giant: true, acts: ['lava', 'salvo', 'bomb'], ph2: ['nova'], ph3: ['laser'], reach: (R) => clampR(70 + Math.sqrt(Math.max(0, (R - 12) ** 2 - 150 ** 2)), 220, 430),
+      parts: [-120, -40, 40, 120].map(lat => ({ k: 'vent', lat, fwd: 95, hp: 0.07, bonus: 0.04, r: 13 })).concat([-150, 150].map(lat => ({ k: 'turret', lat, fwd: 70, hp: 0.05, bonus: 0.03, r: 11 }))) },
     // Zone 4 · Roter Riese: Sonne und Glut
     sunwing:  { name: 'Sonnenflieger', chk: ['dps'], hp: 1, r: 22, glide: 1.1, acts: ['broadside', 'salvo', 'fireball'] },
     splitcore:{ name: 'Splitterkern', chk: ['def'], hp: 0.8, r: 24, split: true, acts: ['nova', 'salvo', 'spawn'] },
     shard:    { name: 'Kernsplitter', hp: 0.2, r: 14, acts: ['salvo', 'nova'] },
     flameorb: { name: 'Flammenorb', chk: ['sustain'], hp: 1, r: 24, acts: ['fireball', 'nova', 'lava'] },
     corona:   { name: 'Koronakreuzer', chk: ['burst'], hp: 1.1, r: 25, acts: ['laser', 'shield', 'broadside'] },
-    phoenix:  { name: 'Phönix', chk: ['dps', 'sustain'], hp: 1.6, r: 30, lord: true, rebirth: true, acts: ['fireball', 'nova', 'salvo'], ph2: ['laser'], ph3: ['lava'],
-      parts: [{ k: 'wing', side: -1 }, { k: 'wing', side: 1 }] },
+    phoenix:  { name: 'Phönix', chk: ['dps', 'sustain'], hp: 1.6, r: 60, lord: true, giant: true, rebirth: true, acts: ['fireball', 'nova', 'salvo'], ph2: ['laser'], ph3: ['lava'], reach: (R) => clampR(80 + Math.sqrt(Math.max(0, (R - 15) * (R - 15) - 130 * 130)), 220, 430),
+      parts: [{ k: 'gwing', lat: -130, fwd: 80, hp: 0.12, bonus: 0.08, r: 18 }, { k: 'gwing', lat: 130, fwd: 80, hp: 0.12, bonus: 0.08, r: 18 }, { k: 'head', lat: 0, fwd: 110, hp: 0.1, bonus: 0.05, r: 16 }] },
     // Zone 5 · Die Leere
     eye:      { name: 'Leerauge', chk: ['dps'], hp: 1, r: 24, acts: ['laser', 'cloak', 'salvo'] },
     shrine:   { name: 'Heilerschrein', chk: ['dps'], hp: 1, r: 25, acts: ['mend', 'spawn', 'shield', 'salvo'] },
     mirror:   { name: 'Spiegler', chk: ['def'], hp: 1, r: 24, acts: ['mirror', 'salvo', 'broadside'] },
     shade:    { name: 'Schattenrochen', chk: ['burst'], hp: 1, r: 24, glide: 0.9, acts: ['cloak', 'salvo', 'broadside'] },
-    devourer: { name: 'Der Verschlinger', chk: ['dps', 'sustain'], hp: 2, r: 36, lord: true, far: true, acts: ['pull', 'mend', 'salvo'], ph2: ['spawn'], ph3: ['laser'],
-      parts: [-26, -9, 9, 26].map((lat, i) => ({ k: 'tentacle', lat, delay: i * 1.4 })) },
+    devourer: { name: 'Der Verschlinger', chk: ['dps', 'sustain'], hp: 2, r: 60, lord: true, giant: true, acts: ['pull', 'mend', 'salvo'], ph2: ['spawn'], ph3: ['laser'], reach: (R, ph) => ph >= 1 ? clampR(R + 60, 260, 430) : 430,
+      parts: [{ k: 'core', lat: 0, fwd: 72, hp: 0.1, bonus: 0.1, r: 18 }].concat([-150, -60, 60, 150].map((lat, i) => ({ k: 'arm', lat, i: i * 2 }))) },
   };
   // Prüfungen: was ein Boss beim Spieler testet
   //  dps     Schadensprobe: verliert er in 10 s zu wenig Lebenspunkte, heizt er auf (+30 % Schaden je Stufe)
@@ -869,7 +871,7 @@
           e.kind = kind; e.hp *= K.hp; e.maxHp = e.hp; e.r = K.r; e.lord = !!K.lord; e.rebirth = !!K.rebirth; e.worm = !!K.worm;
           if (K.lord) e.stop += 12; // der Herrscher schwebt etwas weiter hinten, sein Rumpf ragt trotzdem in die Reichweite
           if (K.far) e.stop = this.s.range + 25 + K.r * 0.5; // Tentakelwesen: Körper knapp außer Reichweite, die Tentakel kommen herein
-          if (K.giant) { e.giant = true; e.a = e.a0 = -Math.PI / 2; e.dist = 740; e.stop = 430; e.spd = 60; } // Riese: kommt von oben herein und bleibt am oberen Rand
+          if (K.giant) { e.giant = true; e.a = e.a0 = -Math.PI / 2; e.dist = 740; e.stop = K.reach(this.s.range, 0); e.spd = 60; } // Riese: kommt von oben herein und bleibt am oberen Rand
         }
       }
       if (o) Object.assign(e, o);
@@ -881,9 +883,9 @@
     }
     // Bauteil eines Bosses: Geschützturm, Tentakel, Segment oder Schwinge
     spawnPart(e, q) {
-      const hp = e.maxHp * (q.k === 'tentacle' ? 0.06 : q.k === 'arm' ? 0.06 : q.k === 'eye' ? 0.08 : 0.07);
+      const hp = e.maxHp * (q.hp || (q.k === 'tentacle' ? 0.06 : q.k === 'arm' ? 0.06 : 0.07));
       const pt = this.spawnAt('part', 0, -FIELD_H, { host: e, spec: q, pk: q.k, fwd: q.fwd || 0, lat: q.lat || 0, side: q.side || 0, si: q.i || 0, hp, maxHp: hp, rw: e.rw * 0.03, dmg: e.dmg * 0.3,
-        shotT: 1.5 + Math.random() * 2, ext: 0, tst: 0, tt: 2 + (q.delay || 0), fwdK: q.k === 'tentacle' || q.k === 'arm' ? 1.5 : 0, r: q.k === 'segment' ? 9 : q.k === 'wing' ? 10 : q.k === 'arm' ? 13 : q.k === 'eye' ? 16 : 7, act: null });
+        shotT: 1.5 + Math.random() * 2, ext: 0, tst: 0, tt: 2 + (q.delay || 0), fwdK: q.k === 'tentacle' || q.k === 'arm' ? 1.5 : e.giant ? 1 : 0, r: q.r || (q.k === 'segment' ? 9 : q.k === 'wing' ? 10 : q.k === 'arm' ? 13 : 7), act: null });
       this.placePart(pt);
       return pt;
     }
@@ -956,8 +958,8 @@
           if (this.fxOn && act !== 'slam') { const q = this.pos(a); this.fx.push({ k: 'bossact', act: act === 'grab' ? 'grabwarn' : 'sweep', x: q.x, y: q.y, t: 0 }); }
         }
       }
-      // ab Phase 2 beugt er sich vor: die Augen kommen in Reichweite
-      e.stop = e.phase >= 1 ? Math.min(430, Math.max(260, this.s.range + 52)) : 430;
+      // Haltepunkt je nach Reichweite und Phase (Leviathan/Verschlinger beugen sich ab Phase 2 vor)
+      e.stop = BOSS_KINDS[e.kind].reach(this.s.range, e.phase || 0);
       if (e.dist > e.stop + 1) e.dist = Math.max(e.stop, e.dist - 40 * dt);
       else if (e.dist < e.stop - 1) e.dist = Math.min(e.stop, e.dist + 40 * dt);
     }
@@ -967,8 +969,8 @@
       if (e.pk === 'segment') h.segs = Math.max(0, (h.segs || 0) - 1);
       if (e.pk === 'tentacle') (h.regrow = h.regrow || []).push({ q: e.spec, at: this.time + 12 });
       if (e.pk === 'arm') (h.regrow = h.regrow || []).push({ q: e.spec, at: this.time + 15 });
-      this.hurt(h, h.maxHp * (e.pk === 'eye' ? 0.1 : e.pk === 'arm' ? 0.03 : 0.05), false, src || 'gun');
-      if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: e.pk === 'tentacle' || e.pk === 'arm' ? 'sever' : e.pk === 'segment' ? 'segment' : e.pk === 'eye' ? 'eye' : 'part', x: p.x, y: p.y + 30, t: 0 }); }
+      this.hurt(h, h.maxHp * ((e.spec && e.spec.bonus) || (e.pk === 'arm' ? 0.03 : 0.05)), false, src || 'gun');
+      if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: e.pk === 'tentacle' || e.pk === 'arm' ? 'sever' : ['segment', 'eye', 'core', 'gwing', 'gate', 'vent', 'head'].includes(e.pk) ? e.pk : 'part', x: p.x, y: p.y + 30, t: 0 }); }
     }
     // Bauteil folgt seinem Boss: Lage relativ zur Blickrichtung auf die Kanone
     placePart(pt) {
@@ -1039,7 +1041,8 @@
       if (e.hp <= 0 && e.rebirth && !e.reborn) {
         // Phönix: steht einmal mit 40 % wieder auf, die Schwingen wachsen nach
         e.reborn = true; e.hp = e.maxHp * 0.4; e.phase = Math.max(e.phase, 1); e.shieldUntil = this.time + 2;
-        if (!this.enemies.some(o => o.host === e && o.hp > 0)) for (const q of BOSS_KINDS[e.kind].parts || []) this.spawnPart(e, q);
+        for (const o of this.enemies) if (o.host === e) o.hp = 0; // alte Teile weg, alle wachsen neu
+        for (const q of BOSS_KINDS[e.kind].parts || []) this.spawnPart(e, q);
         if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'rebirth', x: p.x, y: p.y, t: 0 }, { k: 'phoenix', t: 0 }); }
         return eff;
       }
@@ -1328,7 +1331,8 @@
         for (const dx of [-24, 0, 24]) this.ebullets.push({ x: p.x + dx, y: p.y + e.r * 0.5, dmg: e.dmg * 0.9, big: true, spd: 70, col: '#ff8a3d', rad: 8 });
       } else if (act === 'lava') {
         // Lavaregen: Brocken von überall aus dem oberen Feld
-        for (let i = 0; i < 6; i++) this.ebullets.push({ x: (Math.random() * 2 - 1) * FIELD_W * 0.9, y: -FIELD_H * (0.7 + Math.random() * 0.25), dmg: e.dmg * 0.35, big: true, spd: 170, col: '#ff6a3d' });
+        const nv = e.kind === 'titan' ? this.enemies.filter(o => o.host === e && o.pk === 'vent' && o.hp > 0).length : 4;
+        for (let i = 0; i < Math.round(6 * nv / 4); i++) this.ebullets.push({ x: (Math.random() * 2 - 1) * FIELD_W * 0.9, y: -FIELD_H * (0.7 + Math.random() * 0.25), dmg: e.dmg * 0.35, big: true, spd: 170, col: '#ff6a3d' });
       } else if (act === 'ink') {
         // Tintenwolke: die Arme sind 4 s lang nicht anvisierbar (Flächenschaden trifft trotzdem)
         for (const o of this.enemies) if (o.host === e) o.cloakUntil = this.time + 4;
@@ -1420,6 +1424,21 @@
           if (e.pk === 'segment' && (e.shotT -= dt) <= 0) {
             // Wurmsegment spuckt Glut
             e.shotT = 4 + Math.random() * 3; const p = this.pos(e); this.ebullets.push({ x: p.x, y: p.y, dmg: e.dmg * 0.7, big: true, col: '#ff8a3d' });
+          }
+          if (e.pk === 'gate' && (e.shotT -= dt) <= 0) {
+            // Hangartor: schickt Jäger los, solange es steht
+            e.shotT = 7 + Math.random() * 2;
+            if (this.enemies.length < 18) { const p = this.pos(e); for (const dx of [-8, 8]) { const t = Math.random() < 0.4 ? 'runner' : 'grunt', hp = ENEMY[t].hp * hpScale(this.wave) * 0.7; this.spawnAt(t, p.x + dx, p.y + 10, { hp, maxHp: hp }); } }
+          }
+          if (e.pk === 'vent' && (e.shotT -= dt) <= 0) {
+            // Schlot: speit Lavabrocken auf die Kanone
+            e.shotT = 3.5 + Math.random() * 1.5; const p = this.pos(e); this.ebullets.push({ x: p.x, y: p.y, dmg: e.dmg * 1.2, big: true, spd: 95, col: '#ff6a3d', rad: 7 });
+          }
+          if ((e.pk === 'gwing' || e.pk === 'head') && (e.shotT -= dt * (e.host.reborn ? 1.4 : 1)) <= 0) {
+            // Phönix: Schwingen streuen Glutfedern, der Kopf spuckt Feuerbälle
+            const p = this.pos(e);
+            if (e.pk === 'gwing') { e.shotT = 2.8 + Math.random(); for (let i = -2; i <= 2; i++) this.ebullets.push({ x: p.x + i * 12, y: p.y, dmg: e.dmg * 0.5, big: true, col: '#ffb03d' }); }
+            else { e.shotT = 4 + Math.random(); this.ebullets.push({ x: p.x, y: p.y, dmg: e.dmg * 1.4, big: true, spd: 80, col: '#ff8a3d', rad: 8 }); }
           }
           if (e.pk === 'wing' && (e.shotT -= dt) <= 0) {
             // Schwinge: Fächer aus Glutfedern
@@ -1801,6 +1820,11 @@
       if (this.mode.kind === 'boss') {
         // Bosskampf: Übung ohne Belohnung, aber mit Bestzeit
         res.won = !!this.won; res.boss = this.mode.boss; res.bw = this.mode.w;
+        if (this.won && !this.admin) {
+          // kleine Belohnung: halbe Boss-Kristalle und die Erfahrung der Welle
+          const c = Math.floor(this.crystals * 0.5); m.crystals += c; m.totalCrystals = (m.totalCrystals || 0) + c; res.crystals = c;
+          const x = xpFor(this.mode.w); cmdState(m).xp += x; res.xp = x;
+        }
         if (this.won && !this.admin) { m.bossTime = m.bossTime || {}; const k = this.mode.boss + '@' + this.mode.w, prev = m.bossTime[k]; res.prevTime = prev; if (!prev || this.time < prev) { m.bossTime[k] = this.time; res.newTime = true; } }
         return res;
       }
@@ -2039,6 +2063,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.13.0'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.14.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -154,7 +154,7 @@
       $('overTitle').textContent = res.won ? B.name + ' besiegt!' : early ? 'Bosskampf beendet' : 'Kanone gefallen';
       $('oBest').textContent = res.won ? `Zeit ${fmtTime(res.time)}${res.newTime ? (res.prevTime ? ' · neue Bestzeit (vorher ' + fmtTime(res.prevTime) + ')' : ' · erste Bestzeit') : ' · Bestzeit ' + fmtTime(res.prevTime)}` : `Welle ${res.bw} · ${B.name}`;
       $('oBest').style.color = res.won && res.newTime ? '' : 'var(--ink-dim)';
-      ex.push('<div>Bosskämpfe sind Übung: keine Kristalle, keine Module, keine Erfahrung.</div>');
+      ex.push(`<div>Bosskämpfe geben halbe Boss-Kristalle und die Erfahrung der Welle, aber keine Module.</div>`); if (res.xp) ex.unshift(`<div class="unl">+${fmt(res.xp)} Erfahrung für den Kommandanten</div>`);
       if (res.won) A.play('loot');
     } else if (res.mode.kind === 'chal') {
       const c = chalOf(res.mode.id);
@@ -1804,8 +1804,11 @@
           : [boss.plate > 0 ? `Panzerschild ${Math.ceil(boss.plate / boss.plateMax * 100)} % · ${Math.max(0, boss.plateEnd - run.time).toFixed(0)} s` : 'Panzerschild', boss.plate > 0];
         let ch = CK.map(c => { const [t2, hot] = chip(c); return `<span class="${hot ? 'hot' : ''}">${t2}</span>`; }).join('');
         if (boss.giant) {
-          const pa = run.enemies.filter(o => o.host === boss && o.hp > 0), arms = pa.filter(o => o.pk === 'arm'), eyes = pa.filter(o => o.pk === 'eye').length, grab = arms.some(o => o.act === 'grab' && o.stage === 'hold');
-          ch = `<span>Tentakel ${arms.length}/8</span><span>Augen ${eyes}/2${boss.phase ? '' : ' · außer Reichweite'}</span>` + (grab ? '<span class="hot">Greift die Kanone: Arm abtrennen!</span>' : '') + ch;
+          const pa = run.enemies.filter(o => o.host === boss && o.hp > 0), all = (C.BOSS_KINDS[boss.kind].parts || []);
+          const PN = { arm: 'Tentakel', eye: 'Augen', turret: 'Geschütze', gate: 'Hangartore', vent: 'Schlote', gwing: 'Schwingen', head: 'Kopf', core: 'Kern' };
+          const lean = boss.kind === 'leviathan' || boss.kind === 'devourer';
+          ch = Object.keys(PN).filter(k2 => all.some(q => q.k === k2)).map(k2 => `<span>${PN[k2]} ${pa.filter(o => o.pk === k2).length}/${all.filter(q => q.k === k2).length}${lean && !boss.phase && (k2 === 'eye' || k2 === 'core') ? ' · außer Reichweite' : ''}</span>`).join('')
+            + (pa.some(o => o.act === 'grab' && o.stage === 'hold') ? '<span class="hot">Greift die Kanone: Arm abtrennen!</span>' : '') + ch;
         }
         if (bb._ch !== ch) { bb._ch = ch; $('bossChk').innerHTML = ch; }
         const sh = boss.shieldUntil > run.time;

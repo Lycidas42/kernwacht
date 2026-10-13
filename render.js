@@ -141,6 +141,21 @@
         // Tentakelspitze: Saugnapf-Klaue (der Arm selbst wird vorab gezeichnet)
         poly([[r * 1.6, 0], [r * 0.2, -r * 0.9], [-r * 0.6, -r * 0.5], [-r * 0.6, r * 0.5], [r * 0.2, r * 0.9]]); fillHull(); glow(c, 1.6);
         ctx.beginPath(); ctx.arc(r * 0.1, 0, r * 0.32, 0, 7); ctx.fillStyle = e.tst === 2 ? '#ffffff' : c; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+      } else if (e.type === 'part' && e.pk === 'gate') {
+        // Hangartor: dunkle Öffnung mit Lauflicht
+        ctx.beginPath(); ctx.roundRect(-r * 0.9, -r * 1.2, r * 1.8, r * 2.4, r * 0.2); ctx.fillStyle = '#05050f'; ctx.fill(); glow(c, 1.6);
+        for (let i = 0; i < 3; i++) { const on = Math.floor(t * 0.006 + i) % 3 === 0; ctx.beginPath(); ctx.arc(r * 0.5 - i * r * 0.5, r * 1.0, r * 0.12, 0, 7); ctx.fillStyle = on ? '#fff' : c; ctx.fill(); }
+      } else if (e.type === 'part' && e.pk === 'vent') {
+        // Schlot: glühender Krater
+        const g2 = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.1); g2.addColorStop(0, '#fff2c0'); g2.addColorStop(0.4, '#ff6a3d'); g2.addColorStop(1, 'rgba(255,60,20,0)');
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.1, 0, 7); ctx.fillStyle = g2; ctx.globalAlpha = 0.6 + 0.35 * Math.sin(t * 0.01 + sd); ctx.fill(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.1, 0, 7); glow(c, 1.6);
+      } else if (e.type === 'part' && (e.pk === 'gwing' || e.pk === 'head' || e.pk === 'core')) {
+        // Schwachpunkt am Riesen: glühender Kern mit Ring
+        const cc = e.pk === 'core' ? '#c3a6ff' : '#ffb03d';
+        ctx.beginPath(); ctx.arc(0, 0, r * 1.0, 0, 7); fillHull(); glow(e.flash > 0 ? '#ffffff' : c, 1.8);
+        ctx.beginPath(); ctx.arc(0, 0, r * (0.45 + 0.1 * Math.sin(t * 0.008 + sd)), 0, 7); ctx.fillStyle = cc; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+        if (e.pk === 'head') { poly([[r * 1.6, 0], [r * 0.8, -r * 0.35], [r * 0.8, r * 0.35]]); ctx.fillStyle = '#ffb03d'; ctx.fill(); }
       } else if (e.type === 'part' && e.pk === 'eye') {
         // Auge des Leviathan: gelbe Schlitzpupille, schaut zur Kanone
         ctx.beginPath(); ctx.ellipse(0, 0, r * 1.25, r * 1.9, 0, 0, 7); ctx.fillStyle = '#05050f'; ctx.fill(); glow(c, 1.6);
@@ -177,6 +192,86 @@
         const pulse = e.enraged ? '#ff3030' : c;
         ctx.beginPath(); ctx.arc(0, 0, r * 0.28, 0, 7); ctx.fillStyle = pulse; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * (e.enraged ? 0.025 : 0.008)); ctx.fill(); ctx.globalAlpha = 1;
         ctx.beginPath(); ctx.moveTo(r * 1.1, -r * 0.4); ctx.lineTo(r * 1.55, -r * 0.4); ctx.moveTo(r * 1.1, r * 0.4); ctx.lineTo(r * 1.55, r * 0.4); glow(c, 1.8);
+      }
+    }
+
+    // ---------- Riesen-Herrscher: Körper am oberen Rand (die Bauteile zeichnet die Schiffsschleife) ----------
+    function drawGiantBody(g, bx, by, col, t) {
+      const k = g.kind, ph = g.phase || 0, fl = g.flash > 0 ? '#ffffff' : col;
+      const crack = (pts) => { ctx.beginPath(); pts.forEach(([x, y], i) => ctx[i ? 'lineTo' : 'moveTo'](bx + x, by + y)); glow('#ff6a3d', 1.4, 0.7); };
+      if (k === 'leviathan') {
+          ctx.beginPath(); ctx.moveTo(bx - 235, by + 60);
+          ctx.bezierCurveTo(bx - 290, by - 520, bx + 290, by - 520, bx + 235, by + 60);
+          ctx.bezierCurveTo(bx + 150, by + 130, bx - 150, by + 130, bx - 235, by + 60); ctx.closePath();
+          ctx.fillStyle = HULL; ctx.fill(); glow(g.flash > 0 ? '#ffffff' : col, 3);
+          for (let i = 0; i < 11; i++) { ctx.beginPath(); ctx.arc(bx - 190 + i * 38, by - 40 + Math.sin(i * 1.7) * 30, 6 + Math.abs(Math.sin(i * 2.3)) * 7, 0, 7); glow(col, 1.2, 0.45); }
+          ctx.beginPath(); ctx.moveTo(bx - 16, by + 82); ctx.lineTo(bx, by + 112 + Math.abs(Math.sin(t * 0.004)) * 6); ctx.lineTo(bx + 16, by + 82); ctx.closePath(); ctx.fillStyle = '#ff9a3c'; ctx.fill();
+          // Augenhöhlen (die Augen selbst sind Bauteile und werden darüber gezeichnet; zerstörte bleiben dunkel)
+          for (const sg of [-1, 1]) { ctx.beginPath(); ctx.ellipse(bx + sg * 95, by + 62, 34, 22, 0, 0, 7); ctx.fillStyle = '#05050f'; ctx.fill(); glow(col, 1.6, 0.7); }
+          if (g.phase >= 1) { ctx.beginPath(); ctx.moveTo(bx - 60, by - 10); ctx.lineTo(bx - 30, by + 20); ctx.lineTo(bx - 45, by + 45); glow('#ff6a3d', 1.4, 0.7); }
+          if (g.phase >= 2) { ctx.beginPath(); ctx.moveTo(bx + 70, by - 20); ctx.lineTo(bx + 40, by + 15); ctx.lineTo(bx + 60, by + 40); glow('#ff6a3d', 1.4, 0.7); }
+        return;
+      }
+      if (k === 'bastion') {
+        // Großträger: Panzerrumpf über die ganze Breite, Hangartore und Turmsockel an der Front
+        ctx.beginPath(); ctx.moveTo(bx - 245, by - 520); ctx.lineTo(bx - 245, by + 40); ctx.lineTo(bx - 170, by + 112); ctx.lineTo(bx + 170, by + 112); ctx.lineTo(bx + 245, by + 40); ctx.lineTo(bx + 245, by - 520); ctx.closePath();
+        ctx.fillStyle = HULL; ctx.fill(); glow(fl, 3);
+        ctx.beginPath(); for (const x of [-160, -80, 0, 80, 160]) { ctx.moveTo(bx + x, by - 520); ctx.lineTo(bx + x, by + 100); } for (const y of [-200, -90, 20]) { ctx.moveTo(bx - 240, by + y); ctx.lineTo(bx + 240, by + y); } glow(col, 1, 0.22);
+        // Brücke mit Hauptgeschütz (Laser ab Phase 3)
+        ctx.beginPath(); ctx.roundRect(bx - 34, by - 30, 68, 70, 8); ctx.fillStyle = '#0a0918'; ctx.fill(); glow(col, 1.6);
+        ctx.beginPath(); ctx.moveTo(bx, by + 40); ctx.lineTo(bx, by + 105); glow(g.laser > 0 ? '#ff3030' : col, 3);
+        ctx.beginPath(); ctx.arc(bx, by + 5, 12, 0, 7); ctx.fillStyle = g.enraged ? '#ff3030' : col; ctx.globalAlpha = 0.5 + 0.4 * Math.sin(t * 0.008); ctx.fill(); ctx.globalAlpha = 1;
+        // Positionslichter an der Front
+        for (let i = 0; i < 9; i++) { const on = Math.floor(t * 0.004 + i) % 3 === 0; ctx.beginPath(); ctx.arc(bx - 160 + i * 40, by + 108, 2.5, 0, 7); ctx.fillStyle = on ? '#fff' : col; ctx.globalAlpha = on ? 1 : 0.4; ctx.fill(); ctx.globalAlpha = 1; }
+        if (ph >= 1) crack([[-200, -60], [-150, -20], [-170, 30], [-120, 70]]);
+        if (ph >= 2) crack([[190, -80], [140, -30], [165, 20], [120, 60]]);
+        return;
+      }
+      if (k === 'titan') {
+        // Vulkan-Titan: zerklüftete Felsmasse, Lavaadern zwischen den Schloten
+        ctx.beginPath(); ctx.moveTo(bx - 250, by - 520);
+        const pts = [[-250, 30], [-210, 70], [-160, 60], [-130, 110], [-80, 95], [-40, 120], [0, 105], [40, 122], [85, 98], [130, 112], [165, 64], [210, 78], [250, 30]];
+        for (const [x, y] of pts) ctx.lineTo(bx + x, by + y + Math.sin(x) * 4);
+        ctx.lineTo(bx + 250, by - 520); ctx.closePath(); ctx.fillStyle = '#120b10'; ctx.fill(); glow(fl, 3);
+        for (let i = 0; i < 14; i++) { const x = -220 + (i * 97) % 440, y = -40 - (i * 53) % 260; ctx.beginPath(); for (let j = 0; j < 6; j++) { const a = j / 6 * Math.PI * 2; ctx[j ? 'lineTo' : 'moveTo'](bx + x + Math.cos(a) * (10 + i % 4 * 5), by + y + Math.sin(a) * (8 + i % 3 * 4)); } ctx.closePath(); glow(col, 1, 0.25); }
+        // Lavaadern zu den Schloten (glühen stärker, je mehr Phase)
+        ctx.beginPath(); ctx.moveTo(bx - 120, by + 95); ctx.quadraticCurveTo(bx - 80, by + 20, bx - 40, by + 95); ctx.moveTo(bx + 40, by + 95); ctx.quadraticCurveTo(bx + 80, by + 20, bx + 120, by + 95);
+        ctx.moveTo(bx - 40, by + 95); ctx.quadraticCurveTo(bx, by + 40, bx + 40, by + 95); glow('#ff6a3d', 2 + ph, 0.55 + 0.3 * Math.sin(t * 0.005));
+        const gl = ctx.createRadialGradient(bx, by + 10, 0, bx, by + 10, 70); gl.addColorStop(0, 'rgba(255,200,120,0.7)'); gl.addColorStop(1, 'rgba(255,80,30,0)');
+        ctx.beginPath(); ctx.arc(bx, by + 10, 70, 0, 7); ctx.fillStyle = gl; ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 0.004); ctx.fill(); ctx.globalAlpha = 1;
+        if (ph >= 1) crack([[-60, -120], [-20, -60], [-50, -10]]);
+        if (ph >= 2) crack([[70, -140], [30, -70], [60, -20]]);
+        return;
+      }
+      if (k === 'phoenix') {
+        // Phönix: riesige Schwingen über die ganze Breite, schlagen langsam; Schweif nach oben
+        const flap = Math.sin(t * 0.0025) * 0.12 * (g.reborn ? 1.4 : 1), wc = g.reborn ? '#fff2c0' : col;
+        for (const sd of [-1, 1]) {
+          ctx.beginPath(); ctx.moveTo(bx + sd * 20, by + 20);
+          ctx.quadraticCurveTo(bx + sd * 140, by - 160 - flap * 300, bx + sd * 260, by - 120 - flap * 200);
+          ctx.lineTo(bx + sd * 250, by - 60); ctx.lineTo(bx + sd * 230, by - 10); ctx.lineTo(bx + sd * 205, by + 30); ctx.lineTo(bx + sd * 175, by + 60); ctx.lineTo(bx + sd * 140, by + 82); ctx.lineTo(bx + sd * 95, by + 92); ctx.lineTo(bx + sd * 50, by + 80); ctx.closePath();
+          ctx.fillStyle = 'rgba(40,10,10,0.92)'; ctx.fill(); glow(fl === '#ffffff' ? fl : wc, 2.4);
+          for (let i = 0; i < 7; i++) { const x0 = bx + sd * (40 + i * 30), y0 = by + 70 - i * 18 - flap * i * 30; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + sd * 26, y0 + 34); glow('#ffb03d', 1.2, 0.6); }
+        }
+        for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(bx + i * 6, by - 30); ctx.quadraticCurveTo(bx + i * 30, by - 200, bx + i * 50 + Math.sin(t * 0.004 + i) * 10, by - 330); glow(i % 2 ? '#ffb03d' : col, 1.6, 0.7); }
+        ctx.beginPath(); ctx.ellipse(bx, by + 30, 40, 75, 0, 0, 7); ctx.fillStyle = '#1a0808'; ctx.fill(); glow(fl, 2.4);
+        const cg = ctx.createRadialGradient(bx, by + 30, 0, bx, by + 30, 40); cg.addColorStop(0, 'rgba(255,240,190,0.9)'); cg.addColorStop(1, 'rgba(255,120,40,0)');
+        ctx.beginPath(); ctx.arc(bx, by + 30, 40, 0, 7); ctx.fillStyle = cg; ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 0.006); ctx.fill(); ctx.globalAlpha = 1;
+        return;
+      }
+      if (k === 'devourer') {
+        // Der Verschlinger: Schlund mit Zahnkranz; ab Phase 2 öffnet er sich und gibt den Kern frei
+        const open = ph >= 1 ? 1 : 0.35 + 0.1 * Math.sin(t * 0.002);
+        ctx.beginPath(); ctx.ellipse(bx, by - 60, 245, 200, 0, 0, 7); ctx.fillStyle = '#07060f'; ctx.fill(); glow(fl, 3);
+        ctx.save(); ctx.translate(bx, by - 60); ctx.rotate(t * 0.0006);
+        for (let r2 = 0; r2 < 3; r2++) { ctx.beginPath(); ctx.arc(0, 0, 200 - r2 * 45, r2, r2 + 4.5); glow(col, 1.2, 0.35); }
+        ctx.restore();
+        // Zahnkranz unten, öffnet sich
+        ctx.beginPath();
+        for (let i = 0; i < 15; i++) { const a = Math.PI * (0.12 + i * 0.054), x = bx + Math.cos(a) * 190, y = by - 60 + Math.sin(a) * 150; const tx = bx + Math.cos(a) * (190 - 40 * open), ty = by - 60 + Math.sin(a) * (150 - 45 * open); ctx.moveTo(x - 9, y); ctx.lineTo(tx, ty); ctx.lineTo(x + 9, y); }
+        ctx.fillStyle = '#e8e6ff'; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.ellipse(bx, by + 70, 120 * open + 30, 40 * open + 12, 0, 0, 7); ctx.fillStyle = '#000'; ctx.fill(); glow(col, 1.5, 0.6);
+        return;
       }
     }
 
@@ -793,6 +888,7 @@
       for (const g of run.enemies) {
         if (!g.giant || g.hp <= 0) continue;
         const col = BOSS_COL[(g.sector || 1) - 1], bp = run.pos(g);
+        if (g.kind === 'devourer') drawGiantBody(g, bp.x, bp.y, col, t); // Arme kommen aus dem Schlund
         for (const a of run.enemies) {
           if (a.host !== g || a.pk !== 'arm' || a.hp <= 0 || !a.path) continue;
           const P = a.path, n = P.length, w0 = 15, lit = a.stage === 'hold' && a.act === 'slam', grab = a.act === 'grab' && a.stage === 'hold';
@@ -805,22 +901,11 @@
           if (grab) { ctx.beginPath(); ctx.arc(0, -8, 46, Math.PI * 1.05, Math.PI * 1.95); glow('#ff4040', 3, 0.6 + 0.4 * Math.sin(t * 0.02)); }
           if (a.act === 'sweep' && a.stage === 'hold') { const tp = run.pos(a); ctx.beginPath(); ctx.arc(tp.x, tp.y, 34, 0, 7); ctx.setLineDash([4, 6]); glow(col, 1, 0.5); ctx.setLineDash([]); }
         }
-        // Mantel: ragt über den oberen Rand hinaus
-        const bx = bp.x, by = bp.y;
-        ctx.beginPath(); ctx.moveTo(bx - 235, by + 60);
-        ctx.bezierCurveTo(bx - 290, by - 520, bx + 290, by - 520, bx + 235, by + 60);
-        ctx.bezierCurveTo(bx + 150, by + 130, bx - 150, by + 130, bx - 235, by + 60); ctx.closePath();
-        ctx.fillStyle = HULL; ctx.fill(); glow(g.flash > 0 ? '#ffffff' : col, 3);
-        for (let i = 0; i < 11; i++) { ctx.beginPath(); ctx.arc(bx - 190 + i * 38, by - 40 + Math.sin(i * 1.7) * 30, 6 + Math.abs(Math.sin(i * 2.3)) * 7, 0, 7); glow(col, 1.2, 0.45); }
-        ctx.beginPath(); ctx.moveTo(bx - 16, by + 82); ctx.lineTo(bx, by + 112 + Math.abs(Math.sin(t * 0.004)) * 6); ctx.lineTo(bx + 16, by + 82); ctx.closePath(); ctx.fillStyle = '#ff9a3c'; ctx.fill();
-        // Augenhöhlen (die Augen selbst sind Bauteile und werden darüber gezeichnet; zerstörte bleiben dunkel)
-        for (const sg of [-1, 1]) { ctx.beginPath(); ctx.ellipse(bx + sg * 95, by + 62, 34, 22, 0, 0, 7); ctx.fillStyle = '#05050f'; ctx.fill(); glow(col, 1.6, 0.7); }
-        if (g.phase >= 1) { ctx.beginPath(); ctx.moveTo(bx - 60, by - 10); ctx.lineTo(bx - 30, by + 20); ctx.lineTo(bx - 45, by + 45); glow('#ff6a3d', 1.4, 0.7); }
-        if (g.phase >= 2) { ctx.beginPath(); ctx.moveTo(bx + 70, by - 20); ctx.lineTo(bx + 40, by + 15); ctx.lineTo(bx + 60, by + 40); glow('#ff6a3d', 1.4, 0.7); }
+        if (g.kind !== 'devourer') drawGiantBody(g, bp.x, bp.y, col, t);
         // Tintenwolke
         if (run.inkUntil > run.time) {
           const k = Math.min(1, (run.inkUntil - run.time) / 1);
-          for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(bx - 200 + i * 50, by + 130 + Math.sin(t * 0.002 + i) * 25, 70 + 15 * Math.sin(i * 2.1), 0, 7); ctx.fillStyle = `rgba(4,6,14,${0.55 * k})`; ctx.fill(); }
+          for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(bp.x - 200 + i * 50, bp.y + 130 + Math.sin(t * 0.002 + i) * 25, 70 + 15 * Math.sin(i * 2.1), 0, 7); ctx.fillStyle = `rgba(4,6,14,${0.55 * k})`; ctx.fill(); }
         }
       }
 
@@ -1079,7 +1164,7 @@
           ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
-          const label = { ink: 'TINTENWOLKE', grab: 'GREIFT DIE KANONE', grabwarn: 'GREIFARM', sweep: 'FEGT', eye: 'AUGE ZERSTÖRT', storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
+          const label = { core: 'KERN GETROFFEN', gwing: 'SCHWINGE ZERSTÖRT', gate: 'HANGARTOR ZERSTÖRT', vent: 'SCHLOT VERSIEGELT', head: 'KOPF GETROFFEN', ink: 'TINTENWOLKE', grab: 'GREIFT DIE KANONE', grabwarn: 'GREIFARM', sweep: 'FEGT', eye: 'AUGE ZERSTÖRT', storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
           ctx.globalAlpha = a; ctx.fillStyle = SHIP.boss; ctx.font = `700 13px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }
