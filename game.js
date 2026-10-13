@@ -392,6 +392,7 @@
   const big = n => n >= 1e12 ? fmt(n) : n >= 1e4 ? fmt(n) : String(n);
   const achBonusTxt = (a, t) => '+' + Math.round(a.step * 100 * t) + ' % ' + a.bname;
   function renderAch() {
+    meta.seen = meta.seen || {}; meta.seen.ach = C.achPoints(meta);
     const pts = C.achPoints(meta), max = C.ACH.reduce((s, a) => s + a.goals.length, 0);
     $('achSum').innerHTML = `<b>${pts}</b> von ${max} Stufen erreicht`;
     const list = $('achList'); list.innerHTML = '';
@@ -894,6 +895,30 @@
     });
   }
 
+  // ---------- Punkte im Hauptmenü: hier gibt es etwas Neues oder zu tun ----------
+  const modCopies = () => Object.values(meta.modules || {}).reduce((a, m) => a + (m.copies || 0) + (m.mast || 0), 0);
+  function syncDots() {
+    meta.seen = meta.seen || {};
+    if (meta.seen.mod == null) meta.seen.mod = modCopies();
+    if (meta.seen.ach == null) meta.seen.ach = C.achPoints(meta);
+    const lab = C.cheapest(meta);
+    const frag = meta.frag || 0;
+    const fus = C.fragmentsFor(meta) > 0 || C.FUSION_UPG.some(u => (u.max == null || C.flv(meta, u.id) < u.max) && frag >= C.fusionCost(u, C.flv(meta, u.id)));
+    const sk = C.skPoints(meta) > 0 && C.SKILLS.some(k => C.skCan(meta, k.id));
+    const d = dailyToday();
+    const dots = {
+      labBtn: !!(lab && meta.crystals >= lab.cost),
+      modBtn: modCopies() > meta.seen.mod,
+      fusBtn: fus,
+      dailyBtn: !(d && d.bonus),
+      achBtn: C.achPoints(meta) > meta.seen.ach,
+      cmdBtn: sk,
+      hangBtn: $('hangBtn').classList.contains('new'),
+      mineBtn: $('mineBtn').classList.contains('new'),
+    };
+    for (const id in dots) { const b = $(id); if (b) b.classList.toggle('dot', !!dots[id]); }
+  }
+
   // ---------- Kernfusion ----------
   function syncMetaBtns() {
     const canFuse = C.fragmentsFor(meta) > 0;
@@ -903,6 +928,7 @@
     $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
     const rec = C.record(meta), d = dailyToday();
     if (typeof syncMineBadge === 'function') try { syncMineBadge(); syncNewBadges(); } catch (e) {}
+    try { syncDots(); } catch (e) {}
     $$('.chal-btn').forEach(b => { b.hidden = !(rec >= C.CHAL_AT || meta.chal && Object.keys(meta.chal).length); });
     $$('.daily-btn').forEach(b => { b.hidden = rec < C.DAILY_AT; b.classList.toggle('ready', !(d && d.bonus)); });
     // Leere Zweierreihen ausblenden
@@ -955,6 +981,7 @@
 
   // ---------- Module ----------
   function renderModules() {
+    meta.seen = meta.seen || {}; meta.seen.mod = modCopies();
     const eq = meta.equip, mods = meta.modules;
     const slots = $('modSlots'); slots.innerHTML = '';
     for (let i = 0; i < C.MODULE_SLOTS; i++) {

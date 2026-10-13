@@ -433,7 +433,8 @@ textarea { resize: vertical; min-height: 70px; }
 .sk .pr { width: 100%; height: 3px; background: var(--deck-2); border-radius: 2px; overflow: hidden; }
 .sk .pr i { display: block; height: 100%; background: var(--energy); }
 .hang-btn { border-color: color-mix(in srgb, var(--core) 50%, var(--line)); color: var(--core); }
-.hang-btn.new::after, .mine-btn.new::after { content: " •"; color: var(--hostile); }
+button.sec.dot { position: relative; }
+button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--hostile); box-shadow: 0 0 6px var(--hostile); }
 .mine-btn { border-color: color-mix(in srgb, var(--heat) 50%, var(--line)); color: var(--heat); }
 .mine-cta { background: var(--heat); box-shadow: 0 0 20px color-mix(in srgb, var(--heat) 40%, transparent); }
 .mine-cta:disabled { background: var(--deck-2); color: var(--ink-dim); box-shadow: none; }
