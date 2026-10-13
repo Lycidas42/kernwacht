@@ -49,7 +49,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -1202,7 +1202,7 @@
   const chalSum = () => C.CHALLENGES.reduce((a, c) => a + C.chalTier(meta, c.id), 0);
   function submitScore() {
     if (!O.configured || meta.adminTainted) return;
-    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank }).catch(() => {});
+    O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank, card: publicCard() }).catch(() => {});
   }
   const BOARDS = {
     rec:   { col: 'best_ever', name: 'Rekord',            fmt: r => 'Welle ' + r.best_ever },
@@ -1213,9 +1213,70 @@
     ach:   { col: 'ach',       name: 'Erfolge',           fmt: r => r.ach + ' Stufen' },
     lvl:   { col: 'lvl',       name: 'Rang',              fmt: r => 'Rang ' + r.lvl },
   };
+  // Öffentliche Profilkarte: kompakter, nur lesbarer Auszug für andere Spieler
+  function publicCard() {
+    const eq = (meta.equip || []).filter(t => meta.modules && meta.modules[t] && C.MODULES[t]).map(t => [t, meta.modules[t].rar | 0, meta.modules[t].mast | 0]);
+    const lab = C.META_UPG.reduce((a, u) => a + C.mlv(meta, u.id), 0);
+    return { v: 1, rk: C.rankOf(meta).rank, rec: C.record(meta), fus: meta.fusions || 0, fl: Object.assign({}, meta.flv || {}), sk: Object.assign({}, meta.sk || {}), eq, lab, bb: Object.keys(meta.bossBeat || {}).length, ver: C.VERSION };
+  }
+  // Mini-Sternkarte (nur Anzeige) für eine fremde Skillverteilung
+  function skMiniSvg(sk) {
+    const m = { sk: sk || {} }, out = [];
+    const line = (a, b, col, lit) => out.push(`<line x1="${a.x.toFixed(0)}" y1="${a.y.toFixed(0)}" x2="${b.x.toFixed(0)}" y2="${b.y.toFixed(0)}" stroke="${col}" stroke-width="${lit ? 4 : 2}" stroke-opacity="${lit ? 0.9 : 0.18}"/>`);
+    for (const k of C.SKILLS) {
+      const p = SK_POS[k.id]; if (!p) continue; const col = SK_COL[k.br], on = C.skLv(m, k.id) > 0;
+      if (k.link) for (const a of SK_ANCH[k.id]) line(SK_POS[a], p, col, on);
+      else line(k.par ? SK_POS[k.par] : { x: 0, y: 0 }, p, col, on && (!k.par || C.skLv(m, k.par) > 0));
+    }
+    for (const k of C.SKILLS) {
+      const p = SK_POS[k.id]; if (!p) continue; const col = SK_COL[k.br], l = C.skLv(m, k.id), r = k.cap ? 20 : k.link ? 16 : 14;
+      out.push(`<circle cx="${p.x.toFixed(0)}" cy="${p.y.toFixed(0)}" r="${r}" fill="${l ? col : '#0d0b22'}" fill-opacity="${l ? 0.85 : 1}" stroke="${col}" stroke-opacity="${l ? 1 : 0.35}" stroke-width="3"/>`);
+      if (l && !k.cap && !k.link) out.push(`<text x="${p.x.toFixed(0)}" y="${(p.y + 6).toFixed(0)}" text-anchor="middle" font-size="17" font-weight="700" fill="#0b0d1f">${l}</text>`);
+    }
+    out.push(`<circle r="24" fill="#0d0b22" stroke="#ffd23f" stroke-width="3"/>`);
+    const xs = Object.values(SK_POS).map(p => p.x), ys = Object.values(SK_POS).map(p => p.y);
+    const x0 = Math.min(...xs) - 30, y0 = Math.min(...ys) - 30, w = Math.max(...xs) + 30 - x0, h = Math.max(...ys) + 30 - y0;
+    return `<svg class="pcsk" viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${w.toFixed(0)} ${h.toFixed(0)}" aria-hidden="true">${out.join('')}</svg>`;
+  }
+  let pcBack = 'board';
+  async function openPlayer(id) {
+    if (!id) return;
+    pcBack = current || 'board'; show('pcard');
+    const b = $('pcBody'); b.innerHTML = '<p class="pcst">Wird geladen …</p>';
+    const p = id === O.myId() ? Object.assign({ id, name: meta.name || 'Ohne Namen', avatar: meta.avatar, color: meta.color, best_ever: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank, card: publicCard() }) : await O.player(id);
+    if (current !== 'pcard') return;
+    if (!p) { b.innerHTML = '<p class="pcst">Das Profil ist gerade nicht erreichbar.</p>'; return; }
+    renderPlayer(p);
+  }
+  function renderPlayer(p) {
+    const c = p.card && typeof p.card === 'object' ? p.card : null, rk = c ? c.rk : p.lvl;
+    const stat = (k, v) => `<div><small>${k}</small><b>${v}</b></div>`;
+    let h = `<div class="pchead">${avatarSvg(p.avatar, p.color, 52)}<div><b>${esc(p.name)}</b><small><span>${rk ? 'Rang ' + rk : 'Rang unbekannt'}</span>${p.updated_at ? ' · <span>' + ago(p.updated_at) + '</span>' : ''}</small></div></div>`;
+    h += `<div class="pcstats">${stat('Rekord', 'Welle ' + (p.best_ever || 0))}${stat('Fusionen', p.fusions || 0)}${stat('Abschüsse', fmt(p.kills || 0))}${stat('Läufe', fmt(p.runs || 0))}${stat('Challenge', (p.chal || 0) + ' Stufen')}${stat('Erfolge', (p.ach || 0) + ' Stufen')}${c ? stat('Laborstufen', fmt(c.lab || 0)) + stat('Bosse besiegt', c.bb || 0) : ''}</div>`;
+    if (!c) { h += '<p class="pcst">Mehr Details erscheinen, sobald dieser Spieler mit einer aktuellen Version gespielt hat.</p>'; $('pcBody').innerHTML = h; return; }
+    // Fusion
+    const fl = C.FUSION_UPG.filter(u => c.fl && c.fl[u.id]);
+    h += `<h4>Kernfusion</h4>${fl.length ? `<div class="pcfl">${fl.map(u => `<span>${u.name} <b>${c.fl[u.id]}</b></span>`).join('')}</div>` : '<p class="pcst">Noch keine Fusions-Upgrades.</p>'}`;
+    // Module
+    const eq = (c.eq || []).filter(e => Array.isArray(e) && C.MODULES[e[0]] && C.RARITY[e[1]]);
+    h += `<h4>Module</h4>${eq.length ? eq.map(([t, r, ms]) => `<div class="stmod r${r}">${R_.iconSvg(t, r, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[r].name}${ms ? ' ★' + ms : ''}</span></div></div>`).join('') : '<p class="pcst">Keine Module ausgerüstet.</p>'}`;
+    // Skills
+    const m = { sk: c.sk || {} }, spent = C.skSpent(m);
+    h += `<h4>Kommandant · ${spent} Punkte verteilt</h4>`;
+    if (spent) {
+      h += skMiniSvg(c.sk);
+      h += `<div class="pcbr">${C.SK_BRANCH.map(b => `<span style="color:${SK_COL[b.id]}">${b.name} <b>${C.skBranchPts(m, b.id)}</b></span>`).join('')}</div>`;
+      const keys = C.SKILLS.filter(k => (k.cap || k.link) && C.skLv(m, k.id));
+      if (keys.length) h += `<div class="pcfl">${keys.map(k => `<span style="border-color:${SK_COL[k.br]}">${k.name}</span>`).join('')}</div>`;
+    } else h += '<p class="pcst">Noch keine Skillpunkte verteilt.</p>';
+    $('pcBody').innerHTML = h;
+  }
+  function ago(ts) { const d = (Date.now() - Date.parse(ts)) / 60e3; return isNaN(d) ? '' : d < 60 ? `aktiv vor ${Math.max(1, Math.round(d))} min` : d < 1440 ? `aktiv vor ${Math.round(d / 60)} h` : `aktiv vor ${Math.round(d / 1440)} Tagen`; }
+  $('pcClose').addEventListener('click', () => show(pcBack));
+  document.addEventListener('click', e => { const tr = e.target.closest && e.target.closest('.lb tr[data-pid]'); if (tr) { A.play('click'); openPlayer(tr.dataset.pid); } });
   function boardRows(data, val) {
     const me = O.myId();
-    return data.map((r, i) => `<tr class="${r.id === me ? 'me' : ''}"><td>${i + 1}</td><td><span class="who">${avatarSvg(r.avatar, r.color, 22)}<span class="nm">${esc(r.name)}</span>${r.lvl ? `<small class="lbrk">${r.lvl}</small>` : ''}</span></td><td>${val(r)}</td></tr>`).join('');
+    return data.map((r, i) => `<tr class="${r.id === me ? 'me' : ''}" data-pid="${esc(r.id || '')}"><td>${i + 1}</td><td><span class="who">${avatarSvg(r.avatar, r.color, 22)}<span class="nm">${esc(r.name)}</span>${r.lvl ? `<small class="lbrk">${r.lvl}</small>` : ''}</span></td><td>${val(r)}</td></tr>`).join('');
   }
   let lbTab = 'rec';
   $$('[data-lb]').forEach(b => b.addEventListener('click', () => { lbTab = b.dataset.lb; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x === b ? 'true' : 'false')); A.play('click'); renderBoard(); }));

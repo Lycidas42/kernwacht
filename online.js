@@ -70,13 +70,26 @@
 
   // ---------- Profil und Werte ----------
   const profile = (name, avatar, color) => rpc('kw_profile', { p_name: name || '', p_avatar: avatar | 0, p_color: color | 0 });
-  // Rang (p_lvl) erst nach der Migration „rang“ bekannt: schlägt der Aufruf fehl, ohne Rang wiederholen
-  let hasLvl = true;
-  const stats = s => {
-    const a = { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0 };
-    if (!hasLvl) return rpc('kw_stats', a);
-    return rpc('kw_stats', Object.assign({ p_lvl: s.lvl | 0 }, a)).catch(e => { if (/p_lvl|function|schema/i.test(e.message)) { hasLvl = false; return rpc('kw_stats', a); } throw e; });
-  };
+  // Neuere Felder (p_card, p_lvl) kennt der Server erst nach der jeweiligen Migration:
+  // schlägt der Aufruf fehl, ohne das neueste Feld wiederholen
+  const NEWER = ['p_card', 'p_lvl'];
+  let drop = 0;
+  async function stats(s) {
+    const a = { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0, p_lvl: s.lvl | 0, p_card: s.card || null };
+    for (;;) {
+      const b = Object.assign({}, a); NEWER.slice(0, drop).forEach(k => delete b[k]);
+      try { return await rpc('kw_stats', b); }
+      catch (e) { if (drop < NEWER.length && /function|schema|p_card|p_lvl/i.test(e.message)) { drop++; continue; } throw e; }
+    }
+  }
+  // Öffentliches Profil eines Spielers (nur lesbare Spalten)
+  async function player(id) {
+    if (!(await start())) return null;
+    const q = f => client.from('players').select('id,name,avatar,color,best,best_ever,runs,kills,fusions,chal,ach,updated_at' + f).eq('id', id).maybeSingle();
+    let { data, error } = await q(',lvl,card');
+    if (error) ({ data, error } = await q(''));
+    return error || !data ? null : Object.assign(data, { name: data.name || anon(data.id), anon: !data.name });
+  }
   const daily = (day, wave, kills) => rpc('kw_daily', { p_day: day, p_wave: wave | 0, p_kills: kills | 0 });
 
   // Highscores: Spalte der Spielertabelle; Spieler ohne Namen erscheinen anonym (Kurzkennung aus der ID)
@@ -133,7 +146,7 @@
 
   root.KWOnline = {
     configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
-    profile, stats, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, polls, vote, pollResults,
+    profile, stats, player, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, polls, vote, pollResults,
     onCount: f => listeners.push(f), get count() { return count; },
   };
 })(window);

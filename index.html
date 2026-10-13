@@ -450,6 +450,22 @@ textarea { resize: vertical; min-height: 70px; }
 .lb .who { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb .who .nm { overflow: hidden; text-overflow: ellipsis; }
 .lbrk { flex: 0 0 auto; font-family: var(--font-num); font-size: .66rem; color: var(--energy, #ffd23f); border: 1px solid color-mix(in srgb, var(--energy, #ffd23f) 55%, transparent); border-radius: 3px; padding: 0 4px; line-height: 1.5; }
+.lb tr[data-pid] { cursor: pointer; }
+.lb tr[data-pid]:hover td { background: #ffffff06; }
+#pcBody { display: grid; gap: 10px; }
+#pcBody h4 { margin: 6px 0 0; font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; border-top: 1px solid var(--line); padding-top: 10px; }
+.pcst { margin: 0; font-size: .8rem; color: var(--ink-dim); }
+.pchead { display: flex; gap: 14px; align-items: center; }
+.pchead b { display: block; font-size: 1.15rem; }
+.pchead small { color: var(--energy, #ffd23f); font-family: var(--font-num); font-size: .78rem; }
+.pcstats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pcstats div { border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.pcstats small { display: block; font-size: .64rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); }
+.pcstats b { font-family: var(--font-num); font-size: .95rem; }
+.pcfl, .pcbr { display: flex; flex-wrap: wrap; gap: 6px; font-size: .78rem; }
+.pcfl span { border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px; }
+.pcbr { justify-content: space-between; }
+.pcsk { width: 100%; max-height: 260px; display: block; }
 .lbrk::before { content: "R "; opacity: .7; }
 
 .cannonview { border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; }
@@ -904,6 +920,14 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <button class="sec" id="labClose">Zurück</button>
     </div>
     <button class="danger" id="resetBtn">Spielstand löschen</button>
+  </div>
+</div>
+
+<div class="ov" id="pcard" hidden>
+  <div class="card pc">
+    <h2>Spielerprofil</h2>
+    <div id="pcBody"></div>
+    <div class="actions"><button class="sec" id="pcClose">Zurück</button></div>
   </div>
 </div>
 
