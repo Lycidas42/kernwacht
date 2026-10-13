@@ -909,7 +909,10 @@
   // ---------- Gerade online ----------
   function presence() { O.setStatus(meta.name, runAlive() ? run.wave : 0, { pid: O.myId(), av: meta.avatar | 0, col: meta.color | 0, lvl: C.rankOf(meta).rank, rec: C.record(meta) }); }
   function renderOnline() {
-    const list = O.who().sort((a, b) => (b.wave || 0) - (a.wave || 0) || (b.rec || 0) - (a.rec || 0)), me = O.myId();
+    const all = O.who();
+    // sich selbst immer zeigen, auch wenn die eigene Präsenz (noch) nicht zurückgemeldet wurde
+    if (!all.some(p => p.pid === O.myId() && (p.name || '') === (meta.name || ''))) all.push({ pid: O.myId(), name: meta.name, av: meta.avatar | 0, col: meta.color | 0, lvl: C.rankOf(meta).rank, wave: runAlive() ? run.wave : 0, self: true });
+    const list = all.sort((a, b) => (b.wave || 0) - (a.wave || 0) || (b.rec || 0) - (a.rec || 0)), me = O.myId();
     $('onSum').textContent = list.length ? (list.length === 1 ? 'Gerade bist nur du online.' : `${list.length} Spieler gerade online.`) : 'Gerade ist niemand verbunden.';
     $('onList').innerHTML = list.map(p => `<tr class="${p.pid === me ? 'me' : ''}" ${p.pid ? `data-pid="${esc(p.pid)}"` : ''}><td>${p.wave > 0 ? '<i class="onlive" title="im Lauf"></i>' : '<i class="onidle" title="im Menü"></i>'}</td><td><span class="who">${avatarSvg(p.av, p.col, 22)}<span class="nm">${esc(p.name || 'Anonym')}</span>${p.lvl ? `<small class="lbrk">${p.lvl}</small>` : ''}</span></td><td>${p.wave > 0 ? 'Welle ' + p.wave : 'im Menü'}</td></tr>`).join('');
   }

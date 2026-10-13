@@ -43,7 +43,7 @@
         client = root.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
         channel = client.channel('kernwacht-lobby', { config: { presence: { key: getStored(ID_KEY) || code().slice(0, 5) } } });
         channel.on('presence', { event: 'sync' }, () => {
-          count = Object.keys(channel.presenceState()).length;
+          count = Math.max(1, who().length); // wie die Liste zählen, man selbst ist immer dabei
           listeners.forEach(f => f(count));
         });
         channel.subscribe(status => { if (status === 'SUBSCRIBED') channel.track(Object.assign({}, me)); });
@@ -77,7 +77,7 @@
     // höchste Welle gewinnt, Profilangaben kommen aus dem Eintrag, der sie hat
     const seen = new Map();
     for (const [key, arr] of Object.entries(channel.presenceState())) for (const p of arr) {
-      const k = p.pid || key, o = seen.get(k);
+      const k = (p.pid || key) + '|' + (p.name || ''), o = seen.get(k); // gleiche ID, anderer Name (verbundene Geräte): getrennt zeigen
       if (!o) { seen.set(k, Object.assign({}, p)); continue; }
       const m = Object.assign({}, o, p.pid ? p : {});
       m.wave = Math.max(o.wave || 0, p.wave || 0); if (!m.name) m.name = o.name || p.name;
