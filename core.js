@@ -129,8 +129,9 @@
     jelly:    { name: 'Sporenqualle', chk: ['sustain'], hp: 1, r: 24, acts: ['spores', 'salvo', 'cloak'] },
     squid:    { name: 'Tentakler', hp: 1, r: 24, far: true, acts: ['salvo', 'spawn'], parts: [{ k: 'tentacle', lat: -16, delay: 0 }, { k: 'tentacle', lat: 16, delay: 2.5 }] },
     queen:    { name: 'Schwarmkönigin', chk: ['def'], hp: 1, r: 25, acts: ['swarm', 'shield', 'spawn'] },
-    leviathan:{ name: 'Leviathan', chk: ['dps'], hp: 2, r: 34, lord: true, far: true, acts: ['cloak', 'salvo', 'spores'], ph2: ['swarm'], ph3: ['broadside'],
-      parts: [-30, -18, -6, 6, 18, 30].map((lat, i) => ({ k: 'tentacle', lat, delay: i * 1.1 })) },
+    // Riesen-Oktopus: Mantel über die ganze Breite am oberen Rand, nur Arme und (ab Phase 2) Augen sind erreichbar
+    leviathan:{ name: 'Leviathan', hp: 2, r: 60, lord: true, giant: true, acts: ['salvo', 'spores'], ph2: ['swarm'], ph3: ['ink'],
+      parts: [{ k: 'eye', lat: -95, fwd: 62 }, { k: 'eye', lat: 95, fwd: 62 }].concat([-175, -125, -75, -25, 25, 75, 125, 175].map((lat, i) => ({ k: 'arm', lat, i }))) },
     // Zone 3 · Glutgürtel: Feuer und Gestein
     emberorb: { name: 'Glutorb', chk: ['sustain'], hp: 1, r: 22, acts: ['nova', 'salvo', 'fireball'] },
     worm:     { name: 'Magmawurm', hp: 1, r: 20, worm: true, acts: ['salvo', 'nova', 'spawn'], parts: [0, 1, 2].flatMap(i => [{ k: 'segment', i, side: -1 }, { k: 'segment', i, side: 1 }]) },
@@ -160,7 +161,7 @@
   //  sustain Glutstrahlung: ständiger Schaden an der Kanone (Reparatur zählt)
   //  burst   Panzerschild: alle 16 s ein Schild, der Schaden schluckt; nicht in 6 s gebrochen, heilt sich der Boss
   const BOSS_CHECK = { dps: 'Schadensprobe', def: 'Sturmangriff', sustain: 'Glutstrahlung', burst: 'Panzerschild' };
-  const BOSS_ACT_NAME = { storm: 'Sturmangriff', spores: 'Sporen', swarm: 'Schwarm', fireball: 'Feuerbälle', lava: 'Lavaregen', mirror: 'Spiegel', pull: 'Sog', salvo: 'Salve', broadside: 'Breitseite', spawn: 'Jägerstaffel', hangar: 'Hangar', bomb: 'Bombe', mines: 'Minenteppich', shield: 'Schild', laser: 'Laser', cloak: 'Tarnung', bulwarks: 'Schildträger', nova: 'Nova', mend: 'Reparatur' };
+  const BOSS_ACT_NAME = { ink: 'Tintenwolke', storm: 'Sturmangriff', spores: 'Sporen', swarm: 'Schwarm', fireball: 'Feuerbälle', lava: 'Lavaregen', mirror: 'Spiegel', pull: 'Sog', salvo: 'Salve', broadside: 'Breitseite', spawn: 'Jägerstaffel', hangar: 'Hangar', bomb: 'Bombe', mines: 'Minenteppich', shield: 'Schild', laser: 'Laser', cloak: 'Tarnung', bulwarks: 'Schildträger', nova: 'Nova', mend: 'Reparatur' };
   const BOSS_ROSTER = { 1: ['gunboat', 'layer', 'frigate', 'lancer', 'bastion'], 2: ['ray', 'jelly', 'squid', 'queen', 'leviathan'], 3: ['emberorb', 'worm', 'bulwarkcr', 'forge', 'titan'],
     4: ['sunwing', 'splitcore', 'flameorb', 'corona', 'phoenix'], 5: ['eye', 'shrine', 'mirror', 'shade', 'devourer'] };
   // nach Welle 250 kommen alle 25 Bosse in fester Reihenfolge wieder
@@ -527,6 +528,13 @@
   }
   function skBuy(m, id) { if (!skCan(m, id)) return false; m.sk = m.sk || {}; m.sk[id] = skLv(m, id) + 1; return true; }
   function skReset(m) { m.sk = {}; }
+  // Einzelnen Punkt zurücknehmen: nur, wenn danach alle gekauften Knoten gültig bleiben
+  function skCanRefund(m, id) {
+    const l = skLv(m, id); if (!l) return false;
+    const sk = Object.assign({}, m.sk); sk[id] = l - 1; if (!sk[id]) delete sk[id];
+    const t = { sk }; return Object.keys(sk).every(k => skOpen(Object.assign({}, m, t), k));
+  }
+  function skRefund(m, id) { if (!skCanRefund(m, id)) return false; m.sk[id]--; if (!m.sk[id]) delete m.sk[id]; return true; }
 
   // ---------- Planetenforschung: dauerhafte Boni, bezahlt mit der Ressource des Planeten ----------
   const RESEARCH = {
@@ -856,6 +864,7 @@
           e.kind = kind; e.hp *= K.hp; e.maxHp = e.hp; e.r = K.r; e.lord = !!K.lord; e.rebirth = !!K.rebirth; e.worm = !!K.worm;
           if (K.lord) e.stop += 12; // der Herrscher schwebt etwas weiter hinten, sein Rumpf ragt trotzdem in die Reichweite
           if (K.far) e.stop = this.s.range + 25 + K.r * 0.5; // Tentakelwesen: Körper knapp außer Reichweite, die Tentakel kommen herein
+          if (K.giant) { e.giant = true; e.a = e.a0 = -Math.PI / 2; e.dist = 740; e.stop = 430; e.spd = 60; } // Riese: kommt von oben herein und bleibt am oberen Rand
         }
       }
       if (o) Object.assign(e, o);
@@ -867,9 +876,9 @@
     }
     // Bauteil eines Bosses: Geschützturm, Tentakel, Segment oder Schwinge
     spawnPart(e, q) {
-      const hp = e.maxHp * (q.k === 'tentacle' ? 0.06 : 0.07);
+      const hp = e.maxHp * (q.k === 'tentacle' ? 0.06 : q.k === 'arm' ? 0.06 : q.k === 'eye' ? 0.08 : 0.07);
       const pt = this.spawnAt('part', 0, -FIELD_H, { host: e, spec: q, pk: q.k, fwd: q.fwd || 0, lat: q.lat || 0, side: q.side || 0, si: q.i || 0, hp, maxHp: hp, rw: e.rw * 0.03, dmg: e.dmg * 0.3,
-        shotT: 1.5 + Math.random() * 2, ext: 0, tst: 0, tt: 2 + (q.delay || 0), fwdK: q.k === 'tentacle' ? 1.5 : 0, r: q.k === 'segment' ? 9 : q.k === 'wing' ? 10 : 7 });
+        shotT: 1.5 + Math.random() * 2, ext: 0, tst: 0, tt: 2 + (q.delay || 0), fwdK: q.k === 'tentacle' || q.k === 'arm' ? 1.5 : 0, r: q.k === 'segment' ? 9 : q.k === 'wing' ? 10 : q.k === 'arm' ? 13 : q.k === 'eye' ? 16 : 7, act: null });
       this.placePart(pt);
       return pt;
     }
@@ -878,13 +887,83 @@
     cloaked(e) { if (this.s.mod && this.s.mod.scanner) return false; return (e.type === 'phantom' && e.dist > ENEMY.phantom.cloakFrom) || (e.cloakUntil && e.cloakUntil > this.time); }
 
     pos(e) { return { x: Math.cos(e.a) * e.dist, y: Math.sin(e.a) * e.dist }; }
+    // Riesenarm: Ansatz am Mantel, Spitze je nach Aktion (eingerollt, Schlag, Fegen, Greifen)
+    armTip(pt, p, fx, fy) {
+      const A = { x: p.x - fy * pt.spec.lat + fx * 110, y: p.y + fx * pt.spec.lat + fy * 110 }, sd = Math.sign(A.x - p.x) || 1;
+      const w = Math.sin(this.time * 1.3 + pt.spec.i * 1.7);
+      const idle = { x: A.x + sd * (55 + 20 * w), y: A.y + 120 + 25 * Math.cos(this.time * 1.1 + pt.spec.i) };
+      let tgt = idle;
+      if (pt.act === 'slam') { const an = Math.atan2(A.y, A.x); tgt = { x: Math.cos(an) * (WALL_R + 14), y: Math.sin(an) * (WALL_R + 14) }; }
+      else if (pt.act === 'grab') tgt = { x: sd * 18, y: -26 };
+      else if (pt.act === 'sweep') { const k = Math.max(0, Math.min(1, pt.swK || 0)); tgt = { x: -sd * 210 + sd * 420 * k, y: -Math.max(110, this.s.range * 0.55) + 20 * Math.sin(k * 6) }; }
+      const e = pt.ext || 0;
+      pt.A = A; return { x: idle.x + (tgt.x - idle.x) * e, y: idle.y + (tgt.y - idle.y) * e };
+    }
+    armPath(pt, p, fx, fy, T) {
+      const A = pt.A, sd = Math.sign(A.x - p.x) || 1, n = 14, out = [];
+      const c1 = { x: A.x + sd * 40, y: A.y + 90 }, c2 = { x: T.x + sd * 60 * (1 - (pt.ext || 0)) + Math.sin(this.time * 2 + pt.spec.i) * 18, y: T.y - 110 };
+      for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; out.push({ x: u * u * u * A.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * T.x, y: u * u * u * A.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * T.y }); }
+      pt.path = out;
+    }
+    // Riese: Arme steuern, Augen in Reichweite bringen, Tinte
+    giantTick(e, dt) {
+      const arms = this.enemies.filter(o => o.host === e && o.pk === 'arm' && o.hp > 0);
+      for (const a of arms) {
+        if (!a.act) { a.ext = Math.max(0, (a.ext || 0) - dt / 0.8); continue; }
+        a.actT = (a.actT || 0) + dt;
+        if (a.stage === 'out') {
+          a.ext = Math.min(1, (a.ext || 0) + dt / (a.act === 'sweep' ? 0.9 : 0.75));
+          if (a.ext >= 1) {
+            a.stage = 'hold'; a.actT = 0;
+            if (a.act === 'slam') { this.hitBase(e.dmg * 0.7); if (this.fxOn) this.fx.push({ k: 'wallhit', a: a.a, t: 0 }, { k: 'hurt', t: 0 }); }
+            if (a.act === 'grab' && this.fxOn) this.fx.push({ k: 'bossact', act: 'grab', x: 0, y: -80, t: 0 });
+          }
+        } else if (a.stage === 'hold') {
+          if (a.act === 'slam' && a.actT >= 2.5) a.stage = 'in';
+          if (a.act === 'sweep') {
+            // Fegen: quer durchs Feld, räumt Minen ab und bringt die Klingen ins Stocken
+            a.swK = Math.min(1, (a.swK || 0) + dt / 3); this.bladeOff = Math.max(this.bladeOff || 0, this.time + 0.3);
+            const tp = this.pos(a); for (const m of this.mines) if (Math.hypot(m.x - tp.x, m.y - tp.y) < 34) { m.done = true; m.pulled = true; }
+            this.mines = this.mines.filter(m => !m.done);
+            if (a.swK >= 1) a.stage = 'in';
+          }
+          if (a.act === 'grab') {
+            // Greifen: drückt immer fester zu, bis der Arm abgetrennt ist oder nach 8 s loslässt
+            a.grabT = (a.grabT || 0) + dt;
+            if ((a.sqT = (a.sqT || 0) + dt) >= 1) { a.sqT = 0; this.hitBase(e.dmg * 0.18 * (1 + 0.6 * a.grabT)); }
+            if (a.grabT >= 8) a.stage = 'in';
+          }
+        } else if (a.stage === 'in') {
+          a.ext = Math.max(0, a.ext - dt / 0.9);
+          if (a.ext <= 0) { a.act = null; a.stage = null; a.swK = 0; a.grabT = 0; }
+        }
+      }
+      // neue Aktion: alle paar Sekunden ein ruhender Arm
+      if (e.dist <= e.stop + 5 && (e.armT = (e.armT == null ? 2 : e.armT) - dt * (e.phase >= 2 ? 1.5 : 1)) <= 0) {
+        e.armT = 2.6;
+        const idle = arms.filter(a => !a.act); if (idle.length) {
+          const busyGrab = arms.some(a => a.act === 'grab'), r = Math.random();
+          let act = r < 0.55 ? 'slam' : r < 0.78 ? 'sweep' : 'grab';
+          if (act === 'grab' && busyGrab) act = 'slam';
+          if (act === 'sweep' && !this.mines.length && !this.s.blades) act = 'slam';
+          const pool = act === 'grab' ? idle.filter(a => Math.abs(a.spec.lat) < 80) : idle; const a = (pool.length ? pool : idle)[Math.floor(Math.random() * (pool.length ? pool : idle).length)];
+          a.act = act; a.stage = 'out'; a.actT = 0; a.swK = 0; a.grabT = 0; a.sqT = 0;
+          if (this.fxOn && act !== 'slam') { const q = this.pos(a); this.fx.push({ k: 'bossact', act: act === 'grab' ? 'grabwarn' : 'sweep', x: q.x, y: q.y, t: 0 }); }
+        }
+      }
+      // ab Phase 2 beugt er sich vor: die Augen kommen in Reichweite
+      e.stop = e.phase >= 1 ? Math.min(430, Math.max(260, this.s.range + 52)) : 430;
+      if (e.dist > e.stop + 1) e.dist = Math.max(e.stop, e.dist - 40 * dt);
+      else if (e.dist < e.stop - 1) e.dist = Math.min(e.stop, e.dist + 40 * dt);
+    }
     // Bauteil verloren: Loch im Rumpf; Tentakel wachsen nach, Wurmsegmente nicht
     partLost(e, src) {
       const h = e.host; if (!h || h.hp <= 0 || e.lost) return; e.lost = true;
       if (e.pk === 'segment') h.segs = Math.max(0, (h.segs || 0) - 1);
       if (e.pk === 'tentacle') (h.regrow = h.regrow || []).push({ q: e.spec, at: this.time + 12 });
-      this.hurt(h, h.maxHp * 0.05, false, src || 'gun');
-      if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: e.pk === 'tentacle' ? 'sever' : e.pk === 'segment' ? 'segment' : 'part', x: p.x, y: p.y + 30, t: 0 }); }
+      if (e.pk === 'arm') (h.regrow = h.regrow || []).push({ q: e.spec, at: this.time + 15 });
+      this.hurt(h, h.maxHp * (e.pk === 'eye' ? 0.1 : e.pk === 'arm' ? 0.03 : 0.05), false, src || 'gun');
+      if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: e.pk === 'tentacle' || e.pk === 'arm' ? 'sever' : e.pk === 'segment' ? 'segment' : e.pk === 'eye' ? 'eye' : 'part', x: p.x, y: p.y + 30, t: 0 }); }
     }
     // Bauteil folgt seinem Boss: Lage relativ zur Blickrichtung auf die Kanone
     placePart(pt) {
@@ -897,6 +976,10 @@
         // Wurmleib quer zur Kanone, schlängelt sich
         pt.lat = pt.side * (h.r * 1.7 + pt.si * 26); pt.fwd = Math.sin(this.time * 2.2 + pt.si * 0.9 + pt.side) * 10 + pt.si * 13; // äußere Glieder biegen sich zur Kanone, damit alle in Reichweite liegen
       } else if (pt.pk === 'wing') { pt.lat = pt.side * h.r * 1.45; pt.fwd = -h.r * 0.25; }
+      else if (pt.pk === 'arm') {
+        // Arm des Riesen: Spitze ist das Ziel; die Form (für Zeichnung und Antippen) als Bézierkurve
+        const T = this.armTip(pt, p, fx, fy); pt.a = Math.atan2(T.y, T.x); pt.dist = Math.hypot(T.x, T.y); this.armPath(pt, p, fx, fy, T); return;
+      }
       const x = p.x + fx * pt.fwd - fy * pt.lat, y = p.y + fy * pt.fwd + fx * pt.lat;
       pt.a = Math.atan2(y, x); pt.dist = Math.hypot(x, y);
     }
@@ -1107,7 +1190,12 @@
     // ---------- Spieleraktionen ----------
     markAt(x, y, keep) {
       let best = null, bd = 40;
-      for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e), d = Math.hypot(p.x - x, p.y - y) - e.r; if (d < bd) { bd = d; best = e; } }
+      for (const e of this.enemies) {
+        if (e.hp <= 0) continue; const p = this.pos(e); let d = Math.hypot(p.x - x, p.y - y) - e.r;
+        if (e.path) for (const q of e.path) d = Math.min(d, Math.hypot(q.x - x, q.y - y) - 10); // Riesenarm: überall antippbar
+        if (e.giant) d = 99; // der Mantel selbst ist kein Ziel
+        if (d < bd) { bd = d; best = e; }
+      }
       if (best && best === this.focus && !keep) { this.focus = null; return 'off'; } // erneutes Antippen löst die Markierung
       if (best) { this.focus = best; this.focusUntil = Infinity; } // Markierung hält, bis das Ziel zerstört oder ein anderes gewählt ist
       return best;
@@ -1236,6 +1324,10 @@
       } else if (act === 'lava') {
         // Lavaregen: Brocken von überall aus dem oberen Feld
         for (let i = 0; i < 6; i++) this.ebullets.push({ x: (Math.random() * 2 - 1) * FIELD_W * 0.9, y: -FIELD_H * (0.7 + Math.random() * 0.25), dmg: e.dmg * 0.35, big: true, spd: 170, col: '#ff6a3d' });
+      } else if (act === 'ink') {
+        // Tintenwolke: die Arme sind 4 s lang nicht anvisierbar (Flächenschaden trifft trotzdem)
+        for (const o of this.enemies) if (o.host === e) o.cloakUntil = this.time + 4;
+        this.inkUntil = this.time + 4;
       } else if (act === 'mirror') {
         e.mirrorUntil = this.time + 3.5;
       } else if (act === 'pull') {
@@ -1346,6 +1438,12 @@
           if (e.regrow && e.regrow.length) for (const g of e.regrow.slice()) if (this.time >= g.at) { e.regrow.splice(e.regrow.indexOf(g), 1); this.spawnPart(e, g.q); if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'regrow', x: p.x, y: p.y, t: 0 }); } }
           // Herrscher: neue Phase unter 66 % und 33 % Lebenspunkten
           if (e.lord) { const ph = e.hp < e.maxHp * 0.33 ? 2 : e.hp < e.maxHp * 0.66 ? 1 : 0; if (ph > e.phase) { e.phase = ph; e.actT = Math.min(e.actT, 1); if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'phase', x: p.x, y: p.y, t: 0 }); } } }
+          if (e.giant) {
+            // Riese: eigene Steuerung, kein Sturmangriff, Fähigkeiten wie gewohnt
+            if (e.dist > e.stop + 5 && !e.phase) { e.dist = Math.max(e.stop, e.dist - e.spd * dt); }
+            else { this.giantTick(e, dt); e.actT -= dt; if (e.actT <= 0) { e.actT = e.actMax = Math.max(3, 5 - this.wave * 0.01); this.bossAct(e); } }
+            continue;
+          }
           if (e.retreat) {
             // nach dem Sturmangriff zurück auf Abstand, dann beginnt das Schweben von vorn
             e.dist = Math.min(e.stop, e.dist + e.spd * 1.3 * dt);
@@ -1930,6 +2028,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.11.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, P };
+  const VERSION = '0.12.1'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, P };
 })(typeof window !== 'undefined' ? window : globalThis);

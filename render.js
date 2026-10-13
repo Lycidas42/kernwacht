@@ -141,6 +141,13 @@
         // Tentakelspitze: Saugnapf-Klaue (der Arm selbst wird vorab gezeichnet)
         poly([[r * 1.6, 0], [r * 0.2, -r * 0.9], [-r * 0.6, -r * 0.5], [-r * 0.6, r * 0.5], [r * 0.2, r * 0.9]]); fillHull(); glow(c, 1.6);
         ctx.beginPath(); ctx.arc(r * 0.1, 0, r * 0.32, 0, 7); ctx.fillStyle = e.tst === 2 ? '#ffffff' : c; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+      } else if (e.type === 'part' && e.pk === 'eye') {
+        // Auge des Leviathan: gelbe Schlitzpupille, schaut zur Kanone
+        ctx.beginPath(); ctx.ellipse(0, 0, r * 1.25, r * 1.9, 0, 0, 7); ctx.fillStyle = '#05050f'; ctx.fill(); glow(c, 1.6);
+        ctx.beginPath(); ctx.ellipse(r * 0.25, 0, r * 0.75, r * 0.32, 0, 0, 7); ctx.fillStyle = e.flash > 0 ? '#ffffff' : '#ffd23f'; ctx.fill();
+      } else if (e.type === 'part' && e.pk === 'arm') {
+        // Armspitze: kleine Klaue (der Arm selbst ist oben gezeichnet)
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, 7); fillHull(); glow(e.act === 'grab' && e.stage === 'hold' ? '#ff4040' : c, 1.4);
       } else if (e.type === 'part' && e.pk === 'wing') {
         // Phönixschwinge: Federfächer aus Glut, schlägt
         const fl2 = Math.sin(t * 0.008 + e.side) * 0.25;
@@ -782,6 +789,41 @@
         ctx.beginPath(); ctx.arc(0, 0, Math.max(0, R.r - 12), Math.PI, 0); glow(PAL.core, 1, 0.35 * (1 - k));
       }
 
+      // Riese (Leviathan): Arme mit Saugnäpfen, dann der Mantel über die ganze Breite
+      for (const g of run.enemies) {
+        if (!g.giant || g.hp <= 0) continue;
+        const col = BOSS_COL[(g.sector || 1) - 1], bp = run.pos(g);
+        for (const a of run.enemies) {
+          if (a.host !== g || a.pk !== 'arm' || a.hp <= 0 || !a.path) continue;
+          const P = a.path, n = P.length, w0 = 15, lit = a.stage === 'hold' && a.act === 'slam', grab = a.act === 'grab' && a.stage === 'hold';
+          const L = [], R = [];
+          for (let i = 0; i < n; i++) { const q = P[Math.min(n - 1, i + 1)], o = P[Math.max(0, i - 1)]; let dx = q.x - o.x, dy = q.y - o.y; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l; const w = w0 * (1 - i / n * 0.8); L.push([P[i].x - dy * w, P[i].y + dx * w]); R.push([P[i].x + dy * w, P[i].y - dx * w]); }
+          ctx.beginPath(); L.forEach((p2, i) => ctx[i ? 'lineTo' : 'moveTo'](p2[0], p2[1])); R.reverse().forEach(p2 => ctx.lineTo(p2[0], p2[1])); ctx.closePath();
+          ctx.fillStyle = HULL; if (run.inkUntil > run.time) ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1;
+          glow(grab ? '#ff4040' : lit ? '#ffffff' : col, lit || grab ? 2.2 : 1.6, a.flash > 0 ? 1 : 0.9);
+          for (let i = 2; i < n - 2; i += 2) { const w = w0 * (1 - i / n * 0.8); ctx.beginPath(); ctx.arc(P[i].x, P[i].y, Math.max(1.6, w * 0.32), 0, 7); glow(col, 0.9, 0.6); }
+          if (grab) { ctx.beginPath(); ctx.arc(0, -8, 46, Math.PI * 1.05, Math.PI * 1.95); glow('#ff4040', 3, 0.6 + 0.4 * Math.sin(t * 0.02)); }
+          if (a.act === 'sweep' && a.stage === 'hold') { const tp = run.pos(a); ctx.beginPath(); ctx.arc(tp.x, tp.y, 34, 0, 7); ctx.setLineDash([4, 6]); glow(col, 1, 0.5); ctx.setLineDash([]); }
+        }
+        // Mantel: ragt über den oberen Rand hinaus
+        const bx = bp.x, by = bp.y;
+        ctx.beginPath(); ctx.moveTo(bx - 235, by + 60);
+        ctx.bezierCurveTo(bx - 290, by - 520, bx + 290, by - 520, bx + 235, by + 60);
+        ctx.bezierCurveTo(bx + 150, by + 130, bx - 150, by + 130, bx - 235, by + 60); ctx.closePath();
+        ctx.fillStyle = HULL; ctx.fill(); glow(g.flash > 0 ? '#ffffff' : col, 3);
+        for (let i = 0; i < 11; i++) { ctx.beginPath(); ctx.arc(bx - 190 + i * 38, by - 40 + Math.sin(i * 1.7) * 30, 6 + Math.abs(Math.sin(i * 2.3)) * 7, 0, 7); glow(col, 1.2, 0.45); }
+        ctx.beginPath(); ctx.moveTo(bx - 16, by + 82); ctx.lineTo(bx, by + 112 + Math.abs(Math.sin(t * 0.004)) * 6); ctx.lineTo(bx + 16, by + 82); ctx.closePath(); ctx.fillStyle = '#ff9a3c'; ctx.fill();
+        // Augenhöhlen (die Augen selbst sind Bauteile und werden darüber gezeichnet; zerstörte bleiben dunkel)
+        for (const sg of [-1, 1]) { ctx.beginPath(); ctx.ellipse(bx + sg * 95, by + 62, 34, 22, 0, 0, 7); ctx.fillStyle = '#05050f'; ctx.fill(); glow(col, 1.6, 0.7); }
+        if (g.phase >= 1) { ctx.beginPath(); ctx.moveTo(bx - 60, by - 10); ctx.lineTo(bx - 30, by + 20); ctx.lineTo(bx - 45, by + 45); glow('#ff6a3d', 1.4, 0.7); }
+        if (g.phase >= 2) { ctx.beginPath(); ctx.moveTo(bx + 70, by - 20); ctx.lineTo(bx + 40, by + 15); ctx.lineTo(bx + 60, by + 40); glow('#ff6a3d', 1.4, 0.7); }
+        // Tintenwolke
+        if (run.inkUntil > run.time) {
+          const k = Math.min(1, (run.inkUntil - run.time) / 1);
+          for (let i = 0; i < 9; i++) { ctx.beginPath(); ctx.arc(bx - 200 + i * 50, by + 130 + Math.sin(t * 0.002 + i) * 25, 70 + 15 * Math.sin(i * 2.1), 0, 7); ctx.fillStyle = `rgba(4,6,14,${0.55 * k})`; ctx.fill(); }
+        }
+      }
+
       // Tentakelarme und Wurmglieder: Verbindungen vom Boss zu seinen Bauteilen, unter den Schiffen
       for (const e of run.enemies) {
         if (!e.host || e.hp <= 0 || (e.pk !== 'tentacle' && e.pk !== 'segment')) continue;
@@ -804,6 +846,7 @@
 
       // Schiffe
       for (const e of run.enemies) {
+        if (e.giant) continue; // Riese: oben schon gezeichnet
         const p = run.pos(e);
         // Schiffe zeigen in Flugrichtung; Boss und haltende Schützen zur Kanone
         const facing = e.type === 'boss' || e.hd == null || (e.stop && e.dist <= e.stop) ? e.a + Math.PI : e.hd;
@@ -1036,7 +1079,7 @@
           ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
-          const label = { storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
+          const label = { ink: 'TINTENWOLKE', grab: 'GREIFT DIE KANONE', grabwarn: 'GREIFARM', sweep: 'FEGT', eye: 'AUGE ZERSTÖRT', storm: 'STURMANGRIFF', heat: 'HEIZT AUF', plate: 'PANZERSCHILD', platebreak: 'PANZERSCHILD GEBROCHEN', plateheal: 'PANZERSCHILD HÄLT · HEILUNG', spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
           ctx.globalAlpha = a; ctx.fillStyle = SHIP.boss; ctx.font = `700 13px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }

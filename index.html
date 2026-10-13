@@ -233,6 +233,9 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .skdet small.req { color: #ff8a8a; }
 .skdet button { justify-self: start; height: 34px; padding: 0 16px; border: 1px solid var(--c, #ffd23f); border-radius: 4px; color: var(--c, #ffd23f); font-weight: 700; margin-top: 4px; }
 .skdet button:disabled { opacity: .35; }
+.skdet .skbtns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.skdet .skbtns button.ref { border-color: var(--line); color: var(--ink-dim); }
+.skdet .skbtns small { font-size: .72rem; }
 .sknode { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); border-left: 2px solid #ffd23f; border-radius: 4px; padding: 7px 10px; }
 .sknode.off { opacity: .45; border-left-color: var(--line); }
 .sknode.full { border-left-color: var(--heal); }

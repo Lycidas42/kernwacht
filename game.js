@@ -336,9 +336,13 @@
       else if (k.cap) { const o = C.SKILLS.find(x => x.br === k.br && x.cap && x.id !== k.id && C.skLv(meta, x.id)); req = o ? `Im Ast ist schon „${o.name}“ gewählt` : `Braucht ${C.SK_CAP_AT} Punkte in ${brName(k.br)} (jetzt ${C.skBranchPts(meta, k.br)})`; }
     } else if (!st.full && !st.can && C.skPoints(meta) < 1) req = 'Kein freier Skillpunkt';
     if (req) txt += `<small class="req">${req}</small>`;
-    const btn = st.full ? '' : `<button id="skBuy" ${st.can ? '' : 'disabled'}>${k.cap || k.link ? 'Wählen' : st.l ? '+1 Stufe' : 'Lernen'}</button>`;
+    const canRef = st.l > 0 && !runAlive() && C.skCanRefund(meta, k.id);
+    const why = st.l > 0 && !canRef ? (runAlive() ? 'Zurücknehmen nach dem Lauf' : 'Andere Knoten hängen davon ab') : '';
+    const btn = `<div class="skbtns">${st.full ? '' : `<button id="skBuy" ${st.can ? '' : 'disabled'}>${k.cap || k.link ? 'Wählen' : st.l ? '+1 Stufe' : 'Lernen'}</button>`}${st.l ? `<button id="skRef" class="ref" ${canRef ? '' : 'disabled'}>${k.cap || k.link ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
     d.innerHTML = `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div>${txt}${btn}`;
     const b = $('skBuy');
+    const rb = $('skRef');
+    if (rb) rb.addEventListener('click', () => { if (!runAlive() && C.skRefund(meta, k.id)) { A.play('click'); save(); renderSkills(); } });
     if (b) b.addEventListener('click', () => { if (C.skBuy(meta, k.id)) { meta.skLast = k.br === 'x' ? meta.skLast : k.br; A.play('buy'); if (runAlive()) run.recalc(); save(); renderSkills(); } });
   }
   function renderSkills() {
@@ -1756,7 +1760,11 @@
           : c === 'def' ? [`Sturmangriff in ${Math.max(0, Math.ceil(boss.stormT == null ? 12 : boss.stormT))} s`, boss.stormT != null && boss.stormT < 3]
           : c === 'sustain' ? ['Glutstrahlung', false]
           : [boss.plate > 0 ? `Panzerschild ${Math.ceil(boss.plate / boss.plateMax * 100)} % · ${Math.max(0, boss.plateEnd - run.time).toFixed(0)} s` : 'Panzerschild', boss.plate > 0];
-        const ch = CK.map(c => { const [t2, hot] = chip(c); return `<span class="${hot ? 'hot' : ''}">${t2}</span>`; }).join('');
+        let ch = CK.map(c => { const [t2, hot] = chip(c); return `<span class="${hot ? 'hot' : ''}">${t2}</span>`; }).join('');
+        if (boss.giant) {
+          const pa = run.enemies.filter(o => o.host === boss && o.hp > 0), arms = pa.filter(o => o.pk === 'arm'), eyes = pa.filter(o => o.pk === 'eye').length, grab = arms.some(o => o.act === 'grab' && o.stage === 'hold');
+          ch = `<span>Tentakel ${arms.length}/8</span><span>Augen ${eyes}/2${boss.phase ? '' : ' · außer Reichweite'}</span>` + (grab ? '<span class="hot">Greift die Kanone: Arm abtrennen!</span>' : '') + ch;
+        }
         if (bb._ch !== ch) { bb._ch = ch; $('bossChk').innerHTML = ch; }
         const sh = boss.shieldUntil > run.time;
         bb.classList.toggle('shield', sh);
