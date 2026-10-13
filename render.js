@@ -1207,13 +1207,7 @@
           ctx.globalAlpha = 1;
         }
       }
-      if (run.holding) {
-        ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 0.006);
-        ctx.fillStyle = SHIP.boss; ctx.textAlign = 'center';
-        ctx.font = `700 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`;
-        { const b = run.enemies.find(e => e.type === 'boss' && e.hp > 0); ctx.fillText(((b && b.kind && C.BOSS_KINDS[b.kind].name) || 'Boss').toUpperCase() + ' BESIEGEN', W / 2, H * 0.2); }
-        ctx.globalAlpha = 1;
-      }
+      // „… besiegen“ steht nicht mehr im Feld: die Bossleiste oben zeigt den Boss
     }
 
     // Statischer Hintergrund je Sektor (Planeten usw.), einmal pro Größe/Sektor vorgezeichnet

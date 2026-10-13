@@ -1780,7 +1780,7 @@
       let boss = null;
       for (const e of run.enemies) if (e.type === 'boss' && e.hp > 0 && (!boss || e.hp > boss.hp)) boss = e;
       const bb = $('bossBar');
-      if (bb.hidden !== !boss) bb.hidden = !boss;
+      if (bb.hidden !== !boss) { bb.hidden = !boss; $('bossInfo').hidden = !boss; }
       // Unbesiegter Boss: Tempo auf 1×, bis er fällt (danach zurück auf das gewählte Tempo)
       if (boss && boss.kind && !boss.child && !(meta.bossBeat || {})[boss.kind] && run.slowFor !== boss.id) {
         run.slowFor = boss.id;
@@ -1795,7 +1795,7 @@
         const nt = `Nächste Fähigkeit: <b>${nx}</b> in ${left.toFixed(1).replace('.', ',')} s`;
         if (bb._nt !== nt) { bb._nt = nt; $('bossNext').innerHTML = nt; }
         $('bossNextBar').style.width = Math.min(100, (1 - left / (boss.actMax || 2.5)) * 100) + '%';
-        bb.querySelector('.bossnext').classList.toggle('soon', soon);
+        $('bossInfo').querySelector('.bossnext').classList.toggle('soon', soon);
         // Prüfungen des Bosses mit ihrem Zustand
         const CK = (boss.kind && C.BOSS_KINDS[boss.kind].chk) || [];
         const chip = c => c === 'dps' ? [`Schadensprobe${boss.heat ? ' · aufgeheizt ×' + boss.heat : ''}`, boss.heat > 0]

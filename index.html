@@ -87,24 +87,36 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #xpLine .bar i { background: #ffd23f; box-shadow: 0 0 6px #ffd23f; transition: width .3s; }
 #xpLine .num { color: var(--ink-dim); font-size: 10px; text-transform: none; }
 #xpLine.low { opacity: .55; }
-#bossBar .bosschk { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
-#bossBar .bosschk span { font-size: 10px; letter-spacing: .04em; padding: 1px 6px; border: 1px solid rgba(255,179,234,.4); border-radius: 3px; color: #ffb3ea; }
-#bossBar .bosschk span.hot { border-color: #ff4040; color: #ff8080; }
+#bossInfo .bosschk { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+#bossInfo .bosschk span { font-size: 10px; letter-spacing: .04em; padding: 1px 6px; border: 1px solid rgba(255,179,234,.4); border-radius: 3px; color: #ffb3ea; }
+#bossInfo .bosschk span.hot { border-color: #ff4040; color: #ff8080; }
 #hpbar i { background: linear-gradient(90deg, var(--heal), var(--core)); box-shadow: 0 0 8px var(--core); }
 #wavebar { height: 2px; }
-#bossBar { margin-top: 6px; padding: 5px 8px 6px; border: 1px solid rgba(255,80,200,.55); border-radius: 8px; background: rgba(40,6,34,.82); box-shadow: 0 0 14px rgba(255,60,190,.35); }
+#bossBar { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #ffb3ea; text-shadow: 0 0 6px #000, 0 0 2px #000; }
+#bossBar span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 68%; }
+#bossBar b { font-size: 13px; color: #fff; letter-spacing: 0; }
+#bossBar .bar { flex: 1; height: 5px; background: rgba(0,0,0,.45); box-shadow: 0 0 0 1px rgba(255,80,200,.35); }
+#status { display: grid; gap: 4px; padding: 7px 12px 6px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--void) 35%, var(--deck)); }
+#status .strow, #status .xpline { display: flex; align-items: center; gap: 8px; }
+#status .stl { width: 64px; flex: 0 0 auto; font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-dim); }
+#status .strow .bar { flex: 1; height: 6px; }
+#status .num { font-size: .72rem; color: var(--ink-dim); white-space: nowrap; }
+#status .stpills { gap: 5px; }
+#status .pill { font-size: .72rem; }
+#bossInfo { display: grid; gap: 4px; }
+#status #xpLine .stl { color: #ffd23f; }
 #bossBar .bossline { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #ffb3ea; margin-bottom: 4px; }
 #bossBar .bossline b { font-size: 15px; color: #fff; letter-spacing: 0; }
 #bossBar .bar { height: 8px; background: rgba(255,255,255,.08); }
 #bossBar .bar i { background: linear-gradient(90deg, #ff3fa4, #ff8a3d); box-shadow: 0 0 10px #ff3fa4; transition: width .15s linear; }
-#bossBar .bossnext { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11px; color: #ffb3ea; letter-spacing: .04em; }
-#bossBar .bossnext span { white-space: nowrap; }
-#bossBar .bossnext b { color: #fff; }
-#bossBar .nbar { flex: 1; height: 3px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; }
-#bossBar .nbar i { display: block; height: 100%; background: #ffb3ea; }
-#bossBar .bossnext.soon .nbar i { background: #ff4040; box-shadow: 0 0 6px #ff4040; }
-#bossBar .bossnext.soon b { color: #ff8080; }
-#bossBar.shield { border-color: #7fe3ff; box-shadow: 0 0 14px rgba(120,220,255,.5); }
+#bossInfo .bossnext { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11px; color: #ffb3ea; letter-spacing: .04em; }
+#bossInfo .bossnext span { white-space: nowrap; }
+#bossInfo .bossnext b { color: #fff; }
+#bossInfo .nbar { flex: 1; height: 3px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; }
+#bossInfo .nbar i { display: block; height: 100%; background: #ffb3ea; }
+#bossInfo .bossnext.soon .nbar i { background: #ff4040; box-shadow: 0 0 6px #ff4040; }
+#bossInfo .bossnext.soon b { color: #ff8080; }
+#bossBar.shield { color: #9fe8ff; }
 #bossBar.shield .bar i { background: linear-gradient(90deg, #6fd6ff, #c8f4ff); box-shadow: 0 0 10px #6fd6ff; }
 #wavebar i { background: var(--ink-dim); }
 #wavebar.hold i { background: var(--hostile); animation: blink .8s ease-in-out infinite alternate; }
@@ -565,17 +577,11 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <div class="spacer"></div>
         <div class="pill admin" id="adminPill" hidden>ADMIN</div>
         <div class="pill online num" id="onlinePill" hidden>0</div>
-        <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>
-        <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
-        <div class="pill num k" id="runK">0</div>
         <div class="pill markpill" id="markPill" hidden>◎ Ziel</div>
       </div>
       <div class="bar" id="wavebar"><i></i></div>
-      <div class="hpline"><span>Kanone</span><span class="num" id="hpTxt">0 / 0</span></div>
-      <div class="bar" id="hpbar"><i></i></div>
-      <div class="xpline" id="xpLine"><span id="xpRank">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
       <div class="mchip" id="mChip" hidden><b id="mfName"></b><span id="mfRule"></span></div>
-      <div id="bossBar" hidden><div class="bossline"><span id="bossName">Boss</span><b class="num" id="bossPct">100 %</b></div><div class="bar"><i></i></div><div class="bossnext"><span id="bossNext"></span><div class="nbar"><i id="bossNextBar"></i></div></div><div class="bosschk" id="bossChk"></div></div>
+      <div id="bossBar" hidden><span id="bossName">Boss</span><div class="bar"><i></i></div><b class="num" id="bossPct">100 %</b></div>
     </div>
     <button class="fbtn" id="menuBtn">Menü</button>
     <div id="abil">
@@ -602,6 +608,17 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     </div>
   </div>
   <div id="bench">
+    <!-- Statusleiste: Kanone, Rang, Kennzahlen und Boss-Details (oben im Feld bleibt Platz für den Boss) -->
+    <div id="status">
+      <div class="strow"><span class="stl">Kanone</span><div class="bar" id="hpbar"><i></i></div><span class="num" id="hpTxt">0 / 0</span></div>
+      <div class="xpline" id="xpLine"><span id="xpRank" class="stl">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
+      <div class="hudrow stpills">
+        <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>
+        <div class="pill num foe"><span>Jäger-LP</span><b id="foeHp">0</b></div>
+        <div class="pill num k" id="runK">0</div>
+      </div>
+      <div id="bossInfo" hidden><div class="bossnext"><span id="bossNext"></span><div class="nbar"><i id="bossNextBar"></i></div></div><div class="bosschk" id="bossChk"></div></div>
+    </div>
     <div id="tabs" role="tablist">
       <button role="tab" data-tab="atk" aria-selected="true">Angriff</button>
       <button role="tab" data-tab="def" aria-selected="false">Abwehr</button>
