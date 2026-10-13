@@ -109,6 +109,8 @@
     if (error) ({ data, error } = await q(''));
     return error || !data ? null : Object.assign(data, { name: data.name || anon(data.id), anon: !data.name });
   }
+  // Bindung: einmal je App-Start bzw. Laufende melden (Tag nach deutscher Zeit wird auf dem Server bestimmt)
+  const seen = (runs, best) => rpc('kw_seen', { p_runs: runs | 0, p_best: best | 0 });
   const daily = (day, wave, kills) => rpc('kw_daily', { p_day: day, p_wave: wave | 0, p_kills: kills | 0 });
 
   // Highscores: Spalte der Spielertabelle; Spieler ohne Namen erscheinen anonym (Kurzkennung aus der ID)
@@ -186,7 +188,7 @@
 
   root.KWOnline = {
     configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
-    profile, stats, player, place, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, myFeedback, feedbackReply, feedbackSeen, publicFeedback, polls, vote, pollResults,
+    profile, stats, seen, player, place, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, myFeedback, feedbackReply, feedbackSeen, publicFeedback, polls, vote, pollResults,
     who, onCount: f => listeners.push(f), get count() { return count; },
   };
 })(window);

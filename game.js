@@ -158,7 +158,7 @@
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderRoadmap();
     if ((res.loot || []).length) A.play('loot');
-    submitScore(); cloudAuto();
+    submitScore(); cloudAuto(); if (O.configured) O.seen(1, C.record(meta)).catch(() => {});
     setTimeout(() => show('over'), early ? 0 : 900);
   }
 
@@ -195,7 +195,7 @@
     ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     renderJump();
-    submitScore(); cloudAuto();
+    submitScore(); cloudAuto(); if (O.configured) O.seen(1, C.record(meta)).catch(() => {});
     renderRoadmap();
     setTimeout(() => show('over'), early ? 0 : 900);
   }
@@ -1299,6 +1299,9 @@
 
   // ---------- Highscores / Online ----------
   const chalSum = () => C.CHALLENGES.reduce((a, c) => a + C.chalTier(meta, c.id), 0);
+  // Tageswechsel bei offener App: einmal neu melden (für die Bindungsmessung)
+  let seenDay = new Date().toDateString();
+  setInterval(() => { const d = new Date().toDateString(); if (d !== seenDay && O.configured && !document.hidden) { seenDay = d; O.seen(0, C.record(meta)).catch(() => {}); } }, 10 * 60e3);
   function submitScore() {
     if (!O.configured || meta.adminTainted) return;
     O.stats({ best: meta.best, bestEver: C.record(meta), runs: meta.runs, kills: meta.kills, fusions: meta.fusions || 0, chal: chalSum(), ach: C.achPoints(meta), lvl: C.rankOf(meta).rank, card: publicCard(), frag: fragTotal() }).catch(() => {});
@@ -2003,7 +2006,7 @@
   $('pqClose').addEventListener('click', () => { if (pollFromRun && runAlive()) { pollFromRun = false; show(null); setPaused(false); } else home(); });
 
   if (O.configured) {
-    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); fetchMyFeedback(); if (current === 'menu') renderLbTeaser(true); } });
+    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); fetchMyFeedback(); O.seen(0, C.record(meta)).catch(() => {}); if (current === 'menu') renderLbTeaser(true); } });
     O.onCount(n => {
       $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online';
       for (const m of [$('mOnline'), $('pOnline')]) { m.hidden = false; m.textContent = n === 1 ? 'Nur du bist gerade online' : n + ' Spieler gerade online'; }
