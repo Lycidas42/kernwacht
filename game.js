@@ -1190,7 +1190,7 @@
       const el = document.createElement('div'); el.className = 'row'; el.style.gridTemplateColumns = '1fr auto';
       el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'aktiv' : 'Technik') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
         <button class="buy num ${mx ? 'max' : 'f-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? 'OK' : fmt(c)}</button>`;
-      el.querySelector('button').addEventListener('click', () => { if (C.fusionBuy(meta, u)) { A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderFusion(); } });
+      holdBuy(el.querySelector('button'), () => { if (!C.fusionBuy(meta, u)) return false; A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderFusion(); return true; });
       list.appendChild(el);
     }
   }
@@ -1768,7 +1768,7 @@
         <small>${f.desc}${l ? ` · <em>${FAC_FX[f.id](P, l)}</em>` : ''}${!mx && !need ? ` → <em>${FAC_FX[f.id](P, l + 1)}</em>` : ''}</small>
         <button data-fac="${f.id}" ${ok ? '' : 'disabled'}>${need ? 'braucht Bohrturm' : mx ? 'MAX' : (l ? 'Ausbau ' : 'Bauen ') + fmt(c)}</button></div>`;
     }).join('') : '';
-    $$('#mpFacs [data-fac]').forEach(b => b.addEventListener('click', () => { if (C.mineUpgrade(meta, P.id, b.dataset.fac)) { A.play('buy'); save(); renderMine(); } }));
+    $$('#mpFacs [data-fac]').forEach(b => holdBuy(b, () => { if (!C.mineUpgrade(meta, P.id, b.dataset.fac)) return false; A.play('buy'); save(); renderMine(); return true; }));
     // Raffinerie
     const owned = open ? [P] : [];
     $('refinery').innerHTML = owned.length ? owned.map(Q => {
@@ -1809,7 +1809,7 @@
       return `<div class="rrow" style="--pc:${Q.col}"><div>${R.name} <b class="num">+${Math.round(R.step * 100 * l)} %</b><small>St. ${l} → +${Math.round(R.step * 100 * (l + 1))} % · Vorrat ${fmt(ore)} ${Q.ore}</small></div><span></span>
         <button data-res="${Q.id}" ${ore < c ? 'disabled' : ''}>Forschen<br>${fmt(c)} ${Q.ore}</button></div>`;
     }).join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
-    $$('#research [data-res]').forEach(b => b.addEventListener('click', () => { if (C.research(meta, b.dataset.res)) { A.play('buy'); const R = C.RESEARCH[b.dataset.res]; mineNote(`Forschung: ${R.name} jetzt +${Math.round(R.step * 100 * C.researchLv(meta, b.dataset.res))} %.`); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#research [data-res]').forEach(b => holdBuy(b, () => { if (!C.research(meta, b.dataset.res)) return false; A.play('buy'); const R = C.RESEARCH[b.dataset.res]; mineNote(`Forschung: ${R.name} jetzt +${Math.round(R.step * 100 * C.researchLv(meta, b.dataset.res))} %.`); if (runAlive()) run.recalc(); save(); renderMine(); return true; }));
     $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
     $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); modReveal(d.type, d.rar, d.result, d); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.imp, w = b.dataset.w; if (C.modImprove(meta, t, w)) { A.play('loot'); modReveal(t, null, w === 'rar' ? 'besser' : w === 'mast' ? 'meister' : 'kopie'); if (runAlive()) run.recalc(); save(); renderMine(); } }));
