@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.03, rushBossT: 10, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.05, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 0.65,
@@ -650,7 +650,7 @@
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
         'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
-      const o = {}; keep.forEach(k => (o[k] = this[k])); o.spent = this.spent;
+      const o = {}; keep.forEach(k => (o[k] = this[k])); o.spent = this.spent; o.paid = this.paid; o.rush = this.rush; o.easyRun = this.easyRun; o.leaps = this.leaps;
       o.enemies = this.enemies.map(e => { const c = Object.assign({}, e); if (e.host) { c.hostId = e.host.id; delete c.host; } return c; });
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
       o.mines = this.mines.map(m => Object.assign({}, m));
@@ -785,6 +785,34 @@
       return true;
     }
 
+    // Wellensprung: n Wellen überspringen; Energie, Kristalle, Erfahrung und Boss (Sieg, Kristalle, Beutewurf) werden gutgeschrieben
+    leap(n) {
+      const from = this.wave;
+      let e = 0, k = 0;
+      for (let w = from + 1; w <= from + n; w++) {
+        e += waveEnergy(w) * this.s.loot + this.waveBonusAmount(w);
+        k += waveCrystals(w) * this.s.crysMult * (w % 10 === 0 ? 1 + P.cBoss : 1);
+        statOf(this.home).waves++; cmdState(this.home).xp += xpFor(w) * (w < record(this.home) * P.xpLowAt ? P.xpLow : 1);
+        if (w % 10 === 0) {
+          const kind = bossKind(w); if (kind) (this.home.bossBeat = this.home.bossBeat || {})[kind] = 1;
+          statOf(this.home).bosses++;
+          if (Math.max(record(this.meta), w) >= MODULES_AT) {
+            this.bossKills = (this.bossKills || 0) + 1;
+            const ch = dropChance(w) + 0.1 * (this.meta.dry || 0);
+            if (Math.random() < ch) { this.loot.push(rollModule(w)); this.meta.dry = 0; } else this.meta.dry = (this.meta.dry || 0) + 1;
+          }
+        }
+      }
+      this.energy += e; this.crystals += k; this.wave = from + n; this.leaps = (this.leaps || 0) + 1; this.easyRun = 0;
+      if (this.fxOn) this.fx.push({ k: 'leap', t: 0, from, to: from + n, e, c: k });
+    }
+    // Kristalle laufend gutschreiben (Labor schon während des Laufs nutzbar); finish() bucht nur noch den Rest
+    payCrystals() {
+      if (this.mode || this.admin) return 0;
+      const c = Math.floor(this.crystals) - (this.paid || 0); if (c <= 0) return 0;
+      this.meta.crystals += c; this.meta.totalCrystals = (this.meta.totalCrystals || 0) + c; this.paid = (this.paid || 0) + c; return c;
+    }
+
     // ---------- Auto-Kauf ----------
     // Geschätzter relativer Zugewinn einer Stufe für den Bereich des Upgrades (Angriff: Schaden pro Sekunde,
     // Abwehr: effektive Lebenspunkte und Reparatur, Ertrag: Einnahmen). Nebenwaffen zählen nach ihrem gemessenen Schadensanteil.
@@ -858,6 +886,18 @@
     nextWave() {
       // Bosskampf: nach der Bosswelle ist Schluss (gewonnen)
       if (this.mode && this.mode.kind === 'boss' && this.wave >= this.startWave) { this.won = true; this.dead = true; return; }
+      let doLeap = false;
+      // Durchmarsch: fiel die Welle mühelos (kaum Schaden, Feld leer, Boss schnell), laufen die nächsten Wellen gestaucht
+      if (this.wave > 0 && !this.mode && !this.admin) {
+        const hit = (this.taken || 0) - (this.takenW || 0), dur = this.time - (this.waveStartT || 0), bossW = this.wave % 10 === 0;
+        const easy = hit <= this.s.maxHp * P.rushHit && !this.enemies.some(e => e.hp > 0) && dur <= (bossW ? P.rushBossT : WAVE_LEN + 5);
+        this.easyRun = easy ? (this.easyRun || 0) + 1 : 0;
+        const fast = !(this.meta.settings && this.meta.settings.rush === 'off');
+        const was = this.rush; this.rush = fast && easy && this.wave + 1 < record(this.home) && (was || this.easyRun >= 2); // nur beim Aufholen unter dem Rekord; einmal an, bleibt er an, solange es mühelos bleibt
+        if (this.rush !== was && this.fxOn) this.fx.push({ k: 'rush', t: 0, on: this.rush });
+        // Wellensprung: ein ganzer mühelos geräumter Zehnerblock (mit Boss) unter dem Rekord → die nächsten 10 Wellen überspringen
+        doLeap = bossW && this.easyRun >= 10 && this.wave + 10 < record(this.home) && fast;
+      }
       if (this.wave > 0 && !this.skipCrystalsOnce) {
         this.crystals += waveCrystals(this.wave) * this.s.crysMult * (this.catchUp() ? P.catchCrys : 1);
         const bonus = this.waveBonusAmount();
@@ -865,8 +905,9 @@
       }
       if (this.wave > 0 && !this.admin && !(this.mode && this.mode.kind === 'boss')) { statOf(this.home).waves++; cmdState(this.home).xp += xpFor(this.wave) * (this.wave < record(this.home) * P.xpLowAt ? P.xpLow : 1); } // Wellen weit unter dem Rekord bringen kaum Erfahrung (kein Farmen)
       this.skipCrystalsOnce = false;
+      if (doLeap) this.leap(10); // nach der Gutschrift der gerade beendeten Welle
       this.wave++;
-      this.waveT = 0;
+      this.waveT = 0; this.takenW = this.taken || 0; this.waveStartT = this.time;
       this.holding = false;
       const w = this.wave;
       const boss = w % 10 === 0;
@@ -899,9 +940,9 @@
       // Bosswelle: nur der Boss; was er selbst aussetzt, kommt dazu. Die Energie der fehlenden Schiffe trägt er mit.
       if (boss) { this.bossRwAdd = waveCount(w) * ENEMY.grunt.rw * rwScale(w); list.length = 0; list.push('boss'); }
       this.queue = list;
-      this.spawnGap = boss ? 1 : SPAWN_LEN / list.length;
+      this.spawnGap = boss ? (this.rush ? 0.3 : 1) : this.rush ? Math.min(P.rushGap, SPAWN_LEN / list.length) : SPAWN_LEN / list.length;
       this.spawnT = 0;
-      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Boss' }).name : null, kind: WT.name, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
+      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Boss' }).name : null, kind: WT.name, rush: this.rush, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
     }
 
     // Neues Schiff an Weltposition (x, y) erzeugen
@@ -948,7 +989,11 @@
       this.placePart(pt);
       return pt;
     }
-    spawn(type) { this.spawnAt(type, (this.rng() * 2 - 1) * FIELD_W, -FIELD_H - this.rng() * 30); }
+    spawn(type) {
+      // Durchmarsch: Schiffe springen direkt an den Rand der Reichweite, statt erst heranzufliegen
+      if (this.rush && type !== 'boss') { const R = Math.min(FIELD_H, this.s.range * 0.85), a = -Math.PI / 2 + (this.rng() * 2 - 1) * 0.9; this.spawnAt(type, Math.cos(a) * R, Math.sin(a) * R - this.rng() * 15); return; }
+      this.spawnAt(type, (this.rng() * 2 - 1) * FIELD_W, -FIELD_H - this.rng() * 30);
+    }
     // Getarnte Schiffe sind auf Distanz nicht anvisierbar (Flächenschaden trifft sie trotzdem)
     cloaked(e) { if (this.s.mod && this.s.mod.scanner) return false; return (e.type === 'phantom' && e.dist > ENEMY.phantom.cloakFrom) || (e.cloakUntil && e.cloakUntil > this.time); }
 
@@ -1455,6 +1500,8 @@
       this.waveT += dt * (this.isChal && this.rule === 'fast' ? P.chalFastWave : 1) * (this.catchUp() ? P.catchSpeed : 1);
       // Aufholen: Feld leer und alles gestartet → nächste Welle sofort
       if (this.catchUp() && !this.queue.length && !this.enemies.some(e => e.hp > 0) && this.wave % 10 && this.waveT > 1) this.waveT = WAVE_LEN;
+      // Durchmarsch: sobald alles gestartet und das Feld leer ist, kommt die nächste Welle (auch der Boss) sofort
+      if (this.rush && !this.queue.length && this.waveT > 0.4 && !this.enemies.some(e => e.hp > 0)) this.waveT = Math.max(this.waveT, WAVE_LEN);
       for (const k in this.cd) this.cd[k] = Math.max(0, this.cd[k] - dt);
       this.spawnT += dt;
       while (this.queue.length && this.spawnT >= this.spawnGap) { if (this.enemies.length >= P.aliveCap) { this.spawnT = this.spawnGap; break; } this.spawnT -= this.spawnGap; this.spawn(this.queue.shift()); } // volles Feld: Nachschub wartet
@@ -1876,8 +1923,8 @@
     finish() {
       this.dead = true;
       if (this.mode) return this.finishMode();
-      const m = this.meta, c = Math.floor(this.crystals);
-      m.crystals += c; m.totalCrystals = (m.totalCrystals || 0) + c;
+      const m = this.meta, c = Math.floor(this.crystals), rest = c - (this.paid || 0);
+      m.crystals += rest; m.totalCrystals = (m.totalCrystals || 0) + rest; this.paid = c;
       m.runs++; m.kills += this.kills;
       const newBest = this.wave > m.best && !this.admin;
       if (newBest) m.best = this.wave;
@@ -2143,6 +2190,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.23.5'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.24.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

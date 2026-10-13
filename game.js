@@ -63,7 +63,7 @@
     if (name === 'codex') renderCodex();
     if (name === 'online') renderOnline();
     if (name === 'admin') renderAdmin();
-    if (name === 'pause') { syncSoundBtns(); if (run) $('pauseSub').textContent = `Welle ${run.wave} · Rekord ${C.record(meta)}`; }
+    if (name === 'pause') { syncPauseLab(); syncSoundBtns(); if (run) $('pauseSub').textContent = `Welle ${run.wave} · Rekord ${C.record(meta)}`; }
     if (name === 'fusion') renderFusion();
     if (name === 'modules') renderModules();
     if (name === 'chal') renderChal();
@@ -212,7 +212,7 @@
   $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
 
   // ---------- Einstellungen ----------
-  const SET_DEF = { fx: 'clear', numFmt: 'short', dmgNums: 'on', tips: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
+  const SET_DEF = { rush: 'on', fx: 'clear', numFmt: 'short', dmgNums: 'on', tips: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
   const setting = k => k === 'lang' ? ((window.KWI18n && KWI18n.lang) || 'de') : (meta.settings && meta.settings[k]) || SET_DEF[k];
   function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); R.setFxMode(setting('fx')); }
   function renderSettings() {
@@ -972,6 +972,8 @@
       + (fresh.length ? `<div class="mnew">${built.length ? 'Neuer Planet bereit' : 'Erster Planet bereit'}: ${fresh.map(P => P.name).join(', ')}</div>` : '');
   }
   $('mMine').addEventListener('click', () => { A.play('click'); show('mine'); });
+  // Pausenmenü: Punkt am Labor, wenn die laufend gutgeschriebenen Kristalle für etwas reichen
+  function syncPauseLab() { const c = C.cheapest(meta); $('labBtn3').classList.toggle('dot', !!(c && meta.crystals >= c.cost)); }
   function renderMenu() {
     renderLbTeaser(); renderMineTeaser(); if (O.configured) presence();
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
@@ -1047,6 +1049,8 @@
     // Zu tun: höchstens drei Einträge, Tipp springt an die richtige Stelle
     const todo = [];
     const add = (cond, txt, area, btn) => { if (cond) todo.push({ txt, area, btn }); };
+    { const u = C.META_UPG.find(x => x.id === 'm_jump'), l = C.mlv(meta, 'm_jump');
+      if (C.mlv(meta, 'u_jump') && u && l < u.max && meta.crystals >= C.metaCost(u, l)) add(true, `Sprungweite: Start ab Welle ${C.maxStartWave(meta, l + 1)} statt ${C.maxStartWave(meta, l)}`, 'Labor', 'labBtn'); }
     add(fbUnread > 0, fbUnread === 1 ? 'Neue Antwort auf dein Feedback' : `${fbUnread} neue Antworten auf dein Feedback`, 'Feedback', 'fbBtn');
     add(!meta.name && (meta.runs || 0) >= 1, 'Gib dir einen Namen, damit du in den Highscores erscheinst', 'Profil', 'mMeProf');
     add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kommandant', 'cmdBtn');
@@ -2178,7 +2182,7 @@
     if (live) {
       let left = realDt * speed;
       while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
-      autoT += realDt; if (autoT > 0.3) { autoT = 0; autoBuy(); if (meta.autoCall && !run.queue.length && run.canCallWave()) run.callWave(); }
+      autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); autoBuy(); if (meta.autoCall && !run.queue.length && run.canCallWave()) run.callWave(); }
       dpsT += realDt * speed; if (dpsT >= 1) { dpsT = 0; sampleDps(); }
       for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); }
       run.fx.length = 0;
@@ -2201,7 +2205,7 @@
         $('bestNo').textContent = txt; $('bestNo').classList.toggle('rec', !!hit);
       } else {
         const rec = run.wave > meta.best && meta.best > 0;
-        $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : rec ? 'NEUER REKORD' : 'Rekord ' + meta.best + (run.catchUp() ? ' · Aufholen ×2' : '');
+        $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : rec ? 'NEUER REKORD' : 'Rekord ' + meta.best + (run.rush ? ' · Durchmarsch' : run.catchUp() ? ' · Aufholen ×2' : '');
         $('bestNo').classList.toggle('rec', rec);
       }
       $('runK').textContent = fmt(Math.floor(run.crystals));
