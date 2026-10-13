@@ -970,6 +970,7 @@
     st('mineBtn', $('mineBtn').classList.contains('new') ? 'Lager voll' : '');
     st('hangBtn', $('hangBtn').classList.contains('new') ? 'neu' : '');
     st('achBtn', C.achPoints(meta) + ' Stufen');
+    { const n = cxCount(); st('codexBtn', n + '/34'); $('codexBtn').classList.toggle('dot', meta.cxSeen == null || n > meta.cxSeen); }
     // Bereiche: nur zeigen, was freigeschaltet ist; Punkt, wenn darin etwas wartet
     const vis = pg => [...document.querySelectorAll(`#menu .mpage[data-page="${pg}"] .tile`)].filter(t => !t.hidden);
     const beginner = vis('cannon').length <= 1;
@@ -1349,7 +1350,13 @@
     for (let z = 1; z <= 5; z++) C.BOSS_ROSTER[z].forEach((k, i) => out.push({ k, z, w: (z - 1) * 50 + (i + 1) * 10, B: C.BOSS_KINDS[k] }));
     return out;
   }
+  // Entdeckte Einträge (Gegner und Bosse) nach Rekordwelle; ohne Bezug auf spätere Konstanten, da auch beim Start gerufen
+  function cxCount() {
+    const rec = C.record(meta), ew = [1, 3, 6, 15, 50, 51, 101, 151, 201];
+    return ew.filter(w => rec >= w).length + Math.min(25, Math.floor(rec / 10));
+  }
   function renderCodex() {
+    meta.cxSeen = cxCount(); save();
     const rec = C.record(meta), el = $('cxList');
     $$('#cxTabs [data-cx]').forEach(b => b.setAttribute('aria-selected', b.dataset.cx === cxTab ? 'true' : 'false'));
     cxVis.clear(); if (cxObs) cxObs.disconnect();
@@ -1402,7 +1409,7 @@
   }
   $$('#cxTabs [data-cx]').forEach(b => b.addEventListener('click', () => { cxTab = b.dataset.cx; A.play('click'); renderCodex(); $('cxList').scrollTop = 0; }));
   $('cxClose').addEventListener('click', home);
-  $('codexBtn').addEventListener('click', () => show('codex'));
+  $$('.codex-btn').forEach(b => b.addEventListener('click', () => { A.play('click'); show('codex'); }));
 
   // ---------- Profil: Name und Profilbild ----------
   const AV_COLORS = ['#3ef0ff', '#ff4fa0', '#ffc04d', '#5dffb0', '#c3a6ff', '#ff8a3d', '#7da8ff', '#f4f1ff'];

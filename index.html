@@ -779,7 +779,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <section class="mpage" data-page="start">
         <div class="mtop"><h1 id="title">Kern<span>wacht</span></h1><div class="mrank" id="mRankBox" hidden>Rang<b id="mRank">0</b></div></div>
         <button class="pollbanner" hidden></button>
-        <p class="mintro" id="mIntro">Deine Kanone hält, bis sie fällt. Jeder Fall bringt Kristalle, und im Labor wird die nächste Kanone stärker.</p>
+        <p class="mintro" id="mIntro">Die letzte Wacht am Rand der Galaxis. Halte so viele Wellen wie möglich – jeder Lauf bringt Kristalle, mit denen deine Kanone im Labor dauerhaft stärker wird.</p>
         <div class="stats">
           <div class="stat"><div class="l">Bestwelle</div><div class="v num" id="mBest">0</div></div>
           <div class="stat"><div class="l">Kristalle</div><div class="v num k" id="mK">0</div></div>
@@ -816,7 +816,8 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <button class="tile boss-btn" id="bossBtn" style="--tc:#ff4ff0"><span class="ic">☠</span><span class="tx"><b>Bosse</b><small>Besiegte Bosse direkt herausfordern</small></span><span class="st" id="st-bossBtn"></span></button>
       </section>
       <section class="mpage" data-page="world" hidden>
-        <h2>Welt</h2><p class="mdesc">Planeten, Rohstoffe und das Aussehen deiner Kanone.</p>
+        <h2>Welt</h2><p class="mdesc">Planeten, Rohstoffe, alles über Gegner und Waffen und das Aussehen deiner Kanone.</p>
+        <button class="tile codex-btn" id="codexBtn" style="--tc:#ff8a3d"><span class="ic">❖</span><span class="tx"><b>Kompendium</b><small>Gegner, Bosse und Waffen</small></span><span class="st" id="st-codexBtn"></span></button>
         <button class="tile mine-btn" id="mineBtn" style="--tc:var(--heat)"><span class="ic">⛏</span><span class="tx"><b>Bergbau</b><small>Rohstoffe fördern, Raffinerie, Forschung, Werkstatt</small></span><span class="st" id="st-mineBtn"></span></button>
         <button class="tile hang-btn" id="hangBtn" style="--tc:var(--core)"><span class="ic">✧</span><span class="tx"><b>Hangar</b><small>Farben, Formen und Verzierungen</small></span><span class="st" id="st-hangBtn"></span></button>
       </section>
@@ -825,7 +826,6 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <button class="tile ach-btn" id="achBtn" style="--tc:#ffd23f"><span class="ic">♛</span><span class="tx"><b>Erfolge</b><small>Stufen mit dauerhaften Boni</small></span><span class="st" id="st-achBtn"></span></button>
         <button class="tile lb-btn" id="lbBtn" style="--tc:var(--core)"><span class="ic">≡</span><span class="tx"><b>Highscores</b><small>Rekorde und Tagesliste</small></span><span class="st" id="st-lbBtn"></span></button>
         <button class="tile prof-btn" id="profBtn" style="--tc:#c3a6ff"><span class="ic">☺</span><span class="tx"><b>Profil</b><small>Name, Profilbild, Geräte verbinden</small></span><span class="st" id="st-profBtn"></span></button>
-        <button class="tile" id="codexBtn" style="--tc:#ff8a3d"><span class="ic">❖</span><span class="tx"><b>Kompendium</b><small>Gegner, Bosse und Waffen</small></span><span class="st" id="st-codexBtn"></span></button>
         <button class="tile set-btn" id="setBtn" style="--tc:var(--ink-dim)"><span class="ic">⚙</span><span class="tx"><b>Optionen</b><small>Ton, Zahlen, Sprache, Hinweise</small></span><span class="st" id="st-setBtn"></span></button>
         <button class="tile fb-btn" id="fbBtn" style="--tc:#ffd23f"><span class="ic">✉</span><span class="tx"><b>Feedback</b><small>Fehler melden, Ideen schicken</small></span><span class="st" id="st-fbBtn"></span></button>
         <button class="tile guide-btn" id="guideBtn" style="--tc:var(--heal)"><span class="ic">?</span><span class="tx"><b>Anleitung</b><small>Wie alles funktioniert</small></span><span class="st" id="st-guideBtn"></span></button>
@@ -856,8 +856,9 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
   <div class="card pz">
     <div class="pz-head"><h2 id="pauseTitle">Pause</h2><span id="pauseSub"></span></div>
     <button class="cta" id="resumeBtn2">Weiterspielen</button>
-    <div class="actions three">
+    <div class="actions two">
       <button class="sec" id="labBtn3">Labor</button>
+      <button class="sec codex-btn">Kompendium</button>
       <button class="sec" id="lbBtn2">Highscores</button>
       <button class="sec prof-btn">Profil</button>
     </div>
@@ -1019,7 +1020,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <div class="gitem"><b>Updates</b><p>Neue Versionen lädt die App von selbst. Unter „Mehr“ kannst du auch gezielt nach einem Update suchen.</p></div>
     </details>
     <details class="gsec"><summary>Grundlagen</summary>
-      <div class="gitem"><b>Ziel</b><p>Deine Kanone verteidigt sich allein gegen Welle um Welle. Sie hält, bis sie fällt. Jeder Lauf bringt Kristalle, mit denen du im Labor dauerhaft stärker wirst.</p></div>
+      <div class="gitem"><b>Ziel</b><p>Deine Kanone verteidigt sich allein gegen Welle um Welle. Irgendwann fällt sie, doch jeder Lauf bringt Kristalle, mit denen du im Labor dauerhaft stärker wirst.</p></div>
       <div class="gitem"><b>Energie</b><p>Abschüsse bringen Energie. Damit kaufst du während des Laufs Upgrades in den Reitern Angriff, Abwehr und Ertrag. Mit AUTO kauft das Spiel für dich.</p></div>
       <div class="gitem"><b>Wellen</b><p>Alle 20 Sekunden kommt eine neue Welle. „Welle ▸▸“ ruft sie früher und bringt Bonus-Energie. Jede zehnte Welle ist eine Bosswelle: Der Boss kommt allein, Schiffe bringt er nur selbst mit. Solange er lebt, kommt keine neue Welle. Jede Zone hat vier Wächter und in Welle x50 einen riesigen Herrscher mit Phasen und Bauteilen wie Geschütztürmen, die man gezielt zerstören kann.</p></div>
       <div class="gitem"><b>Tempo</b><p>Mit 1×, 2× und 4× läuft das Spiel schneller. II pausiert.</p></div>

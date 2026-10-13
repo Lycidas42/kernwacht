@@ -17,7 +17,7 @@ window.KW_EN = {
   'Tippen': 'Tap', 'Tippen:': 'Tap:',
 
   // ---------- Menü ----------
-  'Deine Kanone hält, bis sie fällt. Jeder Fall bringt Kristalle, und im Labor wird die nächste Kanone stärker.': 'Your cannon holds until it falls. Every fall earns crystals, and in the lab the next cannon grows stronger.',
+  'Die letzte Wacht am Rand der Galaxis. Halte so viele Wellen wie möglich – jeder Lauf bringt Kristalle, mit denen deine Kanone im Labor dauerhaft stärker wird.': 'The last watch at the edge of the galaxy. Hold as many waves as you can – every run earns crystals that make your cannon permanently stronger in the lab.',
   'Deine Kanone': 'Your cannon',
   'Bestwelle': 'Best wave', 'Läufe': 'Runs', 'Kristalle': 'Crystals', 'Kernfragmente': 'Core fragments',
   'Nächste Freischaltung': 'Next unlock', 'Rekord': 'Record', 'Rekord {0}': 'Record {0}', 'WELLE {0}': 'WAVE {0}',
@@ -223,6 +223,7 @@ window.KW_EN = {
   'Abstimmen': 'Vote', 'Später': 'Later',
   'Neue Umfrage': 'New poll', 'Tippen zum Abstimmen': 'Tap to vote', 'Ergebnis ansehen': 'See results',
   'Bestenliste · Rekord': 'Leaderboard · Record', 'alle ansehen ›': 'see all ›', 'Dein Platz': 'Your place', 'von {0}': 'of {0}', 'Noch {0} Wellen bis an {1} vorbei': '{0} more waves to pass {1}',
+  'Planeten, Rohstoffe, alles über Gegner und Waffen und das Aussehen deiner Kanone.': 'Planets, resources, everything about enemies and weapons, and the look of your cannon.',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',
@@ -516,7 +517,7 @@ window.KW_EN = {
   "Anleitung": "Guide",
   "Grundlagen": "Basics",
   "Ziel": "Goal",
-  "Deine Kanone verteidigt sich allein gegen Welle um Welle. Sie hält, bis sie fällt. Jeder Lauf bringt Kristalle, mit denen du im Labor dauerhaft stärker wirst.": "Your cannon defends itself against wave after wave. It holds until it falls. Every run earns crystals that make you permanently stronger in the lab.",
+  "Deine Kanone verteidigt sich allein gegen Welle um Welle. Irgendwann fällt sie, doch jeder Lauf bringt Kristalle, mit denen du im Labor dauerhaft stärker wirst.": "Your cannon defends itself against wave after wave. Eventually it falls, but every run earns crystals that make you permanently stronger in the lab.",
   "Energie": "Energy",
   "Abschüsse bringen Energie. Damit kaufst du während des Laufs Upgrades in den Reitern Angriff, Abwehr und Ertrag. Mit AUTO kauft das Spiel für dich.": "Kills give energy. Use it during the run to buy upgrades in the Attack, Defense and Yield tabs. AUTO buys for you.",
   "Wellen": "Waves",
