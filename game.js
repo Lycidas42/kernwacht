@@ -42,6 +42,8 @@
 
   // ---------- Zustand ----------
   let catching = false;
+  let slowPrev = 0;
+  function setSpeedUI(v) { speed = v; $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.speed === v ? 'true' : 'false')); }
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
@@ -1728,6 +1730,12 @@
       for (const e of run.enemies) if (e.type === 'boss' && e.hp > 0 && (!boss || e.hp > boss.hp)) boss = e;
       const bb = $('bossBar');
       if (bb.hidden !== !boss) bb.hidden = !boss;
+      // Unbesiegter Boss: Tempo auf 1×, bis er fällt (danach zurück auf das gewählte Tempo)
+      if (boss && boss.kind && !boss.child && !(meta.bossBeat || {})[boss.kind] && run.slowFor !== boss.id) {
+        run.slowFor = boss.id;
+        if (speed > 1) { slowPrev = speed; setSpeedUI(1); toast(`<b>Neuer Boss: ${C.BOSS_KINDS[boss.kind].name}</b><br>Tempo 1×, bis du ihn zum ersten Mal besiegt hast.`, 4000); }
+      }
+      if (!boss && slowPrev) { setSpeedUI(slowPrev); slowPrev = 0; }
       if (boss) {
         const pct = Math.max(0, boss.hp / boss.maxHp * 100);
         bb.querySelector('.bar i').style.width = pct + '%';

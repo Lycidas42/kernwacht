@@ -137,6 +137,14 @@
         // Heiler: Ring mit Kreuz
         ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); fillHull(); glow(c, 1.6);
         ctx.beginPath(); ctx.moveTo(-r * 0.5, 0); ctx.lineTo(r * 0.5, 0); ctx.moveTo(0, -r * 0.5); ctx.lineTo(0, r * 0.5); glow(c, 1.8);
+      } else if (e.type === 'part' && e.pk === 'tentacle') {
+        // Tentakelspitze: Saugnapf-Klaue (der Arm selbst wird vorab gezeichnet)
+        poly([[r * 1.6, 0], [r * 0.2, -r * 0.9], [-r * 0.6, -r * 0.5], [-r * 0.6, r * 0.5], [r * 0.2, r * 0.9]]); fillHull(); glow(c, 1.6);
+        ctx.beginPath(); ctx.arc(r * 0.1, 0, r * 0.32, 0, 7); ctx.fillStyle = e.tst === 2 ? '#ffffff' : c; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1;
+      } else if (e.type === 'part' && e.pk === 'segment') {
+        // Wurmsegment: Panzerplatte mit glühender Fuge
+        hexPath(r * 1.05, t * 0.001 + e.si); fillHull(); glow(c, 1.6);
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.45, 0, 7); ctx.fillStyle = '#ff6a3d'; ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 0.008 + e.si * 1.3); ctx.fill(); ctx.globalAlpha = 1;
       } else if (e.type === 'part') {
         // Geschützturm auf dem Rumpf des Bosses
         ctx.beginPath(); ctx.arc(0, 0, r * 1.05, 0, 7); fillHull(); glow(c, 1.6);
@@ -224,6 +232,93 @@
         core(-r * 0.25, 0, r * (0.14 + 0.05 * (e.phase || 0)));
         if (e.phase >= 1) { ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 0.92); ctx.lineTo(-r * 0.05, -r * 0.6); ctx.lineTo(-r * 0.25, -r * 0.4); glow('#ff6a3d', 1.2, 0.8); }
         if (e.phase >= 2) { ctx.beginPath(); ctx.moveTo(r * 0.4, r * 0.92); ctx.lineTo(r * 0.25, r * 0.55); ctx.lineTo(r * 0.45, r * 0.4); glow('#ff6a3d', 1.2, 0.8); }
+        return true;
+      }
+      const wob = (k2, a) => Math.sin(t * k2 + sd) * a;
+      if (k === 'ray') {
+        // Nebelrochen: breite, schlagende Flügel und langer Schwanz
+        const f = wob(0.004, 0.18);
+        ctx.beginPath(); ctx.moveTo(r * 1.0, 0);
+        ctx.quadraticCurveTo(r * 0.3, -r * (1.1 + f), -r * 0.3, -r * (1.7 + f)); ctx.quadraticCurveTo(-r * 0.4, -r * 0.6, -r * 0.8, 0);
+        ctx.quadraticCurveTo(-r * 0.4, r * 0.6, -r * 0.3, r * (1.7 + f)); ctx.quadraticCurveTo(r * 0.3, r * (1.1 + f), r * 1.0, 0); ctx.closePath(); fillHull(); glow(c, 2.2);
+        ctx.beginPath(); ctx.moveTo(-r * 0.8, 0); ctx.quadraticCurveTo(-r * 1.6, wob(0.006, r * 0.4), -r * 2.4, wob(0.005, r * 0.5)); glow(c, 1.4);
+        for (const sg of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.55, sg * r * 0.28, r * 0.1, 0, 7); ctx.fillStyle = c; ctx.fill(); }
+        core(r * 0.05, 0, r * 0.2);
+        return true;
+      }
+      if (k === 'jelly') {
+        // Sporenqualle: Glocke mit treibenden Fäden, Sporen pulsieren im Inneren
+        for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(-r * 0.3, i * r * 0.2); ctx.quadraticCurveTo(-r * 1.1, i * r * 0.24 + wob(0.005 + i * 0.0007, r * 0.25), -r * 1.8, i * r * 0.28 + wob(0.004, r * 0.35)); glow(c, 1, 0.55); }
+        ctx.beginPath(); ctx.ellipse(r * 0.15, 0, r * 0.85, r * (1.05 + wob(0.004, 0.06)), 0, -Math.PI / 2, Math.PI / 2); ctx.lineTo(-r * 0.3, r * 0.9); ctx.quadraticCurveTo(-r * 0.45, 0, -r * 0.3, -r * 0.9); ctx.closePath(); fillHull(); glow(c, 2.2);
+        for (let i = 0; i < 5; i++) { const a = i * 1.3 + t * 0.001; ctx.beginPath(); ctx.arc(r * 0.2 + Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.5, r * 0.1, 0, 7); ctx.fillStyle = '#c9ff4f'; ctx.globalAlpha = 0.5 + 0.4 * Math.sin(t * 0.008 + i); ctx.fill(); ctx.globalAlpha = 1; }
+        core(r * 0.2, 0, r * 0.18);
+        return true;
+      }
+      if (k === 'squid' || k === 'leviathan') {
+        // Tentakler / Leviathan: Mantel mit Augen; Leviathan größer, mit Rückenkamm
+        const L = k === 'leviathan';
+        ctx.beginPath(); ctx.moveTo(r * 0.85, 0); ctx.bezierCurveTo(r * 0.8, -r * 1.05, -r * 1.2, -r * 0.9, -r * 1.5, 0); ctx.bezierCurveTo(-r * 1.2, r * 0.9, r * 0.8, r * 1.05, r * 0.85, 0); ctx.closePath(); fillHull(); glow(c, L ? 2.8 : 2.2);
+        if (L) { ctx.beginPath(); for (let i = 0; i < 6; i++) { const x = -r * 1.2 + i * r * 0.32; ctx.moveTo(x, -r * 0.1); ctx.lineTo(x - r * 0.12, -r * 0.45); } glow(c, 1.2, 0.7); }
+        for (const sg of [-1, 1]) { ctx.beginPath(); ctx.arc(r * 0.35, sg * r * 0.42, r * 0.17, 0, 7); ctx.fillStyle = '#05050f'; ctx.fill(); glow(c, 1.2); ctx.beginPath(); ctx.arc(r * 0.4, sg * r * 0.42, r * 0.07, 0, 7); ctx.fillStyle = e.enraged ? '#ff3030' : '#ffffff'; ctx.fill(); }
+        core(-r * 0.45, 0, r * 0.2);
+        return true;
+      }
+      if (k === 'queen') {
+        // Schwarmkönigin: Insektenleib mit Brutsäcken und Mandibeln
+        for (const sg of [-1, 1]) { ctx.beginPath(); ctx.ellipse(-r * 0.2, sg * r * 0.95, r * 0.55, r * 0.22, sg * (0.5 + wob(0.012, 0.15)), 0, 7); ctx.fillStyle = 'rgba(79,255,200,0.12)'; ctx.fill(); glow(c, 1, 0.6); }
+        ctx.beginPath(); ctx.ellipse(-r * 0.75, 0, r * 0.7, r * 0.5, 0, 0, 7); fillHull(); glow(c, 1.8);
+        ctx.beginPath(); ctx.ellipse(r * 0.2, 0, r * 0.45, r * 0.42, 0, 0, 7); fillHull(); glow(c, 2.2);
+        ctx.beginPath(); ctx.ellipse(r * 0.85, 0, r * 0.3, r * 0.3, 0, 0, 7); fillHull(); glow(c, 1.8);
+        for (const sg of [-1, 1]) { ctx.beginPath(); ctx.moveTo(r * 1.05, sg * r * 0.15); ctx.quadraticCurveTo(r * 1.45, sg * r * 0.35, r * 1.4, sg * r * (0.05 + Math.abs(wob(0.01, 0.1)))); glow(c, 1.4); }
+        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(-r * (0.45 + i * 0.2), (i % 2 ? 1 : -1) * r * 0.18, r * 0.08, 0, 7); ctx.fillStyle = '#c9ff4f'; ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(t * 0.006 + i)); ctx.fill(); ctx.globalAlpha = 1; }
+        core(r * 0.2, 0, r * 0.16);
+        return true;
+      }
+      if (k === 'emberorb') {
+        // Glutorb: glühende Kugel mit Ringen
+        const g = ctx.createRadialGradient(0, 0, r * 0.1, 0, 0, r); g.addColorStop(0, '#fff2c0'); g.addColorStop(0.35, '#ff9a3c'); g.addColorStop(1, 'rgba(255,90,40,0.15)');
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.9, 0, 7); ctx.fillStyle = g; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1; glow(c, 2.2);
+        for (let i = 0; i < 2; i++) { ctx.save(); ctx.rotate(t * (i ? -0.0013 : 0.0017)); ctx.beginPath(); ctx.ellipse(0, 0, r * (1.25 + i * 0.25), r * (0.4 + i * 0.12), 0, 0, 7); glow(c, 1.3, 0.75); ctx.restore(); }
+        core(0, 0, r * 0.22);
+        return true;
+      }
+      if (k === 'worm') {
+        // Magmawurm-Kopf: gepanzerte Schnauze mit Kiefern (die Glieder sind eigene Bauteile)
+        const jaw = 0.25 + Math.abs(wob(0.006, 0.25));
+        for (const sg of [-1, 1]) { poly([[r * 0.4, sg * r * 0.3], [r * 1.6, sg * r * jaw], [r * 0.9, sg * r * 0.8]]); fillHull(); glow(c, 1.6); }
+        hexPath(r * 1.0, 0); fillHull(); glow(c, 2.2);
+        ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.5); ctx.lineTo(r * 0.2, -r * 0.2); ctx.lineTo(-r * 0.2, r * 0.3); ctx.lineTo(r * 0.5, r * 0.6); glow('#ff6a3d', 1.2, 0.8);
+        if (e.segs > 0) { ctx.beginPath(); ctx.arc(0, 0, r * 1.3, 0, 7); ctx.setLineDash([3, 4]); glow('#ffd23f', 1, 0.45); ctx.setLineDash([]); }
+        core(-r * 0.1, 0, r * 0.2);
+        return true;
+      }
+      if (k === 'bulwarkcr') {
+        // Bollwerkkreuzer: Ramme mit breitem Frontschild
+        for (const o of [-0.5, 0.5]) flame(-r * 1.0, r * o, r * 1.2 * fl, r * 0.16, '#ffc07a', t, sd + o);
+        poly([[r * 0.9, -r * 0.6], [-r * 0.8, -r * 0.75], [-r * 1.05, 0], [-r * 0.8, r * 0.75], [r * 0.9, r * 0.6]]); fillHull(); glow(c, 2.2);
+        ctx.beginPath(); ctx.arc(r * 0.4, 0, r * 1.05, -0.9, 0.9); glow('#ffd23f', 3, 0.85);
+        ctx.beginPath(); for (const y of [-0.35, 0, 0.35]) { ctx.moveTo(-r * 0.6, y * r); ctx.lineTo(r * 0.5, y * r); } glow(c, 1, 0.4);
+        core(-r * 0.35, 0, r * 0.2);
+        return true;
+      }
+      if (k === 'forge') {
+        // Schmiedeschiff: Amboss-Rumpf, glühende Esse und Strahlrohr
+        for (const o of [-0.45, 0.45]) flame(-r * 1.05, r * o, r * 1.3 * fl, r * 0.16, '#ffc07a', t, sd + o);
+        poly([[r * 0.7, -r * 0.95], [r * 0.25, -r * 0.45], [-r * 1.0, -r * 0.6], [-r * 1.0, r * 0.6], [r * 0.25, r * 0.45], [r * 0.7, r * 0.95], [r * 0.95, r * 0.5], [r * 0.95, -r * 0.5]]); fillHull(); glow(c, 2.2);
+        poly([[r * 1.9, -r * 0.12], [r * 0.95, -r * 0.22], [r * 0.95, r * 0.22], [r * 1.9, r * 0.12]]); fillHull(); glow(c, 1.4);
+        const ch = e.laser > 0 ? 1 - e.laser / 2 : 0;
+        ctx.beginPath(); ctx.arc(r * 1.9, 0, r * (0.1 + 0.3 * ch), 0, 7); ctx.fillStyle = ch ? '#ff3030' : '#ff9a3c'; ctx.fill();
+        const g = ctx.createRadialGradient(-r * 0.3, 0, 0, -r * 0.3, 0, r * 0.45); g.addColorStop(0, '#fff2c0'); g.addColorStop(1, 'rgba(255,120,40,0)');
+        ctx.beginPath(); ctx.arc(-r * 0.3, 0, r * 0.45, 0, 7); ctx.fillStyle = g; ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 0.01); ctx.fill(); ctx.globalAlpha = 1;
+        return true;
+      }
+      if (k === 'titan') {
+        // Vulkan-Titan: Asteroidenfestung mit Kraterschlot; die Geschütze sind eigene Bauteile
+        ctx.beginPath(); for (let i = 0; i < 11; i++) { const a = i / 11 * Math.PI * 2, rr = r * (0.95 + 0.12 * Math.sin(i * 2.7)); ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr * 1.05, Math.sin(a) * rr); } ctx.closePath(); fillHull(); glow(c, 2.8);
+        ctx.beginPath(); ctx.moveTo(-r * 0.8, -r * 0.3); ctx.lineTo(-r * 0.2, -r * 0.1); ctx.lineTo(r * 0.1, -r * 0.6); ctx.moveTo(-r * 0.6, r * 0.5); ctx.lineTo(0, r * 0.2); ctx.lineTo(r * 0.5, r * 0.45); glow('#ff6a3d', 1.4, 0.75);
+        for (const [fx, ly] of [[22, -36], [22, 36], [-20, -38], [-20, 38]]) { ctx.beginPath(); ctx.arc(fx / 1.5, ly / 1.5, r * 0.26, 0, 7); ctx.fillStyle = '#0d0c22'; ctx.fill(); glow(c, 1, 0.5); }
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.45); g.addColorStop(0, '#fff2c0'); g.addColorStop(0.5, '#ff6a3d'); g.addColorStop(1, 'rgba(255,80,30,0)');
+        ctx.beginPath(); ctx.arc(0, 0, r * (0.4 + 0.05 * (e.phase || 0)), 0, 7); ctx.fillStyle = g; ctx.globalAlpha = beat; ctx.fill(); ctx.globalAlpha = 1;
         return true;
       }
       return false;
@@ -591,6 +686,26 @@
         ctx.beginPath(); ctx.arc(0, 0, Math.max(0, R.r - 12), Math.PI, 0); glow(PAL.core, 1, 0.35 * (1 - k));
       }
 
+      // Tentakelarme und Wurmglieder: Verbindungen vom Boss zu seinen Bauteilen, unter den Schiffen
+      for (const e of run.enemies) {
+        if (!e.host || e.hp <= 0 || (e.pk !== 'tentacle' && e.pk !== 'segment')) continue;
+        const h = e.host, hp = run.pos(h), p = run.pos(e), col = BOSS_COL[(h.sector || 1) - 1];
+        if (e.pk === 'segment') {
+          // Glied an Glied: zum Kopf bzw. zum inneren Nachbarn
+          const inner = e.si ? run.enemies.find(o => o.host === h && o.pk === 'segment' && o.side === e.side && o.si === e.si - 1 && o.hp > 0) : h;
+          if (!inner) continue; const q = run.pos(inner);
+          ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(p.x, p.y); ctx.lineWidth = 9; ctx.strokeStyle = HULL; ctx.stroke(); glow(col, 1.2, 0.6);
+          continue;
+        }
+        const dx = p.x - hp.x, dy = p.y - hp.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, seg = 14;
+        ctx.beginPath();
+        for (let i = 0; i <= seg; i++) {
+          const k = i / seg, wv = Math.sin(t * 0.006 + k * 5 + e.seed) * 7 * Math.sin(k * Math.PI) * (1 - 0.6 * e.ext);
+          const x = hp.x + dx * k + nx * wv, y = hp.y + dy * k + ny * wv; ctx[i ? 'lineTo' : 'moveTo'](x, y);
+        }
+        ctx.lineWidth = 7 - 2 * e.ext; ctx.strokeStyle = HULL; ctx.lineCap = 'round'; ctx.stroke(); glow(e.tst === 2 ? '#ffffff' : col, e.tst === 2 ? 1.8 : 1.3, 0.85); ctx.lineCap = 'butt';
+      }
+
       // Schiffe
       for (const e of run.enemies) {
         const p = run.pos(e);
@@ -653,7 +768,7 @@
         if (b.oc) { ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - (tp.x - b.x) / d * 26, b.y - (tp.y - b.y) / d * 26); glow('#ffe38a', 4); ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fillStyle = '#fff6cc'; ctx.fill(); continue; }
         glow(b.pierced ? '#c8b6ff' : b.crit ? PAL.energy : run.overActive ? PAL.heat : PAL.core, b.crit || b.pierced ? 2.4 : 1.7);
       }
-      for (const b of run.ebullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.big ? 5 : 3, 0, 7); glow(b.big ? SHIP.boss : '#c9ff4f', 1.5); }
+      for (const b of run.ebullets) { ctx.beginPath(); ctx.arc(b.x, b.y, b.rad || (b.big ? 5 : 3), 0, 7); if (b.col) { ctx.fillStyle = b.col; ctx.globalAlpha = 0.35; ctx.fill(); ctx.globalAlpha = 1; } glow(b.col || (b.big ? SHIP.boss : '#c9ff4f'), 1.5); }
       // Orbitklingen
       if (s.blades) {
         // Bahn der Klingen dezent andeuten
@@ -816,7 +931,7 @@
           ctx.font = `600 ${f.crit ? 13 : 11}px ${FONT_NUM()}`; ctx.textAlign = 'center';
           ctx.fillText(fmt(f.v), f.x + f.dx, f.y - 18 - k * 18); ctx.globalAlpha = 1;
         } else if (f.k === 'bossact') {
-          const label = { broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
+          const label = { spores: 'SPOREN', swarm: 'SCHWARM', fireball: 'FEUERBÄLLE', lava: 'LAVAREGEN', mirror: 'SPIEGEL', pull: 'SOG', sever: 'TENTAKEL ABGETRENNT', regrow: 'TENTAKEL WÄCHST NACH', segment: 'GLIED ZERSTÖRT', split: 'ZERFÄLLT', rebirth: 'WIEDERGEBURT', broadside: 'BREITSEITE', mines: 'MINENTEPPICH', hangar: 'HANGAR ÖFFNET', phase: 'NEUE PHASE', part: 'GESCHÜTZ ZERSTÖRT', salvo: 'SALVE', spawn: 'JÄGERSTAFFEL', bomb: 'BOMBE', shield: 'SCHILD', laser: 'LASER LÄDT', broken: 'LASER ABGEBROCHEN', cloak: 'TARNUNG', bulwarks: 'SCHILDTRÄGER', nova: 'NOVA', mend: 'REPARATUR' }[f.act];
           ctx.globalAlpha = a; ctx.fillStyle = SHIP.boss; ctx.font = `700 13px ${FONT_UI()}`; ctx.textAlign = 'center';
           ctx.fillText(label, f.x, f.y - 52 - k * 10); ctx.globalAlpha = 1;
         }
