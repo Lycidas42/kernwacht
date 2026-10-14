@@ -26,14 +26,24 @@
   }
   // Fusionskern neu bewertet (ab Stufe 200 steigen die Kosten wieder exponentiell): alte Ausgaben anrechnen und neu kaufen
   function migrateFusionCore() {
-    if ((meta.fcoreV || 0) >= 2) return;
+    // v3: späte Kosten ×1,028 statt ×1,02 je Stufe; mit v2-Kosten ausgegebene Fragmente neu verrechnen
+    if ((meta.fcoreV || 0) === 2) {
+      const u = C.FUSION_UPG.find(x => x.id === 'f_core'), L = C.flv(meta, 'f_core');
+      if (u && L > u.late) {
+        let spent = 0; for (let l = 0; l < L; l++) spent += C.fusionCostG(u, l, 1.02);
+        let nl = 0; while (C.fusionCost(u, nl) <= spent) { spent -= C.fusionCost(u, nl); nl++; }
+        meta.flv.f_core = nl; meta.frag = (meta.frag || 0) + spent; meta.fcoreNote = { from: L, to: nl };
+      }
+      meta.fcoreV = 3; return;
+    }
+    if ((meta.fcoreV || 0) >= 3) return;
     const u = C.FUSION_UPG.find(x => x.id === 'f_core'), L = C.flv(meta, 'f_core');
     if (u && L > u.late) {
       let spent = 0; for (let l = 0; l < L; l++) spent += C.fusionCostOld(u, l);
       let nl = 0; while (C.fusionCost(u, nl) <= spent) { spent -= C.fusionCost(u, nl); nl++; }
       meta.flv.f_core = nl; meta.frag = (meta.frag || 0) + spent; meta.fcoreNote = { from: L, to: nl };
     }
-    meta.fcoreV = 2;
+    meta.fcoreV = 3;
   }
   normMeta(); migrateFusionCore();
   C.skFix(meta); // Skillbaum umgebaut: ungültige Knoten geben ihre Punkte zurück
@@ -850,7 +860,7 @@
   // Wirkung eines Labor-Upgrades auf Stufe l (für "aktuell → nächste Stufe")
   const plus = (x, d) => '+' + dec(x, d || 0) + ' %';
   const LAB_FX = {
-    m_rdmg: l => '×' + mult(Math.pow(1 + C.record(meta) / C.P.resK, l)), m_rhp: l => '×' + mult(Math.pow(1 + C.record(meta) / C.P.resK, l)),
+    m_rdmg: l => '×' + mult(Math.pow(1 + Math.min(C.record(meta), C.P.resCap) / C.P.resK, l)), m_rhp: l => '×' + mult(Math.pow(1 + Math.min(C.record(meta), C.P.resCap) / C.P.resK, l)),
     m_dmg: l => '×' + mult(Math.pow(1.08, l)),
     m_hp: l => '×' + mult(Math.pow(1.08, l)),
     m_rate: l => plus(3 * l),
@@ -2304,6 +2314,6 @@
   } else { show('menu'); welcomeBack(false); }
   // Erster Start: Namen wählen oder anonym spielen (nur einmal, nur für neue Spielstände)
   if (!run && !meta.name && !meta.runs && !meta.welcomed && !C.record(meta)) showWelcome();
-  if (meta.fcoreNote) { const n = meta.fcoreNote; delete meta.fcoreNote; save(); setTimeout(() => toast(`<b>Fusionskern neu berechnet</b><br>Stufe ${n.from} → ${n.to}. Ab Stufe 200 steigen die Kosten jetzt wieder stärker, sonst wächst der Kern ins Unendliche. Alle ausgegebenen Fragmente sind angerechnet.`, 14000), 4000); }
+  if (meta.fcoreNote) { const n = meta.fcoreNote; delete meta.fcoreNote; save(); setTimeout(() => toast(`<b>Fusionskern neu berechnet</b><br>Stufe ${n.from} → ${n.to}. Ab Stufe 200 steigen die Kosten stärker (×1,028 je Stufe), sonst wächst die Stärke schneller als die Gegner und läuft ins Unendliche. Alle ausgegebenen Fragmente sind angerechnet.`, 14000), 4000); }
   requestAnimationFrame(frame);
 })();
