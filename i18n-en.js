@@ -255,7 +255,7 @@ window.KW_EN = {
   'Resonanzläufe': 'Resonance barrels', 'Resonanzpanzer': 'Resonance armor', 'Schaden ×(1 + Rekord/2000) je Stufe, höchstens ×1,5': 'Damage ×(1 + record/2000) per level, at most ×1.5', 'Strukturpunkte ×(1 + Rekord/2000) je Stufe, höchstens ×1,5': 'Hull ×(1 + record/2000) per level, at most ×1.5',
   'Schadensanteile': 'Damage shares', 'Gesamtschaden {0} · Ø {1}/s': 'Total damage {0} · avg {1}/s',
   'Meisterschaft {0}': 'Mastery {0}',
-  'Meisterschaft: Ist im Baum nichts mehr zu lernen, wirkt jeder übrige Punkt als ×{0} Schaden und Strukturpunkte.': 'Mastery: once nothing is left to learn in the tree, every spare point gives ×{0} damage and structure points.',
+  'Meisterschaft: Jeder Rang über {0} (voller Baum) wirkt automatisch als ×{1} Schaden und Strukturpunkte. Den zweiten Schlussstein ab Rang {2} gibt es ohne Punkt.': 'Mastery: every rank above {0} (full tree) automatically gives ×{1} damage and structure points. The second keystone from rank {2} costs no point.',
   'Meisterschaft: {0} Punkt · ×{1} Schaden und Strukturpunkte': 'Mastery: {0} point · ×{1} damage and structure points',
   'Meisterschaft: {0} Punkte · ×{1} Schaden und Strukturpunkte': 'Mastery: {0} points · ×{1} damage and structure points',
   'Meisterschaft {0}: ×{1} Schaden und Strukturpunkte.': 'Mastery {0}: ×{1} damage and structure points.',
@@ -730,7 +730,7 @@ window.KW_EN = {
   "{0} → {1}": "{0} → {1}",
   "Rang": "Rank",
   "Kommandantenrang": "Commander rank",
-  "Jede überstandene Welle gibt Erfahrung. Jeder Rang bringt einen Skillpunkt für die Sternkarte: vier Äste mit je zwei Pfaden und einem wählbaren Schlussstein, dazu Brückenknoten zwischen benachbarten Ästen. Ab Rang 70 sind beide Schlusssteine eines Asts wählbar, danach wirken übrige Punkte als Meisterschaft (×1,08 Schaden und Strukturpunkte je Punkt). Zurücksetzen ist außerhalb eines Laufs kostenlos.": "Every wave survived grants experience. Every rank gives a skill point for the star map: four branches with two paths and one keystone choice each, plus bridge nodes between neighbouring branches. From rank 70 both keystones of a branch can be chosen; after that, spare points count as mastery (×1.08 damage and structure points each). Resetting is free outside a run.",
+  "Jede überstandene Welle gibt Erfahrung. Jeder Rang bringt einen Skillpunkt für die Sternkarte: vier Äste mit je zwei Pfaden und einem wählbaren Schlussstein, dazu Brückenknoten zwischen benachbarten Ästen. Jeder Rang über 57 (voller Baum) wirkt als Meisterschaft: ×1,08 Schaden und Strukturpunkte je Rang. Ab Rang 70 ist zusätzlich der zweite Schlussstein jedes Asts frei, ohne Punkt. Zurücksetzen ist außerhalb eines Laufs kostenlos.": "Every wave survived grants experience. Every rank gives a skill point for the star map: four branches with two paths and one keystone choice each, plus bridge nodes between neighbouring branches. Every rank above 57 (full tree) counts as mastery: ×1.08 damage and structure points per rank. From rank 70 the second keystone of each branch is free as well, at no point cost. Resetting is free outside a run.",
 
   // ---------- Einstellungen ----------
   'Einstellungen': 'Settings', 'Anzeige': 'Display', 'Zahlenformat': 'Number format', 'Beispiel: {0} · {1}': 'Example: {0} · {1}', 'Beispiel:': 'Example:',

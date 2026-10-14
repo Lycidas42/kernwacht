@@ -381,7 +381,7 @@
       d.style.setProperty('--c', '#ffd23f');
       d.innerHTML = `<div class="hd"><b>Kommando</b><span class="tag">Sternkarte</span></div>
         <small>Tippe einen Stern an. Jeder Ast gabelt sich in zwei Pfade, ein Knoten braucht seinen Vorgänger. Am Ende jedes Pfads wartet ein Schlussstein (ab ${C.SK_CAP_AT} Punkten im Ast, einer pro Ast, ab Rang ${C.SK_CAP2_AT} beide). Brückenknoten zwischen zwei Ästen öffnen sich mit je ${C.SK_LINK_AT} Punkten in beiden.</small>
-        <small>Meisterschaft: Ist im Baum nichts mehr zu lernen, wirkt jeder übrige Punkt als ×${String(C.SK_MASTER_K).replace('.', ',')} Schaden und Strukturpunkte.</small>
+        <small>Meisterschaft: Jeder Rang über ${C.skTreeMax()} (voller Baum) wirkt automatisch als ×${String(C.SK_MASTER_K).replace('.', ',')} Schaden und Strukturpunkte. Den zweiten Schlussstein ab Rang ${C.SK_CAP2_AT} gibt es ohne Punkt.</small>
         ${C.SK_BRANCH.map(b => `<small><span style="color:${SK_COL[b.id]}">${b.name}</span> – <span>${b.desc}</span></small>`).join('')}`;
       return;
     }
@@ -411,7 +411,8 @@
     $('skXpBar').style.width = Math.min(100, R.cur / R.need * 100) + '%';
     $('skXpTxt').textContent = `${fmt(R.cur)} / ${fmt(R.need)} Erfahrung bis Rang ${R.rank + 1}`;
     const ms = C.skMastery(meta);
-    $('skPts').innerHTML = ms ? `Meisterschaft: <b>${ms}</b> Punkt${ms > 1 ? 'e' : ''} · <b>×${mult(Math.pow(C.SK_MASTER_K, ms))}</b> Schaden und Strukturpunkte` : `Freie Punkte: <b>${pts}</b> von ${R.rank}`;
+    const fr = pts - ms;
+    $('skPts').innerHTML = (fr > 0 || !ms ? `Freie Punkte: <b>${fr}</b> von ${R.rank - ms}` : '') + (fr > 0 && ms ? '<br>' : '') + (ms ? `Meisterschaft: <b>${ms}</b> Punkt${ms > 1 ? 'e' : ''} · <b>×${mult(Math.pow(C.SK_MASTER_K, ms))}</b> Schaden und Strukturpunkte` : '');
     $('skReset').disabled = runAlive() || !C.skSpent(meta);
     $('skReset').textContent = runAlive() ? 'Zurücksetzen nach dem Lauf' : 'Punkte zurücksetzen';
     $('skTabs').innerHTML = C.SK_BRANCH.map(b => `<button data-br="${b.id}" style="color:${SK_COL[b.id]}">${b.name} ${C.skBranchPts(meta, b.id)}</button>`).join('');

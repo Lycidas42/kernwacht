@@ -521,7 +521,9 @@
   const SK_MASTER_K = 1.08; // Meisterschaft: je übrigem Punkt ×1,08 Schaden und Strukturpunkte
   const SK_LINK_AT = 6; // Punkte in beiden Nachbarästen für einen Brückenknoten
   const skLv = (m, id) => (m.sk && m.sk[id]) || 0;
-  const skSpent = m => Object.values(m.sk || {}).reduce((a, b) => a + b, 0);
+  // zweiter Schlussstein eines Asts (ab Rang 70) kostet keinen Punkt
+  const skCap2 = (m, br) => SKILLS.filter(x => x.br === br && x.cap && skLv(m, x.id)).length >= 2;
+  const skSpent = m => Object.values(m.sk || {}).reduce((a, b) => a + b, 0) - SK_BRANCH.filter(b => skCap2(m, b.id)).length;
   const skPoints = m => rankOf(m).rank - skSpent(m);
   const skBranchPts = (m, br) => SKILLS.filter(k => k.br === br).reduce((a, k) => a + skLv(m, k.id), 0);
   // Baum: jeder Knoten braucht seinen Elternknoten (par); Schlussstein zusätzlich 8 Punkte im Ast und
@@ -534,7 +536,9 @@
     return true;
   }
   function skCan(m, id) {
-    const k = SK_BY_ID[id]; if (!k || skPoints(m) < 1) return false;
+    const k = SK_BY_ID[id]; if (!k) return false;
+    const free2 = k.cap && SKILLS.some(x => x.br === k.br && x.cap && x.id !== id && skLv(m, x.id)); // zweiter Schlussstein: kostenlos
+    if (!free2 && skPoints(m) < 1) return false;
     return skLv(m, id) < (k.cap ? 1 : k.max) && skOpen(m, id);
   }
   // Ungültige Knoten (z. B. nach Umbau des Baums) entfernen; die Punkte werden damit wieder frei
@@ -544,8 +548,13 @@
     while (ch) { ch = false; for (const id in m.sk) if (!skOpen(m, id)) { n += m.sk[id]; delete m.sk[id]; ch = true; } }
     return n;
   }
-  // Meisterschaft: übrige Punkte wirken, sobald im Baum nichts mehr zu lernen ist
-  function skMastery(m) { const p = skPoints(m); return p > 0 && !SKILLS.some(k => skCan(m, k.id)) ? p : 0; }
+  // Meisterschaft: jeder Rang über dem vollen Baum (57 Punkte) wirkt automatisch;
+  // hängt nur am Rang, nicht daran, ob schon alles verteilt ist
+  const SK_TREE = SKILLS.reduce((a, k) => a + (k.cap ? 0 : k.max), 0) + SK_BRANCH.length;
+  const skTreeMax = () => SK_TREE;
+  function skMastery(m) { return Math.max(0, rankOf(m).rank - SK_TREE); }
+  // für den Baum verfügbare Punkte (Meisterschaft abgezogen)
+  const skFree = m => skPoints(m) - skMastery(m);
   function skBuy(m, id) { if (!skCan(m, id)) return false; m.sk = m.sk || {}; m.sk[id] = skLv(m, id) + 1; return true; }
   function skReset(m) { m.sk = {}; }
   // Einzelnen Punkt zurücknehmen: nur, wenn danach alle gekauften Knoten gültig bleiben
@@ -2215,6 +2224,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.29.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.29.1'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
