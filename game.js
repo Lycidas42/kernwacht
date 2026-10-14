@@ -380,7 +380,8 @@
     if (!k) {
       d.style.setProperty('--c', '#ffd23f');
       d.innerHTML = `<div class="hd"><b>Kommando</b><span class="tag">Sternkarte</span></div>
-        <small>Tippe einen Stern an. Jeder Ast gabelt sich in zwei Pfade, ein Knoten braucht seinen Vorgänger. Am Ende jedes Pfads wartet ein Schlussstein (ab ${C.SK_CAP_AT} Punkten im Ast, einer pro Ast). Brückenknoten zwischen zwei Ästen öffnen sich mit je ${C.SK_LINK_AT} Punkten in beiden.</small>
+        <small>Tippe einen Stern an. Jeder Ast gabelt sich in zwei Pfade, ein Knoten braucht seinen Vorgänger. Am Ende jedes Pfads wartet ein Schlussstein (ab ${C.SK_CAP_AT} Punkten im Ast, einer pro Ast, ab Rang ${C.SK_CAP2_AT} beide). Brückenknoten zwischen zwei Ästen öffnen sich mit je ${C.SK_LINK_AT} Punkten in beiden.</small>
+        <small>Meisterschaft: Ist im Baum nichts mehr zu lernen, wirkt jeder übrige Punkt als ×${String(C.SK_MASTER_K).replace('.', ',')} Schaden und Strukturpunkte.</small>
         ${C.SK_BRANCH.map(b => `<small><span style="color:${SK_COL[b.id]}">${b.name}</span> – <span>${b.desc}</span></small>`).join('')}`;
       return;
     }
@@ -392,7 +393,7 @@
     if (!st.l && !st.open) {
       if (k.link) req = `Braucht je ${C.SK_LINK_AT} Punkte in ${k.link.map(b => `${brName(b)} (${C.skBranchPts(meta, b)})`).join(' und ')}`;
       else if (k.par && !C.skLv(meta, k.par)) req = `Braucht zuerst „${C.SKILLS.find(x => x.id === k.par).name}“`;
-      else if (k.cap) { const o = C.SKILLS.find(x => x.br === k.br && x.cap && x.id !== k.id && C.skLv(meta, x.id)); req = o ? `Im Ast ist schon „${o.name}“ gewählt` : `Braucht ${C.SK_CAP_AT} Punkte in ${brName(k.br)} (jetzt ${C.skBranchPts(meta, k.br)})`; }
+      else if (k.cap) { const o = C.SKILLS.find(x => x.br === k.br && x.cap && x.id !== k.id && C.skLv(meta, x.id)); req = o ? `Im Ast ist schon „${o.name}“ gewählt. Den zweiten Schlussstein gibt es ab Rang ${C.SK_CAP2_AT}.` : `Braucht ${C.SK_CAP_AT} Punkte in ${brName(k.br)} (jetzt ${C.skBranchPts(meta, k.br)})`; }
     } else if (!st.full && !st.can && C.skPoints(meta) < 1) req = 'Kein freier Skillpunkt';
     if (req) txt += `<small class="req">${req}</small>`;
     const canRef = st.l > 0 && !runAlive() && C.skCanRefund(meta, k.id);
@@ -409,7 +410,8 @@
     $('skRank').textContent = 'Rang ' + R.rank;
     $('skXpBar').style.width = Math.min(100, R.cur / R.need * 100) + '%';
     $('skXpTxt').textContent = `${fmt(R.cur)} / ${fmt(R.need)} Erfahrung bis Rang ${R.rank + 1}`;
-    $('skPts').innerHTML = `Freie Punkte: <b>${pts}</b> von ${R.rank}`;
+    const ms = C.skMastery(meta);
+    $('skPts').innerHTML = ms ? `Meisterschaft: <b>${ms}</b> Punkt${ms > 1 ? 'e' : ''} · <b>×${mult(Math.pow(C.SK_MASTER_K, ms))}</b> Schaden und Strukturpunkte` : `Freie Punkte: <b>${pts}</b> von ${R.rank}`;
     $('skReset').disabled = runAlive() || !C.skSpent(meta);
     $('skReset').textContent = runAlive() ? 'Zurücksetzen nach dem Lauf' : 'Punkte zurücksetzen';
     $('skTabs').innerHTML = C.SK_BRANCH.map(b => `<button data-br="${b.id}" style="color:${SK_COL[b.id]}">${b.name} ${C.skBranchPts(meta, b.id)}</button>`).join('');
@@ -450,7 +452,7 @@
   setInterval(() => {
     const r = C.rankOf(meta).rank;
     if (meta.rankSeen == null) { meta.rankSeen = r; return; }
-    if (r > meta.rankSeen) { const n = r - meta.rankSeen; meta.rankSeen = r; save(); A.play('loot'); toast(`<b>Kommandant: Rang ${r}</b><br>+${n} Skillpunkt${n > 1 ? 'e' : ''}. Im Menü unter „Kommandant“.`, 5000); }
+    if (r > meta.rankSeen) { const n = r - meta.rankSeen; meta.rankSeen = r; save(); A.play('loot'); const ms = C.skMastery(meta); toast(ms ? `<b>Kommandant: Rang ${r}</b><br>Meisterschaft ${ms}: ×${mult(Math.pow(C.SK_MASTER_K, ms))} Schaden und Strukturpunkte.` : `<b>Kommandant: Rang ${r}</b><br>+${n} Skillpunkt${n > 1 ? 'e' : ''}. Im Menü unter „Kommandant“.`, 5000); if (runAlive()) run.recalc(); }
   }, 2000);
 
   // ---------- Erfolge ----------
@@ -1064,9 +1066,9 @@
     $('mIntro').hidden = rec >= 20;
     // Kachel-Status
     const st = (id, t) => { const el = $('st-' + id); if (el) el.textContent = t || ''; };
-    const lab = C.cheapest(meta), sk = C.skPoints(meta), gain = C.fragmentsFor(meta), d = dailyToday();
+    const lab = C.cheapest(meta), ms = C.skMastery(meta), sk = C.skPoints(meta) - ms, gain = C.fragmentsFor(meta), d = dailyToday();
     st('labBtn', lab && meta.crystals >= lab.cost ? 'kaufbar' : '');
-    st('cmdBtn', sk > 0 ? sk + ' frei' : 'Rang ' + R.rank);
+    st('cmdBtn', sk > 0 ? sk + ' frei' : ms ? 'Meisterschaft ' + ms : 'Rang ' + R.rank);
     st('modBtn', (meta.equip || []).filter(t => meta.modules && meta.modules[t]).length + '/3');
     st('fusBtn', gain > 0 ? '+' + fmt(gain) : '');
     st('dailyBtn', d && d.bonus ? (d.best ? 'heute ' + d.best : '') : 'Bonus offen');
