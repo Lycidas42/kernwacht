@@ -413,6 +413,18 @@ button.buy, [data-fac], [data-res] { -webkit-user-select: none; user-select: non
 .stmod .mshare .share { display: inline-block; height: 4px; background: var(--core); border-radius: 2px; vertical-align: middle; margin-right: 6px; opacity: .7; }
 .stmods .stnote { font-size: .7rem; }
 .stmod .rar { color: var(--rc); font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; }
+.dmgrep { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: .8rem; display: grid; gap: 5px; }
+.dmgrep h4 { margin: 0 0 2px; font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+.dmgrep .dr { display: grid; grid-template-columns: minmax(0, 1fr) 52px 3.3em 4.4em; gap: 8px; align-items: center; }
+.dmgrep .dr .n { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dmgrep .dr .b { height: 5px; background: color-mix(in srgb, var(--line) 60%, transparent); border-radius: 3px; overflow: hidden; }
+.dmgrep .dr .b i { display: block; height: 100%; background: var(--core); border-radius: 3px; }
+.dmgrep .dr .p, .dmgrep .dr .v { text-align: right; font-variant-numeric: tabular-nums; }
+.dmgrep .dr .v { color: var(--ink-dim); }
+.dmgrep .dr.sub .n { font-weight: 400; color: var(--ink-dim); padding-left: 10px; }
+.dmgrep .dr.sub .n::before { content: '└ '; opacity: .5; }
+.dmgrep .dr.sub .b i { opacity: .55; }
+.dmgrep .dtot { margin-top: 3px; color: var(--ink-dim); font-size: .74rem; }
 .extra { display: grid; gap: 6px; font-size: .84rem; }
 .extra .loot { border-left: 2px solid var(--rc); padding-left: 8px; }
 .extra .loot b { color: var(--rc); }
@@ -983,6 +995,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     </div>
     <div class="note" id="oBest">Neue Bestwelle.</div>
     <div class="extra" id="oExtra" hidden></div>
+    <div class="dmgrep" id="oDmg" hidden></div>
     <button class="pollbanner" hidden></button>
     <div class="roadmap" hidden></div>
     <div class="actions">

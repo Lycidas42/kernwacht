@@ -130,6 +130,22 @@
     $('mfRule').textContent = m.kind === 'boss' ? 'Welle ' + m.w : m.kind === 'chal' ? (() => { const c = chalOf(m.id), t = c.goals.filter(g => run.wave >= g).length; return c.goals[t] ? 'Ziel Welle ' + c.goals[t] : 'alle Stufen'; })() : 'gleiche Wellen für alle';
     if (intro) toast(`<b>${name}</b><br>${rule}`);
   }
+  // Schadensanteile des Laufs für den Ergebnisbildschirm
+  const GUN_MODS = new Set(['chain', 'cryoammo', 'overcharge', 'scanner']);
+  function dmgReport() {
+    if (!run || !run.dealt) return '';
+    const D = run.dealt, total = C.SOURCES.reduce((a, k) => a + (D[k] || 0), 0);
+    if (!(total > 0)) return '';
+    const pc = v => { const x = v / total * 100; return x >= 10 || x === 0 ? Math.round(x) : x < 0.1 ? '<0,1' : x.toFixed(1).replace('.', ','); };
+    const row = (name, v, sub) => `<div class="dr${sub ? ' sub' : ''}"><span class="n">${name}</span><span class="b"><i style="width:${Math.max(1, Math.round(v / total * 100))}%"></i></span><span class="p num">${pc(v)} %</span><span class="v num">${fmt(v)}</span></div>`;
+    const rows = SRC.filter(x => D[x.k] > 0).sort((a, b) => D[b.k] - D[a.k]).map(x => {
+      let h = row(x.name, D[x.k]);
+      // Module als Unterzeilen dort, wo ihr Schaden zählt: Verstärker der Kanone unter „Kanone“, der Rest unter „Module (direkt)“
+      if (x.k === 'mod' || x.k === 'gun') h += Object.entries(run.modDealt || {}).filter(([t, v]) => v > 0 && C.MODULES[t] && (GUN_MODS.has(t) === (x.k === 'gun'))).sort((a, b) => b[1] - a[1]).map(([t, v]) => row(C.MODULES[t].name, v, true)).join('');
+      return h;
+    }).join('');
+    return `<h4>Schadensanteile</h4>${rows}<div class="dtot">Gesamtschaden ${fmt(total)} · Ø ${fmt(total / Math.max(1, run.time))}/s</div>`;
+  }
   function endRun(early) {
     $('modeFrame').hidden = true; $('mChip').hidden = true;
     if (!run || run.finished) return;
@@ -166,6 +182,7 @@
     if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
     ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
+    { const d = dmgReport(); $('oDmg').innerHTML = d; $('oDmg').hidden = !d; }
     renderRoadmap();
     if ((res.loot || []).length) A.play('loot');
     submitScore(); cloudAuto(); if (O.configured) O.seen(1, C.record(meta)).catch(() => {});
@@ -204,6 +221,7 @@
     if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
     ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
+    { const d = dmgReport(); $('oDmg').innerHTML = d; $('oDmg').hidden = !d; }
     renderJump();
     submitScore(); cloudAuto(); if (O.configured) O.seen(1, C.record(meta)).catch(() => {});
     renderRoadmap();

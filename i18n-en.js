@@ -253,6 +253,7 @@ window.KW_EN = {
   'Mühelose Wellen kommen gestaucht, und ganze Zehnerblöcke werden übersprungen (mit Belohnung)': 'Effortless waves come compressed and whole blocks of ten are skipped (with rewards)',
   'Welle {0}: Hülle nur noch {1} %': 'Wave {0}: hull down to {1} %', 'Welle {0}: Schiffe blieben in Reichweite': 'Wave {0}: ships stayed in range', 'Welle {0}: {1} hielt {2} s': 'Wave {0}: {1} lasted {2} s', 'Durchmarsch aus: Schaden': 'Rush off: damage', 'Durchmarsch aus: Feld voll': 'Rush off: field busy', 'Durchmarsch aus: Boss zäh': 'Rush off: tough boss',
   'Resonanzläufe': 'Resonance barrels', 'Resonanzpanzer': 'Resonance armor', 'Schaden ×(1 + Rekord/2000) je Stufe, höchstens ×1,5': 'Damage ×(1 + record/2000) per level, at most ×1.5', 'Strukturpunkte ×(1 + Rekord/2000) je Stufe, höchstens ×1,5': 'Hull ×(1 + record/2000) per level, at most ×1.5',
+  'Schadensanteile': 'Damage shares', 'Gesamtschaden {0} · Ø {1}/s': 'Total damage {0} · avg {1}/s',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',
