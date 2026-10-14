@@ -253,6 +253,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .skn { cursor: pointer; }
 .skn .bg { fill: var(--deck); stroke-width: 2; }
 .skn.lock { opacity: .38; }
+.skn .todoring { fill: none; stroke: #ffd23f; stroke-width: 1.6; stroke-dasharray: 5 4; opacity: .9; }
+.skn.can .todoring { animation: skspin 6s linear infinite; }
+.skn .todobadge { fill: #ffd23f; }
+.skn.full:not(.sel) .bg { stroke-opacity: .55; }
+@keyframes skspin { to { stroke-dashoffset: -54; } }
+.sktodo { font-size: .76rem; color: var(--ink-dim); margin: 2px 0 8px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.sktodo button { font-size: .74rem; padding: 3px 8px; border: 1px solid currentColor; border-radius: 12px; background: transparent; }
 .skn.can .bg { animation: skpulse 1.6s ease-in-out infinite; }
 @keyframes skpulse { 50% { stroke-width: 4; } }
 .skn.sel .halo { stroke: #fff; stroke-width: 1.5; stroke-dasharray: 3 3; fill: none; }
@@ -1177,6 +1184,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <p class="dim" style="font-size:.8rem">Jede überstandene Welle bringt Erfahrung, höhere Wellen mehr. Wellen unter der Hälfte deines Rekords bringen nur ein Zehntel. Jeder Rang bringt einen Skillpunkt. Der Rang bleibt auch bei der Kernfusion. Skills wirken in normalen Läufen und Challenges, nicht im Tageslauf.</p>
     <div class="skxp"><div class="bar"><i id="skXpBar"></i></div><small id="skXpTxt"></small></div>
     <div class="skpts"><span id="skPts"></span><button class="mini" id="skReset">Punkte zurücksetzen</button></div>
+    <div class="sktodo" id="skTodo" hidden></div>
     <div class="skmap" id="skMap"><svg id="skSvg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div class="skctl"><button class="mini" id="skFit" aria-label="Ganze Karte">Ganze Karte</button></div></div>
     <div class="lbtabs mtabs" id="skTabs"></div>

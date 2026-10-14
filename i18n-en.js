@@ -260,6 +260,7 @@ window.KW_EN = {
   'Meisterschaft: {0} Punkte · ×{1} Schaden und Strukturpunkte': 'Mastery: {0} points · ×{1} damage and structure points',
   'Meisterschaft {0}: ×{1} Schaden und Strukturpunkte.': 'Mastery {0}: ×{1} damage and structure points.',
   'Im Ast ist schon „{0}“ gewählt. Den zweiten Schlussstein gibt es ab Rang {1}.': '“{0}” is already chosen in this branch. The second keystone unlocks at rank {1}.',
+  'Noch nicht voll:': 'Not maxed yet:', 'Gesperrt:': 'Locked:', 'Alle Knoten sind voll. Weitere Ränge wirken als Meisterschaft.': 'All nodes are maxed. Further ranks count as mastery.',
   'SALVE': 'SALVO', 'JÄGERSTAFFEL': 'FIGHTER SQUADRON', 'BOMBE': 'BOMB', 'SCHILD': 'SHIELD', 'LASER LÄDT': 'LASER CHARGING', 'LASER ABGEBROCHEN': 'LASER BROKEN',
   'TARNUNG': 'CLOAK', 'SCHILDTRÄGER': 'SHIELD BEARERS', 'NOVA': 'NOVA', 'REPARATUR': 'REPAIR', 'LASER · SCHADEN BRICHT AB': 'LASER · DAMAGE BREAKS IT', 'NEUER REKORD': 'NEW RECORD',
   'Schwarm': 'Swarm', 'Panzerverband': 'Armored group', 'Artillerie': 'Artillery',

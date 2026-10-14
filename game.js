@@ -360,7 +360,8 @@
     for (const k of C.SKILLS) {
       const p = SK_POS[k.id]; if (!p) continue;
       const st = skState(k), col = SK_COL[k.br], rad = k.cap ? 21 : k.link ? 17 : 15;
-      const cls = ['skn', st.l ? 'own' : '', st.can ? 'can' : '', !st.l && !st.open ? 'lock' : '', skSel === k.id ? 'sel' : ''].join(' ');
+      const todo = !st.full && (st.open || st.l > 0); // noch nicht voll und erreichbar: hervorheben
+      const cls = ['skn', st.l ? 'own' : '', st.can ? 'can' : '', todo ? 'todo' : '', st.full ? 'full' : '', !st.l && !st.open ? 'lock' : '', skSel === k.id ? 'sel' : ''].join(' ');
       const shape = k.link
         ? `<rect class="bg" x="${-rad}" y="${-rad}" width="${rad * 2}" height="${rad * 2}" transform="rotate(45)" stroke="${col}" ${st.l ? `fill="${col}" fill-opacity=".28"` : ''}/>`
         : k.cap ? `<polygon class="bg" points="${[0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 3 * i + Math.PI / 6; return (Math.cos(a) * rad).toFixed(1) + ',' + (Math.sin(a) * rad).toFixed(1); }).join(' ')}" stroke="${col}" ${st.l ? `fill="${col}" fill-opacity=".3"` : ''}/>`
@@ -369,7 +370,7 @@
       const ring = !k.cap && !k.link && st.max > 1 ? `<circle r="${rad + 4}" fill="none" stroke="${col}" stroke-opacity=".2" stroke-width="2.5"/><circle r="${rad + 4}" fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="${(C2 * st.l / st.max).toFixed(1)} ${C2.toFixed(1)}" transform="rotate(-90)"/>` : '';
       const mid = k.cap || k.link ? (st.l ? '✓' : '') : `${st.l}/${st.max}`;
       out.push(`<g class="${cls}" data-sk="${k.id}" transform="translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})" ${st.l ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}>
-        <circle class="halo" r="${rad + 9}" fill="none"/>${ring}${shape}
+        <circle class="halo" r="${rad + 9}" fill="none"/>${todo ? `<circle class="todoring" r="${rad + 10}"/>` : ''}${ring}${shape}${todo ? `<g transform="translate(${(rad * 0.8).toFixed(1)} ${(-rad * 0.8).toFixed(1)})"><circle class="todobadge" r="6.5"/><text y="3.2" text-anchor="middle" font-size="9" font-weight="800" fill="#1a1530">+</text></g>` : ''}
         <text y="4" text-anchor="middle" font-size="${k.cap || k.link ? 12 : 10}" font-weight="700" fill="${st.l ? '#fff' : col}">${mid}</text>
         <text y="${rad + 15}" text-anchor="middle" font-size="9.5" fill="${st.l ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${k.name}</text></g>`);
     }
@@ -413,6 +414,13 @@
     const ms = C.skMastery(meta);
     const fr = pts - ms;
     $('skPts').innerHTML = (fr > 0 || !ms ? `Freie Punkte: <b>${fr}</b> von ${R.rank - ms}` : '') + (fr > 0 && ms ? '<br>' : '') + (ms ? `Meisterschaft: <b>${ms}</b> Punkt${ms > 1 ? 'e' : ''} · <b>×${mult(Math.pow(C.SK_MASTER_K, ms))}</b> Schaden und Strukturpunkte` : '');
+    // offene Knoten (noch nicht voll, erreichbar) als antippbare Liste, damit kein Punkt übersehen wird
+    const open = C.SKILLS.filter(k => { const st = skState(k); return !st.full && (st.open || st.l > 0); });
+    const canN = open.filter(k => C.skCan(meta, k.id));
+    $('skTodo').hidden = !(fr > 0 || canN.length);
+    $('skTodo').innerHTML = canN.length ? `Noch nicht voll: ${canN.map(k => `<button data-goto="${k.id}" style="color:${SK_COL[k.br]}">${k.name} ${C.skLv(meta, k.id)}/${k.cap ? 1 : k.max}</button>`).join('')}`
+      : fr > 0 ? (open.length ? `Gesperrt: ${open.map(k => `<button data-goto="${k.id}" style="color:${SK_COL[k.br]}">${k.name}</button>`).join('')}` : 'Alle Knoten sind voll. Weitere Ränge wirken als Meisterschaft.') : '';
+    $$('#skTodo [data-goto]').forEach(b => b.addEventListener('click', () => { A.play('click'); skSel = b.dataset.goto; const k = C.SKILLS.find(x => x.id === skSel); skFocus(k.br === 'x' ? 'all' : k.br); renderSkMap(); renderSkDet(); }));
     $('skReset').disabled = runAlive() || !C.skSpent(meta);
     $('skReset').textContent = runAlive() ? 'Zurücksetzen nach dem Lauf' : 'Punkte zurücksetzen';
     $('skTabs').innerHTML = C.SK_BRANCH.map(b => `<button data-br="${b.id}" style="color:${SK_COL[b.id]}">${b.name} ${C.skBranchPts(meta, b.id)}</button>`).join('');
