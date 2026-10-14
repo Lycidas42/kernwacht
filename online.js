@@ -93,11 +93,11 @@
   const NEWER = ['p_frag', 'p_card', 'p_lvl'];
   let drop = 0;
   async function stats(s) {
-    const a = { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.floor(s.kills || 0), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0, p_lvl: s.lvl | 0, p_card: s.card || null, p_frag: Math.floor(s.frag || 0) };
+    const a = { p_best: s.best | 0, p_best_ever: s.bestEver | 0, p_runs: s.runs | 0, p_kills: Math.min(9e15, Math.floor(s.kills || 0)), p_fusions: s.fusions | 0, p_chal: s.chal | 0, p_ach: s.ach | 0, p_lvl: s.lvl | 0, p_card: s.card || null, p_frag: isFinite(s.frag) ? Math.min(1e300, Math.floor(s.frag || 0)) : 0 };
     for (;;) {
       const b = Object.assign({}, a); NEWER.slice(0, drop).forEach(k => delete b[k]);
       try { return await rpc('kw_stats', b); }
-      catch (e) { if (drop < NEWER.length && /function|schema|p_frag|p_card|p_lvl/i.test(e.message)) { drop++; continue; } throw e; }
+      catch (e) { if (drop < NEWER.length && /function|schema|bigint|p_frag|p_card|p_lvl/i.test(e.message)) { drop++; continue; } throw e; }
     }
   }
   // Öffentliches Profil eines Spielers (nur lesbare Spalten)
