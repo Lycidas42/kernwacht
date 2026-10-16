@@ -2121,14 +2121,20 @@
     m.crystals -= c; pl[fid] = l + 1; if (fid === 'd' && l === 0) pl.t = Date.now();
     return true;
   }
-  // Lasermeißel: Bohrkraft lädt sich auf, jeder Treffer bringt Erz (etwa 20 s Förderung bzw. ein Grundwert)
-  const tapMax = lz => 20 + 2 * lz;
-  const tapRegen = 0.25; // pro Sekunde
+  // Lasermeißel: jeder Planet hat eigene Bohrkraft, die sich auflädt; jeder Treffer bringt Erz (etwa 20 s Förderung bzw. ein Grundwert).
+  // Weil jetzt jeder Planet seine eigene Leiste hat, sind Vorrat und Aufladung je Planet kleiner als früher bei der gemeinsamen Leiste.
+  const tapMax = lz => 12 + lz;
+  const tapRegen = 0.1; // pro Sekunde und Planet
   function tapYield(m, P_) { const pl = plOf(m, P_.id); return Math.max(1, (Math.max(mineRate(pl.d, P_), 45) / 30) * (1 + 0.5 * (pl.lz - 1)) * trv(P_, 'tap') * achBonus(m).mine); }
-  function tapEnergy(m, now) { const M = mineState(m); now = now || Date.now(); const T = M.tap = M.tap || { e: 20, t: now }; const mx = Math.max(...PLANETS.map(P_ => tapMax((M.p[P_.id] || {}).lz || 0))); T.e = Math.min(mx, T.e + (now - T.t) / 1000 * tapRegen); T.t = now; return T; }
+  function tapEnergy(m, id, now) {
+    const M = mineState(m), pl = plOf(m, id), mx = tapMax(pl.lz || 0); now = now || Date.now();
+    if (M.tap) delete M.tap; // alte gemeinsame Leiste (bis 0.29.2)
+    const T = pl.tap = pl.tap || { e: mx, t: now };
+    T.e = Math.min(mx, T.e + Math.max(0, now - T.t) / 1000 * tapRegen); T.t = now; return T;
+  }
   function mineTap(m, id, rnd) {
     const P_ = PDEF(id), pl = plOf(m, id); if (!P_ || !planetOpen(m, P_) || !pl.lz) return null;
-    const T = tapEnergy(m); if (T.e < 1) return null;
+    const T = tapEnergy(m, id); if (T.e < 1) return null;
     T.e -= 1;
     const vein = (rnd || Math.random)() < 0.06 * trv(P_, 'vein');
     const n = Math.max(1, Math.round(tapYield(m, P_) * (vein ? 8 : 1)));
@@ -2224,6 +2230,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.29.2'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.30.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

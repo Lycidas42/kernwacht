@@ -1904,9 +1904,8 @@
     const P = C.PLANETS.find(x => x.id === minePid), M = C.mineState(meta), pl = Object.assign({ d: 0, s: 0 }, M.p[P.id] || {});
     pl.fill = pl.d ? (pl.stock || 0) / C.mineCap(pl, P) : 0;
     mineView.draw(P, pl, now, { open: C.planetOpen(meta, P), lockTxt: 'ab Rekordwelle ' + P.at });
-    const T = C.tapEnergy(meta), mx = C.tapMax(pl.lz || 0);
     $('mTap').hidden = !pl.lz;
-    $('mTap').querySelector('i').style.width = Math.min(100, T.e / mx * 100) + '%';
+    if (pl.lz) $('mTap').querySelector('i').style.width = Math.min(100, C.tapEnergy(meta, P.id).e / C.tapMax(pl.lz) * 100) + '%';
   }
   function syncMineBadge() {
     const M = C.mineTick(meta), full = C.PLANETS.some(P => { const pl = M.p[P.id]; return pl && pl.d && pl.stock >= C.mineCap(pl, P) * 0.9; });

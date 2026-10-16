@@ -8,7 +8,7 @@ Erfolge: 11 Erfolge mit je 4–7 Stufen (Wellen, Höchste Welle, Abschüsse, Kri
 
 Tageslauf (ab Rekordwelle 15): Alle spielen am selben Tag dieselben Wellen mit derselben Standard-Ausrüstung und einer Tages-Besonderheit. Der erste Versuch am Tag bringt einen Kristallbonus, der beste Versuch kommt in die Tages-Bestenliste. Das ist die Vorstufe zum späteren Battle Mode.
 
-Bergbau (ab Rekordwelle 25): Fünf Planeten mit eigener Optik und Eigenschaft. Je Planet Bohrturm, Erzsilo, Sammeldrohnen, Schmelze und Lasermeißel (Abbau per Tippen). Förderung in Echtzeit, auch offline. Erz wird in der Raffinerie zu Kristallen oder stärkt in der Werkstatt Module des gleichen Sektors. Grafik in `mine-view.js`.
+Bergbau (ab Rekordwelle 25): Fünf Planeten mit eigener Optik und Eigenschaft. Je Planet Bohrturm, Erzsilo, Sammeldrohnen, Schmelze und Lasermeißel (Abbau per Tippen, eigene Bohrkraft-Leiste je Planet). Förderung in Echtzeit, auch offline. Erz wird in der Raffinerie zu Kristallen oder stärkt in der Werkstatt Module des gleichen Sektors. Grafik in `mine-view.js`.
 
 Hangar: Farbe, Turmform, Fundament und Anbauteile der Kanone; neue Teile werden über den Fortschritt freigeschaltet. Musik: sechs generative Stücke (Synthwave, 8-Bit, Ambient, Techno, Episch, Lo-Fi) oder Zufall.
 
