@@ -943,7 +943,7 @@ window.KW_EN = {
   'Treibeis': 'Drift ice', 'Der Sturm wandert mit {0} pro Sekunde zum markierten Ziel': 'The storm drifts towards the marked target at {0} per second',
   'Glatteis': 'Black ice', 'Schiffe im Sturm sind {0} langsamer': 'Ships in the storm are {0} slower',
   'Polarwirbel': 'Polar vortex', 'Der Sturm zieht Schiffe langsam zu seiner Mitte (keine Bosse)': 'The storm slowly pulls ships towards its centre (no bosses)',
-  'Fächer': 'Fan', 'Hinter deinem Finger teilt sich der Strahl in drei Strahlen': 'Beyond your finger the beam splits into three beams',
+  'Fächer': 'Fan', 'Hinter deinem Finger (selbstzielend: hinter dem Ziel) teilt sich der Strahl in drei Strahlen': 'Beyond your finger (self-aiming: beyond the target) the beam splits into three beams',
   'Hitzepunkt': 'Hot spot', 'Der Aufbau beginnt bei {0}': 'The build-up starts at {0}',
   'Nachglühen': 'Afterglow', 'Der Aufbau bleibt nach dem Strahl {0} s erhalten': 'The build-up is kept for {0} s after the beam',
   'Schwachstelle': 'Weak spot', 'Das Ziel erleidet während des Strahls {0} mehr Schaden aus allen Quellen': 'While the beam is on it, the target takes {0} more damage from all sources',

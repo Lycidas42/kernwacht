@@ -735,7 +735,7 @@
     { id: 'lp_glow',  el: 'light', form: 'prism', max: 2, name: 'Glühen',    desc: l => `Der Aufbau auf einem Ziel geht bis +${pc(1 + 0.25 * l)} statt +100 %` },
     { id: 'lp_wide',  el: 'light', form: 'prism', par: 'lp_glow', max: 2, name: 'Breitband', desc: l => `+${pc(0.2 * l)} Strahlbreite` },
     { id: 'lp_blind', el: 'light', form: 'prism', par: 'lp_glow', max: 2, name: 'Blendung',  desc: l => `Getroffene Kanonenboote und Heiler setzen ${dc(0.5 * l, 1)} s aus (je Schiff höchstens alle 3 s)` },
-    { id: 'lp_fan',   el: 'light', form: 'prism', par: 'lp_glow', cap: 1, name: 'Fächer', desc: () => 'Hinter deinem Finger teilt sich der Strahl in drei Strahlen' },
+    { id: 'lp_fan',   el: 'light', form: 'prism', par: 'lp_glow', cap: 1, name: 'Fächer', desc: () => 'Hinter deinem Finger (selbstzielend: hinter dem Ziel) teilt sich der Strahl in drei Strahlen' },
     { id: 'll_hot',   el: 'light', form: 'lens', max: 2, name: 'Hitzepunkt',  desc: l => `Der Aufbau beginnt bei +${pc(0.25 * l)}` },
     { id: 'll_after', el: 'light', form: 'lens', par: 'll_hot', max: 2, name: 'Nachglühen', desc: l => `Der Aufbau bleibt nach dem Strahl ${dc(P0.llAfter * l, 1)} s erhalten` },
     { id: 'll_weak',  el: 'light', form: 'lens', par: 'll_hot', max: 2, name: 'Schwachstelle', desc: l => `Das Ziel erleidet während des Strahls ${pc(0.075 * l)} mehr Schaden aus allen Quellen` },
@@ -2037,7 +2037,7 @@
           const t = this.prismT; if (!t) { this.beam = null; return; } const p = this.pos(t); tx = p.x; ty = p.y; k = 0.5;
         }
         const L = Math.hypot(tx, ty) || 1, ux = tx / L, uy = ty / L;
-        if (o.fan && !B.auto) {
+        if (o.fan) { // Fächer: teilt sich hinter dem Finger, beim selbstzielenden Strahl hinter dem Ziel
           segs.push({ x1: O.x, y1: O.y, x2: tx, y2: ty, k: 1 });
           for (const an of [-0.32, 0, 0.32]) { const c = Math.cos(an), s_ = Math.sin(an), dx = ux * c - uy * s_, dy = ux * s_ + uy * c; segs.push({ x1: tx, y1: ty, x2: tx + dx * 320, y2: ty + dy * 320, k: 1 }); }
         } else segs.push({ x1: O.x, y1: O.y, x2: ux * 560, y2: uy * 560, k: 1 });
@@ -3004,6 +3004,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.47.4'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.47.5'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
