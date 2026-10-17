@@ -258,6 +258,10 @@
   function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); R.setFxMode(setting('fx')); }
   function renderSettings() {
     $$('#settings .seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === setting(seg.dataset.set))));
+    const ro = C.rushOpen(meta);
+    $$('#settings [data-set="rush"] button').forEach(b => { b.disabled = !ro; });
+    $('rushLock').hidden = ro;
+    $('rushLock').textContent = `Gesperrt: ab Rekordwelle ${C.RUSH_AT} und der ${C.RUSH_FUS}. Fusion (jetzt Rekord ${C.record(meta)}, Fusionen: ${meta.fusions || 0})`;
     $('numEx').textContent = 'Beispiel: ' + fmt(27.9e12) + ' · ' + fmt(4.2e18);
   }
   $$('#settings .seg button').forEach(b => b.addEventListener('click', () => {

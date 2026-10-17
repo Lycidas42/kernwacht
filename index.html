@@ -341,6 +341,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .skcaps .sknode button { border-color: #ff8ad8; color: #ff8ad8; }
 .setrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; font-size: .86rem; padding: 4px 0; }
 .setrow small { display: block; color: var(--ink-dim); font-size: .72rem; }
+.setrow small.lock { color: var(--energy); margin-top: 2px; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
 .seg button { padding: 7px 10px; font-size: .74rem; font-weight: 600; color: var(--ink-dim); }
 .seg button.on, .seg button[aria-pressed="true"] { background: var(--core); color: var(--void); }
@@ -1227,7 +1228,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <details class="gsec"><summary>Fortschritt</summary>
       <div class="gitem"><b>Labor</b><p>Dauerhafte Verbesserungen mit Kristallen. „Empfohlen kaufen“ wählt ein sinnvolles nächstes Upgrade.</p></div>
       <div class="gitem"><b>Sprungtor</b><p>Startet Läufe später, abhängig von deiner Bestwelle. Die übersprungenen Wellen bringen Startenergie und Kristalle. Nach einer Kernfusion zählt mindestens die Hälfte des Anteils an deinem Rekord. Wellen unter der Hälfte deines Rekords laufen im Aufholmodus doppelt so schnell, die nächste kommt, sobald das Feld leer ist, und sie bringen doppelte Kristalle.</p></div>
-      <div class="gitem"><b>Durchmarsch und Wellensprung</b><p>Das Spiel merkt, wenn Wellen mühelos fallen: Dann kommen sie gestaucht direkt an den Rand deiner Reichweite, und die nächste startet, sobald das Feld leer ist. Fällt ein ganzer Zehnerblock samt Boss mühelos, werden die nächsten zehn Wellen übersprungen; Energie, Kristalle, Erfahrung und der Beutewurf des Bosses werden gutgeschrieben. Sobald es knapp wird, läuft alles wieder normal. Abschaltbar in den Optionen.</p></div>
+      <div class="gitem"><b>Durchmarsch und Wellensprung</b><p>Das Spiel merkt, wenn Wellen mühelos fallen: Dann kommen sie gestaucht direkt an den Rand deiner Reichweite, und die nächste startet, sobald das Feld leer ist. Fällt ein ganzer Zehnerblock samt Boss mühelos, werden die nächsten zehn Wellen übersprungen; Energie, Kristalle, Erfahrung und der Beutewurf des Bosses werden gutgeschrieben. Sobald es knapp wird, läuft alles wieder normal. Freigeschaltet ab Rekordwelle 100 und der dritten Fusion, abschaltbar in den Optionen.</p></div>
       <div class="gitem"><b>Module</b><p>Bosse lassen ab Welle 30 Module fallen. Drei kannst du ausrüsten. Weitere Funde und höhere Seltenheit machen sie stärker; im Werte-Reiter siehst du ihren Beitrag zum Schaden.</p></div>
       <div class="gitem"><b>Kernfusion</b><p>Ab Bestwelle 50: setzt Labor, Kristalle und Bestwelle zurück und gibt Kernfragmente für dauerhafte Technik. Je weiter du kommst, desto mehr Fragmente, ab Welle 150 deutlich mehr.</p></div>
       <div class="gitem"><b>Challenge</b><p>Läufe mit Handicap ab Rekordwelle 40. Jede Stufe gibt einen dauerhaften Bonus. Module sind dort abgeschaltet, außer den Leere-Modulen aus Sektor 5.</p></div>
@@ -1276,7 +1277,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="setrow"><div>Schadenszahlen<small>Zahlen über getroffenen Schiffen</small></div><div class="seg" data-set="dmgNums"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <div class="setrow"><div>Tipps im Spiel<small>Kurze Hinweise beim ersten Kontakt mit neuen Dingen</small></div><div class="seg" data-set="tips"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <h3>Spiel</h3>
-    <div class="setrow"><div>Durchmarsch<small>Mühelose Wellen kommen gestaucht, und ganze Zehnerblöcke werden übersprungen (mit Belohnung)</small></div><div class="seg" data-set="rush"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
+    <div class="setrow"><div>Durchmarsch<small>Mühelose Wellen kommen gestaucht, und ganze Zehnerblöcke werden übersprungen (mit Belohnung)</small><small class="lock" id="rushLock" hidden></small></div><div class="seg" data-set="rush"><button data-v="on">An</button><button data-v="off">Aus</button></div></div>
     <h3>Sprache</h3>
     <div class="setrow"><div>Sprache des Spiels<small>Englisch und Deutsch, jederzeit umschaltbar.</small></div><div class="seg" data-set="lang"><button data-v="de">Deutsch</button><button data-v="en">English</button></div></div>
     <h3>Spielstand</h3>

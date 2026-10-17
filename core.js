@@ -355,6 +355,8 @@
   // ---------- Freischaltungen nach Rekordwelle (aller Zeiten) ----------
   const GATES = { m_rdmg: 250, m_rhp: 250, u_freeze: 15, m_freeze: 15, u_blade: 20, u_over: 25, m_over: 25, u_jump: 25, m_jump: 25, u_mine: 35 };
   const MODULES_AT = 30, FUSION_AT = 50;
+  // Durchmarsch und Wellensprung: erst ab dieser Rekordwelle und frühestens nach der dritten Fusion
+  const RUSH_AT = 100, RUSH_FUS = 3;
   const ROADMAP = [
     { w: 10, label: 'Erster Boss' },
     { w: 15, label: 'Stasisfeld im Labor, Tageslauf' },
@@ -365,6 +367,7 @@
     { w: 40, label: 'Herausforderungen: Läufe mit Handicap für dauerhafte Boni' },
     { w: 50, label: 'Kernfusion und Elementarmagie' },
     { w: 51, label: 'Sektor 2: Smaragdnebel, Eismond Kryos' },
+    { w: 100, label: 'Durchmarsch und Wellensprung (ab der 3. Fusion)' },
     { w: 101, label: 'Sektor 3: Glutgürtel, Glutwelt Ignis' },
     { w: 151, label: 'Sektor 4: Roter Riese, Roter Zwerg Nox' },
     { w: 201, label: 'Sektor 5: Die Leere, Rand der Leere' },
@@ -372,6 +375,7 @@
   ];
   const record = m => Math.max(m.bestEver || 0, m.best || 0);
   const gateOk = (m, id) => record(m) >= (GATES[id] || 0);
+  const rushOpen = m => record(m) >= RUSH_AT && (m.fusions || 0) >= RUSH_FUS;
   function nextUnlock(m) { const r = record(m); return ROADMAP.find(x => x.w > r) || null; }
   // Erwartete Energie aus Abschüssen einer Welle (ohne Upgrades im Lauf)
   function waveEnergy(w) {
@@ -1183,7 +1187,7 @@
         const timeOk = dur <= (bossW ? ((BOSS_KINDS[bossKind(this.wave)] || {}).lord ? P.rushLordT : P.rushBossT) : WAVE_LEN + 5); // Herrscher (alle 50 Wellen) dürfen länger dauern
         const easy = hurtOk && fieldOk && timeOk;
         this.easyRun = easy ? (this.easyRun || 0) + 1 : 0;
-        const fast = !(this.meta.settings && this.meta.settings.rush === 'off');
+        const fast = rushOpen(this.home) && !(this.meta.settings && this.meta.settings.rush === 'off');
         // Ein zäher Boss beendet den Durchmarsch nicht, solange die Hülle mindestens halb voll ist (nur kein Wellensprung in diesem Block)
         const keep = bossW && !easy && this.hp >= this.s.maxHp * 0.5;
         const was = this.rush; this.rush = fast && (easy || keep) && (was || this.easyRun >= 2); // einmal an, bleibt er an, solange es mühelos bleibt
@@ -2866,6 +2870,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.35.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.35.1'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, RUSH_AT, RUSH_FUS, rushOpen, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
