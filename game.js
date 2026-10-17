@@ -291,7 +291,7 @@
     const ro = C.rushOpen(meta);
     $$('#settings [data-set="rush"] button').forEach(b => { b.disabled = !ro; });
     $('rushLock').hidden = ro;
-    $('rushLock').textContent = `Gesperrt: frei nach einer Fusion bei Welle ${C.FUS_MILES[0].w} oder höher (bisher beste Fusion: Welle ${C.fusWave(meta)})`;
+    $('rushLock').textContent = `Gesperrt: frei ${C.mileTxt(C.FUS_MILES[0])} (bisher beste Fusion: Welle ${C.fusWave(meta)}, Fusionen: ${meta.fusions || 0})`;
     $('numEx').textContent = 'Beispiel: ' + fmt(27.9e12) + ' · ' + fmt(4.2e18);
   }
   $$('#settings .seg button').forEach(b => b.addEventListener('click', () => {
@@ -1514,7 +1514,7 @@
       note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
     const fw = C.fusWave(meta);
     $('fusMiles').innerHTML = `<small class="dim">Zählt die höchste Bestwelle, bei der du fusioniert hast (bisher: ${fw ? 'Welle ' + fw : 'noch keine Fusion'}).</small>`
-      + C.FUS_MILES.map(x => `<div class="fusmile${fw >= x.w ? ' ok' : ''}"><i>${fw >= x.w ? '✓' : ''}</i><span>Fusion bei Welle ${x.w}: ${x.txt}</span></div>`).join('')
+      + C.FUS_MILES.map(x => { const ok = C.mileOk(meta, x); return `<div class="fusmile${ok ? ' ok' : ''}"><i>${ok ? '✓' : ''}</i><span>Fusion bei Welle ${x.w}, ab der ${x.n}. Fusion: ${x.txt}</span></div>`; }).join('')
       + `<small class="dim">${meta.fusGlow ? `Fusionsglut aktiv: Dein nächster Lauf bringt ×${C.fusGlow(meta)} Erfahrung.` : `Nach jeder Fusion: Fusionsglut mit ×${C.fusGlow(meta)} Erfahrung im ersten Lauf, auch unter dem Rekord.`}</small>`;
     const list = $('fusList'); list.innerHTML = '';
     for (const u of C.FUSION_UPG) {
@@ -1532,7 +1532,7 @@
     const btn = $('fuseBtn');
     if (!fuseArmed) { fuseArmed = setTimeout(() => { fuseArmed = 0; btn.classList.remove('armed'); btn.textContent = 'Fusion auslösen'; }, 3500); btn.classList.add('armed'); btn.textContent = 'Wirklich? Labor wird zurückgesetzt'; return; }
     clearTimeout(fuseArmed); fuseArmed = 0;
-    const fw0 = C.fusWave(meta), gain = C.fuse(meta), miles = C.FUS_MILES.filter(x => x.w > fw0 && C.fusWave(meta) >= x.w);
+    const fw0 = C.fusWave(meta), gain = C.fuse(meta), miles = C.FUS_MILES.filter(x => !C.mileOk(Object.assign({}, meta, { fusWave: fw0, fusions: meta.fusions - 1 }), x) && C.mileOk(meta, x));
     run = null; put(RKEY, null); meta.bossFail = null; save(); A.play('fusion');
     renderFusion();
     $('fusNote').className = 'note'; $('fusNote').style.color = ''; $('fusNote').textContent = `Fusion abgeschlossen: +${fmt(gain)} Kernfragmente. Investiere sie unten und starte neu.`;
