@@ -679,7 +679,7 @@
         how: 'Knopf antippen, dann ins Feld tippen. Der Einschlag kommt verzögert: Ziele dorthin, wo die Schiffe in 1,5 s sind. Ein zweiter Tipp auf den Knopf zielt automatisch.' },
     ],
     ice: [
-      { id: 'lance', name: 'Frostlanze', desc: 'Trifft ein Ziel mit 14× Kanonenschaden (Bosse zusätzlich 1,2 % ihrer Lebenspunkte, Anbauteile 5 %) und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
+      { id: 'lance', name: 'Frostlanze', desc: 'Trifft das markierte Ziel, sonst das nächste Schiff, mit 14× Kanonenschaden (Bosse zusätzlich 1,2 % ihrer Lebenspunkte, Anbauteile 5 %) und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
         how: 'Knopf antippen: Die Lanze trifft das markierte Ziel. Ohne Markierung trifft sie den Boss oder das Schiff mit den meisten Lebenspunkten.' },
       { id: 'nova', name: 'Frostnova', desc: 'Eine Kältewelle um die Kanone bis Abstand 160: 3,2× Kanonenschaden (Bosse zusätzlich 1,2 % ihrer Lebenspunkte), friert alle Schiffe darin 2 s ein, Bosse werden halb so schnell. Die Notbremse, wenn es eng wird. Abklingzeit 18 s.',
         how: 'Knopf antippen: Die Nova geht sofort von der Kanone aus.' },
@@ -1736,6 +1736,12 @@
       const alive = this.enemies.filter(vis); if (!alive.length) return null;
       return alive.find(e => e.type === 'boss') || alive.find(e => e.host && e.host.hp > 0) || alive.sort((a, b) => b.hp - a.hp)[0]; // Riese: seine Arme und Teile
     }
+    lanceTarget() {
+      if (this.focus && this.focus.hp > 0 && !this.cloaked(this.focus)) return this.focus;
+      let best = null;
+      for (const e of this.enemies) if (e.hp > 0 && !e.host && !e.giant && e.type !== 'boss' && !this.cloaked(e) && !(e.frostUntil > this.time) && e.dist < FIELD_H + 20 && (!best || e.dist < best.dist)) best = e;
+      return best || this.elemTarget();
+    }
     // dichteste Stelle, die nicht zu nah an schon gewählten Punkten liegt (Sternenfall)
     densest(skip) {
       let best = null, bv = 0;
@@ -1817,8 +1823,8 @@
         this.storms.push({ x, y: Math.min(y, -20), until: this.time + o.sdur, hand: !!hand, n: 0, t0: this.time });
         return true;
       }
-      // Frostlanze
-      const t = this.elemTarget(); if (!t) return false;
+      // Frostlanze: Markierung, sonst das nächste noch nicht eingefrorene Schiff (Boss und Anbauteile nur, wenn sonst nichts da ist)
+      const t = this.lanceTarget(); if (!t) return false;
       this.elemCd = o.cd; this.lanceN = (this.lanceN || 0) + 1;
       const tp = this.pos(t);
       if (this.fxOn) this.fx.push({ k: 'lance', x1: 0, y1: -10, x2: tp.x, y2: tp.y, t: 0 });
@@ -2969,6 +2975,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.47.0'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.47.1'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
