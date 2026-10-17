@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eDmgLate: 0.7, eDmgLateAt: 100, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.9, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragEarly: 1.5, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, strikePart: 0.35, fbK: 6, fbR: 60, fmK: 11, fwK: 1.8, elBossPct: 0.012, elPartPct: 0.05, fDmgLv: 0.1, strikePartTo: 20, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, boss1Hp: 0.3, boss1Part: 0.45, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragEarly: 1.5, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, strikePart: 0.35, fbK: 6, fbR: 60, fmK: 11, fwK: 1.8, elBossPct: 0.012, elPartPct: 0.05, fDmgLv: 0.1, iceK: 2, lightK: 6, llHot: 0.25, llWeak: 0.075, llRamp: 2, lensK: 1.2, llAfter: 0.5, strikePartTo: 20, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, boss1Hp: 0.3, boss1Part: 0.45, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.3, shockRLow: 0.7, shockPct: 0, bladeLv: 0.25, bladeWall: 2, bladeRHi: 0.8, bladePart: 0.3, bladeCd: 1, bladeMax: 2, bladeStep: 8, aoeMax: 15, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 1.8,
@@ -664,27 +664,27 @@
   // Formen verwandeln die Fähigkeit (andere Wirkung, oft andere Bedienung); Wechsel außerhalb des Laufs kostenlos
   const ELEM_FORMS = {
     fire: [
-      { id: 'ball', name: 'Feuerball', desc: 'Explosion mit 6× Kanonenschaden, danach brennt der Boden 4 s (0,9× Kanonenschaden pro Sekunde). Zwei Ladungen, jede lädt in 10 s nach.',
+      { id: 'ball', name: 'Feuerball', desc: 'Explosion mit 6× Kanonenschaden im Radius 60, danach brennt der Boden 4 s (0,9× Kanonenschaden pro Sekunde). Zwei Ladungen, jede lädt in 10 s nach. Bosse verlieren je Treffer zusätzlich 1,2 % ihrer Lebenspunkte, Boss-Anbauteile 5 %.',
         how: 'Knopf antippen, dann ins Feld tippen: Der Feuerball schlägt genau dort ein. Ein zweiter Tipp auf den Knopf wirft ihn stattdessen automatisch in die dichteste Gruppe.' },
-      { id: 'wall', name: 'Flammenwand', desc: 'Eine Wand aus Feuer, bis 140 lang, hält 6 s. Schiffe, die sie berühren, brennen 3 s (1,2× Kanonenschaden pro Sekunde) und erleiden solange 10 % mehr Schaden aus allen Quellen. Abklingzeit 16 s.',
+      { id: 'wall', name: 'Flammenwand', desc: 'Eine Wand aus Feuer, bis 140 lang, hält 6 s. Schiffe, die sie berühren, brennen 3 s (1,8× Kanonenschaden pro Sekunde) und erleiden solange 10 % mehr Schaden aus allen Quellen. Abklingzeit 16 s.',
         how: 'Knopf antippen, dann im Feld eine Linie ziehen: Dort entsteht die Wand. Am besten quer zur Flugbahn. Ein zweiter Tipp auf den Knopf setzt sie automatisch quer vor die dichteste Gruppe.' },
-      { id: 'meteor', name: 'Meteor', desc: 'Schlägt 1,5 s nach dem Tippen ein: 11× Kanonenschaden im Radius 70, betäubt 1 s, der Krater brennt 5 s. Abklingzeit 22 s.',
+      { id: 'meteor', name: 'Meteor', desc: 'Schlägt 1,5 s nach dem Tippen ein: 11× Kanonenschaden im Radius 70, betäubt 1 s, der Krater brennt 5 s. Abklingzeit 22 s. Bosse verlieren je Treffer zusätzlich 1,2 % ihrer Lebenspunkte, Boss-Anbauteile 5 %.',
         how: 'Knopf antippen, dann ins Feld tippen. Der Einschlag kommt verzögert: Ziele dorthin, wo die Schiffe in 1,5 s sind. Ein zweiter Tipp auf den Knopf zielt automatisch.' },
     ],
     ice: [
-      { id: 'lance', name: 'Frostlanze', desc: 'Trifft ein Ziel mit 6× Kanonenschaden und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
+      { id: 'lance', name: 'Frostlanze', desc: 'Trifft ein Ziel mit 12× Kanonenschaden (Bosse zusätzlich 1,2 % ihrer Lebenspunkte, Anbauteile 5 %) und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
         how: 'Knopf antippen: Die Lanze trifft das markierte Ziel. Ohne Markierung trifft sie den Boss oder das Schiff mit den meisten Lebenspunkten.' },
-      { id: 'nova', name: 'Frostnova', desc: 'Eine Kältewelle um die Kanone bis Abstand 120: 0,8× Kanonenschaden, friert alle Schiffe darin 2 s ein, Bosse werden halb so schnell. Die Notbremse, wenn es eng wird. Abklingzeit 18 s.',
+      { id: 'nova', name: 'Frostnova', desc: 'Eine Kältewelle um die Kanone bis Abstand 120: 1,6× Kanonenschaden, friert alle Schiffe darin 2 s ein, Bosse werden halb so schnell. Die Notbremse, wenn es eng wird. Abklingzeit 18 s.',
         how: 'Knopf antippen: Die Nova geht sofort von der Kanone aus.' },
-      { id: 'storm', name: 'Eissturm', desc: 'Ein Hagelfeld (Radius 70) für 6 s: 0,6× Kanonenschaden pro Sekunde. Jede Sekunde im Feld kühlt ein Schiff weiter ab, nach 3 s friert es 2 s ein. Abklingzeit 18 s.',
+      { id: 'storm', name: 'Eissturm', desc: 'Ein Hagelfeld (Radius 70) für 6 s: 1,2× Kanonenschaden pro Sekunde. Jede Sekunde im Feld kühlt ein Schiff weiter ab, nach 3 s friert es 2 s ein. Abklingzeit 18 s.',
         how: 'Knopf antippen, dann ins Feld tippen: Dort entsteht der Sturm. Ein zweiter Tipp auf den Knopf setzt ihn automatisch auf die dichteste Gruppe.' },
     ],
     light: [
-      { id: 'prism', name: 'Prismastrahl', desc: 'Ein Strahl von der Kanone durchs ganze Feld: 1,5× Kanonenschaden pro Sekunde an allen Schiffen auf der Linie. Bleibt er auf einem Schiff, steigt der Schaden alle 0,5 s um 10 % (bis +100 %). Die Energie reicht 4 s und lädt in 12 s wieder voll, solange der Strahl aus ist.',
+      { id: 'prism', name: 'Prismastrahl', desc: 'Ein Strahl von der Kanone durchs ganze Feld: 9× Kanonenschaden pro Sekunde an allen Schiffen auf der Linie. Bleibt er auf einem Schiff, steigt der Schaden alle 0,5 s um 10 % (bis +100 %). Die Energie reicht 4 s und lädt in 12 s wieder voll, solange der Strahl aus ist.',
         how: 'Knopf antippen schaltet den Strahl bereit. Dann den Finger aufs Feld legen und ziehen: Der Strahl folgt dem Finger. Loslassen spart Energie. Lange auf den Knopf drücken: Der Strahl richtet sich selbst auf das markierte Ziel, mit halbem Schaden.' },
-      { id: 'lens', name: 'Brennglas', desc: 'Ein dünner Strahl auf ein einziges Ziel: 3× Kanonenschaden pro Sekunde, alle 0,5 s 25 % mehr (bis +300 %). Wechselt das Ziel, beginnt der Aufbau neu. Gemacht für Bosse. Gleiche Energie wie der Prismastrahl.',
+      { id: 'lens', name: 'Brennglas', desc: 'Ein dünner Strahl auf ein einziges Ziel: 21× Kanonenschaden pro Sekunde, alle 0,5 s 25 % mehr (bis +200 %). Wechselt das Ziel, beginnt der Aufbau neu. Gemacht für Bosse. Gleiche Energie wie der Prismastrahl.',
         how: 'Knopf antippen: Der Strahl richtet sich selbst auf das markierte Ziel (ohne Markierung auf den Boss oder das stärkste Schiff) und bleibt dort, bis die Energie leer ist. Noch ein Tipp beendet ihn.' },
-      { id: 'mirror', name: 'Spiegelfeld', desc: 'Spiegel im Feld lenken den Strahl um: Er läuft von der Kanone über alle Spiegel und trifft alles auf dem Weg (1,2× Kanonenschaden pro Sekunde). Bis zu 3 Spiegel, sie halten 15 s. Gleiche Energie wie der Prismastrahl.',
+      { id: 'mirror', name: 'Spiegelfeld', desc: 'Spiegel im Feld lenken den Strahl um: Er läuft von der Kanone über alle Spiegel und trifft alles auf dem Weg (7× Kanonenschaden pro Sekunde). Bis zu 3 Spiegel, sie halten 15 s. Gleiche Energie wie der Prismastrahl.',
         how: 'Knopf antippen schaltet das Spiegelfeld ein. Jeder Tipp ins Feld setzt dann einen Spiegel (der älteste verschwindet, wenn alle gesetzt sind). Solange das Spiegelfeld an ist und Energie da ist, läuft der Strahl über die Spiegel. Noch ein Tipp auf den Knopf schaltet es aus.' },
     ],
   };
@@ -730,7 +730,7 @@
     { id: 'lp_blind', el: 'light', form: 'prism', par: 'lp_glow', max: 2, name: 'Blendung',  desc: l => `Getroffene Kanonenboote und Heiler setzen ${dc(0.5 * l, 1)} s aus (je Schiff höchstens alle 3 s)` },
     { id: 'lp_fan',   el: 'light', form: 'prism', par: 'lp_glow', cap: 1, name: 'Fächer', desc: () => 'Hinter deinem Finger teilt sich der Strahl in drei Strahlen' },
     { id: 'll_hot',   el: 'light', form: 'lens', max: 2, name: 'Hitzepunkt',  desc: l => `Der Aufbau beginnt bei +${pc(0.25 * l)}` },
-    { id: 'll_after', el: 'light', form: 'lens', par: 'll_hot', max: 2, name: 'Nachglühen', desc: l => `Der Aufbau bleibt nach dem Strahl ${dc(1.5 * l, 1)} s erhalten` },
+    { id: 'll_after', el: 'light', form: 'lens', par: 'll_hot', max: 2, name: 'Nachglühen', desc: l => `Der Aufbau bleibt nach dem Strahl ${dc(P0.llAfter * l, 1)} s erhalten` },
     { id: 'll_weak',  el: 'light', form: 'lens', par: 'll_hot', max: 2, name: 'Schwachstelle', desc: l => `Das Ziel erleidet während des Strahls ${pc(0.075 * l)} mehr Schaden aus allen Quellen` },
     { id: 'll_sun',   el: 'light', form: 'lens', par: 'll_hot', cap: 1, name: 'Sonnenfeuer', desc: () => 'Stirbt das Ziel bei vollem Aufbau, explodiert es und der Strahl springt mit halbem Aufbau aufs nächste Ziel' },
     { id: 'lm_more',  el: 'light', form: 'mirror', max: 2, name: 'Spiegelkabinett', desc: l => `+${l} Spiegel` },
@@ -1087,7 +1087,7 @@
       const el = s.noGun ? null : elActive(this.meta);
       s.el = null;
       if (el) {
-        const E = id => elLv(this.meta, id), g = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)), form = elForm(this.meta, el);
+        const E = id => elLv(this.meta, id), gb = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)), g = gb, form = elForm(this.meta, el);
         const o = { k: el, form, cap: ELEM_SKILLS.some(k => k.el === el && k.form === form && k.cap && E(k.id)) };
         if (el === 'fire') {
           const f = 1 + P.fDmgLv * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
@@ -1097,16 +1097,17 @@
           if (form === 'meteor') { o.cd = Math.max(6, 22 * cdk - 2 * E('fm_cd')); o.dmg = g * P.fmK * f; o.r = 70; o.boss = 1 + 0.2 * E('fm_boss'); o.burn = g * 0.6 * f; o.shower = g * 1.5 * E('fm_shower') * f; o.star = !!E('fm_star'); }
         }
         if (el === 'ice') {
+          const g = gb * P.iceK;
           o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.shard = g * 2 * (1 + 0.4 * E('il_shard'));
           if (form === 'lance') { o.dmg = g * 6; o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.sog = 0.5 * E('il_sog'); o.zero = !!E('il_zero'); }
           if (form === 'nova') { o.dmg = g * 0.8; o.cd = 18 - E('i_cd'); o.r = 120 * (1 + 0.125 * E('in_rad')); o.dur = 2 + 0.5 * E('i_dur'); o.rime = 0.5 * E('in_rime'); o.heal = 0.004 * E('in_hull'); o.age = !!E('in_age'); }
           if (form === 'storm') { o.dps = g * 0.6; o.dmg = o.dps; o.cd = 18 - E('i_cd'); o.r = 70; o.sdur = 6 + E('is_dur'); o.dur = 2 + 0.5 * E('i_dur'); o.drift = 15 * E('is_drift'); o.slick = 0.15 * E('is_slick'); o.vortex = !!E('is_vortex'); }
         }
         if (el === 'light') {
-          const lk = 1 + 0.2 * E('l_dmg');
+          const lk = (1 + 0.2 * E('l_dmg')) * P.lightK;
           o.dur = 4 + 0.5 * E('l_dur'); o.cd = 12 - 1.5 * E('l_cd');
           if (form === 'prism') { o.dps = g * 1.5 * lk; o.ramp = 1 + 0.25 * E('lp_glow'); o.w = 7 * (1 + 0.2 * E('lp_wide')); o.blind = 0.5 * E('lp_blind'); o.fan = !!E('lp_fan'); }
-          if (form === 'lens') { o.dps = g * 3 * lk; o.hot = 0.25 * E('ll_hot'); o.after = 1.5 * E('ll_after'); o.weak = 0.075 * E('ll_weak'); o.sun = !!E('ll_sun'); o.ramp = 3; o.w = 3; }
+          if (form === 'lens') { o.dps = g * 3 * lk * P.lensK; o.hot = P.llHot * E('ll_hot'); o.after = P.llAfter * E('ll_after'); o.weak = P.llWeak * E('ll_weak'); o.sun = !!E('ll_sun'); o.ramp = P.llRamp; o.w = 3; }
           if (form === 'mirror') { o.dps = g * 1.2 * lk; o.mirrors = 3 + E('lm_more'); o.refr = 0.1 * E('lm_refr'); o.lens = g * 0.3 * E('lm_lens'); o.cage = !!E('lm_cage'); o.w = 7; }
         }
         s.el = o;
@@ -1819,7 +1820,7 @@
         this.frost(e, i ? o.dur / 2 : o.dur, hand);
         if (o.zero && e.type === 'boss' && this.lanceN % 3 === 0) e.frostHard = this.time + 1; // Nullpunkt: jede 3. Lanze hält Bosse an
         if (e.type === 'mender') this.probe('il_mend');
-        this.elHit(e, i ? o.dmg / 2 : o.dmg, hand);
+        this.elHit(e, i ? o.dmg / 2 : o.dmg + this.elBig(e), hand);
       });
       return true;
     }
@@ -2951,6 +2952,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.43.0'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.44.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

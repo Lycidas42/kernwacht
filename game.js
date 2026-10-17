@@ -160,7 +160,7 @@
     const pc = v => { const x = v / total * 100; return x >= 10 || x === 0 ? Math.round(x) : x < 0.1 ? '<0,1' : x.toFixed(1).replace('.', ','); };
     const row = (name, v, sub) => `<div class="dr${sub ? ' sub' : ''}"><span class="n">${name}</span><span class="b"><i style="width:${Math.max(1, Math.round(v / total * 100))}%"></i></span><span class="p num">${pc(v)} %</span><span class="v num">${fmt(v)}</span></div>`;
     const rows = SRC.filter(x => D[x.k] > 0).sort((a, b) => D[b.k] - D[a.k]).map(x => {
-      let h = row(x.name, D[x.k]);
+      let h = row(srcName(x), D[x.k]);
       // Module als Unterzeilen dort, wo ihr Schaden zählt: Verstärker der Kanone unter „Kanone“, der Rest unter „Module (direkt)“
       if (x.k === 'mod' || x.k === 'gun') h += Object.entries(run.modDealt || {}).filter(([t, v]) => v > 0 && C.MODULES[t] && (GUN_MODS.has(t) === (x.k === 'gun'))).sort((a, b) => b[1] - a[1]).map(([t, v]) => row(C.MODULES[t].name, v, true)).join('');
       return h;
@@ -821,6 +821,8 @@
     const a = dpsHist[0], b = dpsHist[dpsHist.length - 1], dt = b.t - a.t;
     return dt > 0 ? ((b.d[k] || 0) - (a.d[k] || 0)) / dt : 0;
   }
+  // Element-Zeile mit Namen und Form, z. B. „Feuer · Feuerball“
+  const srcName = x => { const o = x.k === 'elem' && run && run.s && run.s.el; if (!o) return x.name; const X = C.ELEMENTS[o.k], F = (C.ELEM_FORMS[o.k] || []).find(f => f.id === o.form); return X ? X.icon + ' ' + X.name + (F ? ' · ' + F.name : '') : x.name; };
   const SRC = [
     { k: 'gun', name: 'Kanone', hit: s => s.gunDmg, rate: (s, r) => dec(r.rateNow, 2) + '/s' + (s.multi ? ' ×' + (1 + s.multi) : ''), on: () => true },
     { k: 'rocket', name: 'Raketen', hit: s => s.rocketDmg, rate: s => 'alle ' + dec(s.rocketCd, 1) + ' s', on: s => s.rocketCd > 0 },
@@ -848,7 +850,7 @@
     const body = $('stBody'); statEls = {};
     for (const src of SRC) {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${src.name}</td><td class="h"></td><td class="r"></td><td class="dps"></td><td class="sh"></td>`;
+      tr.innerHTML = `<td>${srcName(src)}</td><td class="h"></td><td class="r"></td><td class="dps"></td><td class="sh"></td>`;
       body.appendChild(tr);
       statEls[src.k] = { tr, h: tr.querySelector('.h'), r: tr.querySelector('.r'), dps: tr.querySelector('.dps'), sh: tr.querySelector('.sh') };
     }
