@@ -919,13 +919,22 @@
   let elemLp = 0, elemLpDone = false, beamPtr = null, wallPtr = null;
   const TAP_FORMS = { ball: 1, meteor: 1, storm: 1 };
   const ELEM_HINT = { ball: 'Tipp ins Feld: Feuerball werfen. Knopf: automatisch', meteor: 'Tipp ins Feld: Meteor rufen, er schlägt nach 1,5 s ein. Knopf: automatisch', storm: 'Tipp ins Feld: Eissturm setzen. Knopf: automatisch', wall: 'Linie ins Feld ziehen: Flammenwand. Knopf: automatisch' };
+  // Knopf zeigt die gewählte Form; lange Namen auf zwei Zeilen getrennt (wie „Über-ladung“)
+  const FORM_SPLIT = { ball: 'Feuer-|ball', wall: 'Flammen-|wand', lance: 'Frost-|lanze', nova: 'Frost-|nova', storm: 'Eis-|sturm', prism: 'Prisma-|strahl', lens: 'Brenn-|glas', mirror: 'Spiegel-|feld' };
+  function setElemName(b, o) {
+    const F = (C.ELEM_FORMS[o.k] || []).find(f => f.id === o.form), el = b.querySelector('.nm');
+    if (!F) { el.textContent = C.ELEMENTS[o.k].name; return; }
+    const sp = FORM_SPLIT[o.form];
+    if (window.KWI18n && KWI18n.lang === 'en' || !sp) { el.textContent = F.name; return; }
+    el.innerHTML = sp.split('|').map(esc).join('<br>');
+  }
   function updateElemBtn() {
     const b = $('ab-elem'), o = run.s.el;
     if (o && o.form === 'mirror') { if (run.mirrorMode && !armed) armed = 'mirror'; if (!run.mirrorMode && armed === 'mirror') armed = null; }
     $('stage').classList.toggle('beam', armed === 'beam' || armed === 'wall');
     b.hidden = !o; if (!o) return;
     const E = C.ELEMENTS[o.k], key = o.k + ':' + o.form;
-    if (b.dataset.k !== key) { b.dataset.k = key; b.style.setProperty('--glow', E.col); b.querySelector('.ring').setAttribute('stroke', E.col); b.querySelector('.nm').textContent = E.name; b.setAttribute('aria-label', C.ELEM_FORMS[o.k].find(f => f.id === o.form).name); }
+    if (b.dataset.k !== key) { b.dataset.k = key; b.style.setProperty('--glow', E.col); b.querySelector('.ring').setAttribute('stroke', E.col); setElemName(b, o); b.setAttribute('aria-label', C.ELEM_FORMS[o.k].find(f => f.id === o.form).name); }
     let frac, txt;
     if (o.form === 'ball') { const n = Math.floor(run.elemAmmo || 0); frac = n >= o.ammo ? 1 : (run.elemAmmo || 0) - n; txt = armed === 'elem' ? 'Ziel' : n + '/' + o.ammo; }
     else if (o.k !== 'light') { frac = 1 - run.elemCd / o.cd; txt = armed === 'elem' ? 'Ziel' : armed === 'wall' ? 'Linie' : run.elemCd > 0 ? Math.ceil(run.elemCd) + ' s' : 'bereit'; }
