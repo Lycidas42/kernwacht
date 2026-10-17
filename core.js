@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eDmgLate: 0.7, eDmgLateAt: 100, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.9, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragEarly: 1.5, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, strikePart: 0.35, fbK: 6, fbR: 60, fmK: 11, fwK: 1.8, elBossPct: 0.012, elPartPct: 0.05, fDmgLv: 0.1, iceK: 2, lightK: 6, llHot: 0.25, llWeak: 0.075, llRamp: 2, lensK: 1.2, llAfter: 0.5, strikePartTo: 20, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, boss1Hp: 0.3, boss1Part: 0.45, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragEarly: 1.5, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, strikePart: 0.35, fbK: 6, fbR: 60, fmK: 11, fwK: 1.8, elBossPct: 0.012, elPartPct: 0.05, fDmgLv: 0.1, iceK: 2, lanceK: 1.2, novaK: 2, novaR: 160, lanceChain: 1, elF: 14, lightK: 6, llHot: 0.25, llWeak: 0.075, llRamp: 2, lensK: 1.2, llAfter: 0.5, strikePartTo: 20, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, boss1Hp: 0.3, boss1Part: 0.45, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.3, shockRLow: 0.7, shockPct: 0, bladeLv: 0.25, bladeWall: 2, bladeRHi: 0.8, bladePart: 0.3, bladeCd: 1, bladeMax: 2, bladeStep: 8, aoeMax: 15, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 1.8,
@@ -205,7 +205,7 @@
   const MODULES = {
     chain:     { sector: 1, name: 'Kettenblitz',       desc: v => `${pctS(v)} Chance, dass ein Treffer auf 2 Schiffe überspringt`, base: 0.10 },
     splinter:  { sector: 1, name: 'Splittermunition',  desc: v => `Abschüsse explodieren mit ${v.toFixed(1).replace('.', ',')}× Kanonenschaden im Umkreis`, base: 0.42 },
-    cryoammo:  { sector: 2, name: 'Kältebruch',        desc: v => `Kanonentreffer auf verlangsamte Schiffe machen +${pctS(v)} Schaden. Treffer verlangsamen leicht (10 %)`, base: P0.modK.cryo },
+    cryoammo:  { sector: 2, name: 'Kältebruch',        desc: v => `Kanonen- und Elementtreffer auf verlangsamte Schiffe machen +${pctS(v)} Schaden. Treffer verlangsamen leicht (10 %)`, base: P0.modK.cryo },
     scanner:   { sector: 2, name: 'Zielerfassung',     desc: v => `+${pctS(v)} Krit-Chance, Tarnung wirkungslos`, base: 0.04 },
     overcharge:{ sector: 3, name: 'Überspannung',      desc: v => `Jeder 12. Schuss macht ${v.toFixed(1).replace('.', ',')}× Schaden`, base: 2, add: 1 },
     plating:   { sector: 3, name: 'Dornenwall',        desc: v => `Schiffe am Schutzwall erleiden ${v.toFixed(1).replace('.', ',')}× Kanonenschaden pro Sekunde, +5 % Panzerung`, base: P0.modK.thorn },
@@ -672,9 +672,9 @@
         how: 'Knopf antippen, dann ins Feld tippen. Der Einschlag kommt verzögert: Ziele dorthin, wo die Schiffe in 1,5 s sind. Ein zweiter Tipp auf den Knopf zielt automatisch.' },
     ],
     ice: [
-      { id: 'lance', name: 'Frostlanze', desc: 'Trifft ein Ziel mit 12× Kanonenschaden (Bosse zusätzlich 1,2 % ihrer Lebenspunkte, Anbauteile 5 %) und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
+      { id: 'lance', name: 'Frostlanze', desc: 'Trifft ein Ziel mit 14× Kanonenschaden (Bosse zusätzlich 1,2 % ihrer Lebenspunkte, Anbauteile 5 %) und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
         how: 'Knopf antippen: Die Lanze trifft das markierte Ziel. Ohne Markierung trifft sie den Boss oder das Schiff mit den meisten Lebenspunkten.' },
-      { id: 'nova', name: 'Frostnova', desc: 'Eine Kältewelle um die Kanone bis Abstand 120: 1,6× Kanonenschaden, friert alle Schiffe darin 2 s ein, Bosse werden halb so schnell. Die Notbremse, wenn es eng wird. Abklingzeit 18 s.',
+      { id: 'nova', name: 'Frostnova', desc: 'Eine Kältewelle um die Kanone bis Abstand 160: 3,2× Kanonenschaden (Bosse zusätzlich 1,2 % ihrer Lebenspunkte), friert alle Schiffe darin 2 s ein, Bosse werden halb so schnell. Die Notbremse, wenn es eng wird. Abklingzeit 18 s.',
         how: 'Knopf antippen: Die Nova geht sofort von der Kanone aus.' },
       { id: 'storm', name: 'Eissturm', desc: 'Ein Hagelfeld (Radius 70) für 6 s: 1,2× Kanonenschaden pro Sekunde. Jede Sekunde im Feld kühlt ein Schiff weiter ab, nach 3 s friert es 2 s ein. Abklingzeit 18 s.',
         how: 'Knopf antippen, dann ins Feld tippen: Dort entsteht der Sturm. Ein zweiter Tipp auf den Knopf setzt ihn automatisch auf die dichteste Gruppe.' },
@@ -710,7 +710,7 @@
     { id: 'i_dur',   el: 'ice', max: 3, name: 'Permafrost',  desc: l => `Ziele bleiben ${dc(0.5 * l, 1)} s länger eingefroren` },
     { id: 'i_brit',  el: 'ice', par: 'i_dur', max: 3, name: 'Sprödigkeit', desc: l => `Eingefrorene Ziele erleiden ${pc(0.4 + 0.1 * l)} statt 40 % mehr Schaden (verlangsamte ein Viertel davon)` },
     { id: 'i_cd',    el: 'ice', par: 'i_dur', max: 2, name: 'Kälteschock', desc: l => `−${l} s Abklingzeit` },
-    { id: 'il_chain', el: 'ice', form: 'lance', max: 2, name: 'Eiskette',     desc: l => `Die Lanze springt auf ${l} weitere${l > 1 ? '' : 's'} Schiff${l > 1 ? 'e' : ''} (halber Schaden, halbe Frostdauer)` },
+    { id: 'il_chain', el: 'ice', form: 'lance', max: 2, name: 'Eiskette',     desc: l => `Die Lanze springt auf ${l} weitere${l > 1 ? '' : 's'} Schiff${l > 1 ? 'e' : ''} (voller Schaden, halbe Frostdauer)` },
     { id: 'il_shard', el: 'ice', form: 'lance', par: 'il_chain', max: 2, name: 'Splitterregen', desc: l => `+${pc(0.4 * l)} Schaden beim Zersplittern` },
     { id: 'il_sog',   el: 'ice', form: 'lance', par: 'il_chain', max: 2, name: 'Kältesog',     desc: l => `Während Stasis lädt die Lanze ${pc(0.5 * l)} schneller` },
     { id: 'il_zero',  el: 'ice', form: 'lance', par: 'il_chain', cap: 1, name: 'Nullpunkt', desc: () => 'Schiffe unter 12 % Lebenspunkten zerspringen sofort beim Einfrieren; jede 3. Lanze hält auch Bosse 1 s ganz an' },
@@ -1087,7 +1087,10 @@
       const el = s.noGun ? null : elActive(this.meta);
       s.el = null;
       if (el) {
-        const E = id => elLv(this.meta, id), gb = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)), g = gb, form = elForm(this.meta, el);
+        // Basis ist die Kanonenleistung pro Sekunde (Schuss × Feuerrate × Mehrfachschuss × Krit), normiert auf P.elF,
+        // sonst bleiben Elemente bei Spielständen mit viel Feuerrate und Krit weit hinter der Kanone zurück
+        const gunF = s.rate * (1 + s.multi * s.multiDmg) * (1 + s.crit * (s.critx - 1));
+        const E = id => elLv(this.meta, id), gb = s.gunDmg * gunF / P.elF * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)), g = gb, form = elForm(this.meta, el);
         const o = { k: el, form, cap: ELEM_SKILLS.some(k => k.el === el && k.form === form && k.cap && E(k.id)) };
         if (el === 'fire') {
           const f = 1 + P.fDmgLv * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
@@ -1099,8 +1102,8 @@
         if (el === 'ice') {
           const g = gb * P.iceK;
           o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.shard = g * 2 * (1 + 0.4 * E('il_shard'));
-          if (form === 'lance') { o.dmg = g * 6; o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.sog = 0.5 * E('il_sog'); o.zero = !!E('il_zero'); }
-          if (form === 'nova') { o.dmg = g * 0.8; o.cd = 18 - E('i_cd'); o.r = 120 * (1 + 0.125 * E('in_rad')); o.dur = 2 + 0.5 * E('i_dur'); o.rime = 0.5 * E('in_rime'); o.heal = 0.004 * E('in_hull'); o.age = !!E('in_age'); }
+          if (form === 'lance') { o.dmg = g * 6 * P.lanceK; o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.sog = 0.5 * E('il_sog'); o.zero = !!E('il_zero'); }
+          if (form === 'nova') { o.dmg = g * 0.8 * P.novaK; o.cd = 18 - E('i_cd'); o.r = P.novaR * (1 + 0.125 * E('in_rad')); o.dur = 2 + 0.5 * E('i_dur'); o.rime = 0.5 * E('in_rime'); o.heal = 0.004 * E('in_hull'); o.age = !!E('in_age'); }
           if (form === 'storm') { o.dps = g * 0.6; o.dmg = o.dps; o.cd = 18 - E('i_cd'); o.r = 70; o.sdur = 6 + E('is_dur'); o.dur = 2 + 0.5 * E('i_dur'); o.drift = 15 * E('is_drift'); o.slick = 0.15 * E('is_slick'); o.vortex = !!E('is_vortex'); }
         }
         if (el === 'light') {
@@ -1740,7 +1743,12 @@
     // Feuerball und Meteor treffen große Ziele spürbar: Anteil der maximalen Lebenspunkte von Bossen und Anbauteilen
     elBig(e) { return e.type === 'boss' && !e.child ? e.maxHp * P.elBossPct : e.host ? e.maxHp * P.elPartPct : 0; }
     // Treffer des Elements: merkt sich Zeitpunkt und Auslöser (Hand/Autopilot) für die Erfahrung
-    elHit(e, d, hand) { e.elemT = this.time; e.elemHand = !!hand; return this.hurt(e, d, false, 'elem'); }
+    elHit(e, d, hand) {
+      e.elemT = this.time; e.elemHand = !!hand;
+      // Kältebruch wirkt auch für das Element: verlangsamte Ziele nehmen mehr Schaden
+      const m = this.s.mod && this.s.mod.cryoammo; if (m && e.slowUntil > this.time) d *= 1 + m;
+      return this.hurt(e, d, false, 'elem');
+    }
     elemXp(e) {
       if (this.admin || !this.s.el || e.type === 'bomb') return;
       const o = this.s.el, boss = e.type === 'boss' && !e.child;
@@ -1788,7 +1796,7 @@
           const big = e.type === 'boss' || !!e.host;
           this.frost(e, o.dur * (!big && e.dist < WALL_R + 50 ? 1 + o.rime : 1), hand);
           if (!big) { n++; hull++; }
-          this.elHit(e, o.dmg, hand);
+          this.elHit(e, o.dmg + this.elBig(e), hand);
         }
         if (o.heal && hull && !this.dead) this.hp = Math.min(this.s.maxHp, this.hp + this.s.maxHp * o.heal * hull);
         if (this.fxOn) this.fx.push({ k: 'frostnova', r: o.r, t: 0 });
@@ -1820,7 +1828,7 @@
         this.frost(e, i ? o.dur / 2 : o.dur, hand);
         if (o.zero && e.type === 'boss' && this.lanceN % 3 === 0) e.frostHard = this.time + 1; // Nullpunkt: jede 3. Lanze hält Bosse an
         if (e.type === 'mender') this.probe('il_mend');
-        this.elHit(e, i ? o.dmg / 2 : o.dmg + this.elBig(e), hand);
+        this.elHit(e, i ? o.dmg * P.lanceChain : o.dmg + this.elBig(e), hand);
       });
       return true;
     }
@@ -2952,6 +2960,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.44.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.45.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
