@@ -195,12 +195,29 @@
     ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
     { const d = dmgReport(); $('oDmg').innerHTML = d; $('oDmg').hidden = !d; }
-    renderRoadmap();
+    renderRoadmap(); fusionHint(res, early);
     if ((res.loot || []).length) A.play('loot');
     submitScore(); cloudAuto(); if (O.configured) O.seen(1, C.record(meta)).catch(() => {});
     setTimeout(() => show('over'), early ? 0 : 900);
   }
 
+  // Hinweis auf die Kernfusion: einmal, wenn sie zum ersten Mal möglich ist, und immer wieder, wenn man dreimal in Folge
+  // am selben Boss scheitert (solange es Fragmente gibt)
+  function fusionHint(res, early) {
+    const w = res.wave, bf = meta.bossFail;
+    if (!early && w % 10 === 0) meta.bossFail = { w, n: bf && bf.w === w ? bf.n + 1 : 1 };
+    else if (bf && w > bf.w) meta.bossFail = null;
+    const gain = C.fragmentsFor(meta), first = gain > 0 && !meta.fusHint, stuck = gain > 0 && meta.bossFail && meta.bossFail.n >= 3;
+    $('oFus').hidden = !(first || stuck); $('labBtn2').className = first || stuck ? 'sec' : 'cta';
+    if (!(first || stuck)) return;
+    if (first) meta.fusHint = 1;
+    const bw = stuck ? meta.bossFail.w : w, B = C.BOSS_KINDS[C.bossKind(bw)];
+    $('oFusT').textContent = stuck ? `${meta.bossFail.n}× an ${B ? B.name : 'Boss'} (Welle ${bw}) gescheitert` : 'Kernfusion möglich!';
+    $('oFusP').textContent = (stuck ? 'Ein guter Moment für die Kernfusion. ' : `Du hast Welle ${C.FUSION_MIN} erreicht. `)
+      + `Sie setzt Labor, Kristalle und Bestwelle zurück und gibt dir +${fmt(gain)} Kernfragmente für dauerhafte Technik. Danach wirst du deutlich schneller stärker${meta.fusions ? '' : ', und es kommen Module, Kommandant und mehr dazu'}.`;
+    save();
+  }
+  $('oFusBtn').addEventListener('click', () => { A.play('click'); show('fusion'); });
   // Ergebnis eines Sonderlaufs
   function endMode(res, early) {
     const ex = [];
@@ -1209,6 +1226,8 @@
     add($('achBtn').classList.contains('dot') && !$('achBtn').hidden, 'Neue Erfolgsstufe', 'Erfolge', 'achBtn');
     add($('mineBtn').classList.contains('new') && !$('mineBtn').hidden, 'Ein Lager im Bergbau ist voll', 'Bergbau', 'mineBtn');
     add($('hangBtn').classList.contains('new') && !$('hangBtn').hidden, 'Neue Teile im Hangar', 'Hangar', 'hangBtn');
+    // am Boss festgefahren: die Fusion zuerst nennen
+    if (meta.bossFail && meta.bossFail.n >= 3) { const i = todo.findIndex(x => x.btn === 'fusBtn'); if (i > 0) todo.unshift(todo.splice(i, 1)[0]); }
     $('mTodo').innerHTML = todo.slice(0, 3).map(x => `<button data-todo="${x.btn}"><i></i>${x.txt}<span>${x.area} ›</span></button>`).join('');
     $$('#mTodo [data-todo]').forEach(b => b.addEventListener('click', () => { A.play('click'); $(b.dataset.todo).click(); }));
     setPage(mPage);
@@ -1511,7 +1530,7 @@
     if (!fuseArmed) { fuseArmed = setTimeout(() => { fuseArmed = 0; btn.classList.remove('armed'); btn.textContent = 'Fusion auslösen'; }, 3500); btn.classList.add('armed'); btn.textContent = 'Wirklich? Labor wird zurückgesetzt'; return; }
     clearTimeout(fuseArmed); fuseArmed = 0;
     const fw0 = C.fusWave(meta), gain = C.fuse(meta), miles = C.FUS_MILES.filter(x => x.w > fw0 && C.fusWave(meta) >= x.w);
-    run = null; put(RKEY, null); save(); A.play('fusion');
+    run = null; put(RKEY, null); meta.bossFail = null; save(); A.play('fusion');
     renderFusion();
     $('fusNote').className = 'note'; $('fusNote').style.color = ''; $('fusNote').textContent = `Fusion abgeschlossen: +${fmt(gain)} Kernfragmente. Investiere sie unten und starte neu.`;
     const un = newUnlocks();

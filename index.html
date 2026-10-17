@@ -810,6 +810,9 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 .hero .jumpbox h3 { margin: 0 0 6px; }
 .hero .cta { height: 54px; font-size: 1rem; }
 .todo { display: grid; gap: 8px; }
+.fushint { display: grid; gap: 6px; border: 1px solid var(--heat); border-radius: 6px; padding: 12px; background: color-mix(in srgb, var(--heat) 10%, transparent); box-shadow: 0 0 18px color-mix(in srgb, var(--heat) 25%, transparent); }
+.fushint b { color: var(--heat); font-size: .95rem; }
+.fushint p { margin: 0; font-size: .82rem; }
 .later { display: grid; gap: 4px; }
 .later h4 { margin: 4px 0 2px; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
 .later button { display: grid; grid-template-columns: 22px 1fr; column-gap: 8px; align-items: center; text-align: left; border: 1px dashed var(--line); border-radius: 4px; padding: 7px 10px; opacity: .75; }
@@ -1080,6 +1083,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="extra" id="oExtra" hidden></div>
     <div class="dmgrep" id="oDmg" hidden></div>
     <button class="pollbanner" hidden></button>
+    <div class="fushint" id="oFus" hidden><b id="oFusT"></b><p id="oFusP"></p><button class="cta" id="oFusBtn">Zur Kernfusion</button></div>
     <div class="roadmap" hidden></div>
     <div class="actions">
       <div class="actions two"><button class="cta" id="labBtn2">Ins Labor</button><button class="sec mine-btn" id="mineBtn2">Bergbau</button></div>
