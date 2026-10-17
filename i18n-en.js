@@ -460,6 +460,7 @@ window.KW_EN = {
   'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall. Dort treffen sie doppelt und zerstören Bomben sofort.': 'Blades circle on a loop: outside through the field, inside along the barrier. There they hit double and destroy bombs instantly.',
   'Elementarmagie und vierter Modulplatz': 'Elemental magic and fourth module slot',
   'Mit einer Fusion bei Welle {0} oder höher': 'With a fusion at wave {0} or higher',
+  'ab der {0}. Fusion': 'from fusion no. {0}',
   'Spielstände': 'Saves', 'Mehrere Spielstände, jeder mit eigenem Namen in den Highscores. Beim Wechseln wird der aktuelle in der Cloud gesichert.': 'Several saves, each with its own name in the high scores. Switching backs up the current one to the cloud first.',
   'Neuen Spielstand beginnen': 'Start new save', 'Wirklich neu beginnen': 'Really start over', 'Wechseln': 'Switch', 'Wirklich wechseln': 'Really switch', 'Wirklich entfernen': 'Really remove',
   'Ohne Namen': 'No name', 'Rekord {0} · aktiv': 'Record {0} · active', 'Aus der Liste entfernen': 'Remove from list',

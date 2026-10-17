@@ -1518,11 +1518,11 @@
       + `<small class="dim">${meta.fusGlow ? `Fusionsglut aktiv: Dein nächster Lauf bringt ×${C.fusGlow(meta)} Erfahrung.` : `Nach jeder Fusion: Fusionsglut mit ×${C.fusGlow(meta)} Erfahrung im ersten Lauf, auch unter dem Rekord.`}</small>`;
     const list = $('fusList'); list.innerHTML = '';
     for (const u of C.FUSION_UPG) {
-      const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), ok = !mx && !runAlive() && meta.frag >= c;
+      const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), lk = !mx && u.minFus && (meta.fusions || 0) < u.minFus, ok = !mx && !lk && !runAlive() && meta.frag >= c;
       const fx = F_FX[u.id], extra = fx ? ` <b style="color:var(--core)">${fx(l)}${mx ? '' : ' → ' + fx(l + 1)}</b>` : '';
       const el = document.createElement('div'); el.className = 'row'; el.style.gridTemplateColumns = '1fr auto';
-      el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'aktiv' : 'Technik') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
-        <button class="buy num ${mx ? 'max' : 'f-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? 'OK' : fmt(c)}</button>`;
+      el.innerHTML = `<div><div class="nm">${u.name}<small>${lk ? `ab der ${u.minFus}. Fusion` : u.unlock ? (mx ? 'aktiv' : 'Technik') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
+        <button class="buy num ${mx ? 'max' : 'f-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? 'OK' : lk ? 'gesperrt' : fmt(c)}</button>`;
       holdBuy(el.querySelector('button'), () => { if (runAlive() || !C.fusionBuy(meta, u)) return false; A.play('buy'); save(); renderFusion(); return true; });
       list.appendChild(el);
     }
