@@ -458,6 +458,7 @@ window.KW_EN = {
   'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall. Dort treffen sie dreifach und zerstören Bomben sofort.': 'Blades circle on a loop: outside through the field, inside along the barrier. There they hit triple and destroy bombs instantly.',
   'Druckring, der weit ins Feld läuft und alles darin trifft. Kleine Schiffe werden weit zurückgestoßen: verschafft Luft gegen Schwärme.': 'Pressure ring that travels far into the field and hits everything in it. Small ships are pushed far back: buys room against swarms.',
   'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall. Dort treffen sie doppelt und zerstören Bomben sofort.': 'Blades circle on a loop: outside through the field, inside along the barrier. There they hit double and destroy bombs instantly.',
+  'Elementarmagie und vierter Modulplatz': 'Elemental magic and fourth module slot',
   'Spielstände': 'Saves', 'Mehrere Spielstände, jeder mit eigenem Namen in den Highscores. Beim Wechseln wird der aktuelle in der Cloud gesichert.': 'Several saves, each with its own name in the high scores. Switching backs up the current one to the cloud first.',
   'Neuen Spielstand beginnen': 'Start new save', 'Wirklich neu beginnen': 'Really start over', 'Wechseln': 'Switch', 'Wirklich wechseln': 'Really switch', 'Wirklich entfernen': 'Really remove',
   'Ohne Namen': 'No name', 'Rekord {0} · aktiv': 'Record {0} · active', 'Aus der Liste entfernen': 'Remove from list',

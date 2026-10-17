@@ -26,6 +26,9 @@
     // Kommandant und Elemente sind jetzt Freischaltungen: wer schon Punkte verteilt bzw. ein Element gewählt hat, behält sie
     if (meta.cmdOpen == null && meta.sk && Object.values(meta.sk).some(v => v > 0)) meta.cmdOpen = 1;
     if (meta.elOpen == null && meta.elem && meta.elem.act) meta.elOpen = 1;
+    // Elemente jetzt erst mit einer Fusion bei Welle 150: nach älteren, früheren Regeln geöffnet, aber nie benutzt → wieder schließen
+    if (meta.elOpen && !(meta.elem && meta.elem.act) && (meta.elMig || 0) < 1) delete meta.elOpen;
+    meta.elMig = 1;
   }
   // Fusionskern neu bewertet (ab Stufe 200 steigen die Kosten wieder exponentiell): alte Ausgaben anrechnen und neu kaufen
   function migrateFusionCore() {
