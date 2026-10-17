@@ -92,6 +92,7 @@ Der Publishable Key ist für den Browser gedacht und darf öffentlich sein; gesc
 
 - **Spielercode:** Jeder Spieler bekommt im Browser einen geheimen Geräteschlüssel (25 Zeichen). Die Datenbank speichert nur dessen Hash.
 - **Geräte koppeln:** Profil → „Code für anderes Gerät erzeugen“ zeigt einen Kurzcode (z. B. `K7M-4QX`, 10 Minuten gültig) und einen QR-Code. Auf dem anderen Gerät eingeben oder scannen: Beide Geräte sind danach derselbe Spieler. Jedes Gerät hat seinen eigenen Schlüssel (`player_keys`).
+- **Mehrere Spielstände:** Profil → „Spielstände“. Jeder Spielstand ist ein eigener Spieler mit eigenem Spielercode, Namen und Highscore-Eintrag. Lokal steht nur die Liste der Codes (`kernwacht.slots`). Wechseln und „Neuen Spielstand beginnen“ sichern den aktuellen Stand vorher in der Cloud (geht nur online); danach wird der andere Stand geladen bzw. ein leerer begonnen. „✕“ nimmt einen Stand nur aus der Liste, der Cloud-Stand bleibt. Gekoppelte Geräte wechseln nicht mit.
 - **Schreiben** geht nur über die Datenbankfunktionen `kw_*`, die den Code prüfen. Gelesen werden dürfen nur Profilname, Profilbild und Highscore-Werte.
 - **Verwaltung:** `admin.html` (Link auch im Admin-Modus des Spiels) zeigt Feedback, Umfragen und Spieler. Zugang mit dem Verwaltungsschlüssel; in der Migration steht nur sein Hash. Neuen Schlüssel setzen: im SQL Editor
   `insert into admin_keys values (encode(sha256(convert_to('kernwacht-admin:' || 'NEUER-SCHLÜSSEL', 'UTF8')), 'hex'));` und den alten Eintrag löschen.

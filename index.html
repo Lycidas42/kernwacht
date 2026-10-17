@@ -509,6 +509,12 @@ button.buy, [data-fac], [data-res] { -webkit-user-select: none; user-select: non
 .dim { color: var(--ink-dim); font-size: .74rem; }
 .inrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
 .inrow .sec { height: 40px; padding: 0 14px; }
+.savelist { display: grid; gap: 6px; margin-bottom: 8px; }
+.saveslot { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.saveslot.cur { grid-template-columns: 1fr; border-color: var(--core); }
+.saveslot span { display: grid; min-width: 0; }
+.saveslot b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saveslot small { color: var(--ink-dim); font-size: .72rem; }
 textarea, .inrow input, #pName { width: 100%; background: var(--deck-2); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 9px 10px; font: inherit; font-size: .9rem; }
 textarea { resize: vertical; min-height: 70px; }
 #cOther { font-family: var(--font-num); text-transform: uppercase; font-size: .8rem; }
@@ -1353,6 +1359,12 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <small class="dim" id="cLast"></small>
       <div class="actions two"><button class="sec" id="cSave">Jetzt sichern</button><button class="sec" id="cLoad">Aus Cloud laden</button></div>
       <button class="sec" id="cAuto" aria-pressed="true">Automatisch sichern: an</button>
+
+      <h3>Spielstände</h3>
+      <p>Mehrere Spielstände, jeder mit eigenem Namen in den Highscores. Beim Wechseln wird der aktuelle in der Cloud gesichert.</p>
+      <div class="savelist" id="slotList"></div>
+      <button class="sec" id="slotNew">Neuen Spielstand beginnen</button>
+      <p class="note" id="slotNote"></p>
 
       <h3>Auf anderem Gerät weiterspielen</h3>
       <p>Erzeuge hier einen Code und gib ihn auf dem anderen Gerät unter „Profil“ ein. Er gilt 10 Minuten. Danach sind beide Geräte derselbe Spieler.</p>

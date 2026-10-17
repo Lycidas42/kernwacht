@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const C = window.Core, A = window.KWAudio, O = window.KWOnline, R_ = window.KWRender, fmt = R_.fmt;
-  const KEY = 'kernwacht.v1', RKEY = 'kernwacht.run.v2';
+  const KEY = 'kernwacht.v1', RKEY = 'kernwacht.run.v2', SKEY = 'kernwacht.slots';
   // SHA-256 von "kernwacht:" + Passwort. Neues Passwort: siehe README, Abschnitt "Admin-Modus".
   const ADMIN_HASH = 'e157170b6268a0306b388f775d4cd2cae352e63f0ca05b40984b9028368f2758';
   const $ = id => document.getElementById(id);
@@ -1857,11 +1857,12 @@
       $('cLast').textContent = meta.cloudAt ? 'Zuletzt gesichert: ' + stamp(meta.cloudAt) : 'Noch nicht in der Cloud gesichert.';
       $('cAuto').setAttribute('aria-pressed', meta.cloudAuto !== false ? 'true' : 'false');
       $('cAuto').textContent = meta.cloudAuto !== false ? 'Automatisch sichern: an' : 'Automatisch sichern: aus';
+      renderSlots();
     }
   }
   let cloudBusy = false, cloudT = 0;
   async function cloudSave(silent) {
-    if (!O.configured || cloudBusy) return false;
+    if (!O.configured || cloudBusy || frozenSave) return false;
     cloudBusy = true;
     try {
       const at = await O.save(exportData());
@@ -1886,9 +1887,69 @@
         cloudNote(`Cloud-Stand vom ${stamp(r.updated_at)}: ${r.name || 'ohne Namen'}, Rekord ${Math.max(m.bestEver || 0, m.best || 0)}, ${m.runs} Läufe. Hier auf dem Gerät: Rekord ${C.record(meta)}, ${meta.runs} Läufe. Zum Ersetzen nochmal tippen.`);
         return;
       }
-      if (other) O.adopt(other);
+      if (other) { await cloudSave(true); slotRemember(); O.adopt(other); }
       applyImport(r.data, 'cloud');
     } catch (e) { cloudNote('Laden fehlgeschlagen: ' + e.message, true); }
+  }
+  // Mehrere Spielstände: jeder ist ein eigener Spieler mit eigenem Spielercode und Cloud-Stand.
+  // Lokal steht nur die Liste der Codes; gewechselt wird über die Cloud (aktuellen Stand sichern, anderen laden).
+  function slots() { const l = load(SKEY); return Array.isArray(l) ? l.filter(x => x && O.validCode(x.code)) : []; }
+  // Aktuellen Spielstand in die Liste eintragen bzw. dort aktualisieren
+  function slotRemember() {
+    const c = O.code(), l = slots(), e = { code: c, name: meta.name || '', rec: C.record(meta), at: Date.now() };
+    const i = l.findIndex(x => x.code === c);
+    if (i < 0) l.push(e); else l[i] = e;
+    put(SKEY, l); return l;
+  }
+  function slotNote(txt, err) { $('slotNote').textContent = txt; $('slotNote').className = 'note' + (err ? ' err' : ''); }
+  let slotArmed = '', slotBusy = false;
+  function renderSlots() {
+    const c = O.code(), l = slotRemember();
+    $('slotList').innerHTML = l.map(x => {
+      const cur = x.code === c;
+      return `<div class="saveslot${cur ? ' cur' : ''}"><span><b>${esc(x.name || 'Ohne Namen')}</b><small>Rekord ${x.rec | 0}${cur ? ' · aktiv' : ''}</small></span>`
+        + (cur ? '' : `<button class="mini" data-slot="${x.code}">${slotArmed === 'go' + x.code ? 'Wirklich wechseln' : 'Wechseln'}</button><button class="mini" data-slotdel="${x.code}" aria-label="Aus der Liste entfernen">${slotArmed === 'del' + x.code ? 'Wirklich entfernen' : '✕'}</button>`) + '</div>';
+    }).join('');
+    $('slotNew').textContent = slotArmed === 'new' ? 'Wirklich neu beginnen' : 'Neuen Spielstand beginnen';
+    $$('#slotList [data-slot]').forEach(b => b.addEventListener('click', () => slotSwitch(b.dataset.slot)));
+    $$('#slotList [data-slotdel]').forEach(b => b.addEventListener('click', () => slotForget(b.dataset.slotdel)));
+  }
+  // Vor jedem Wechsel: kein laufender Lauf, aktueller Stand sicher in der Cloud
+  async function slotPrepare() {
+    if (runAlive()) { slotNote('Beende zuerst den laufenden Lauf.', true); return false; }
+    slotNote('Aktueller Spielstand wird in der Cloud gesichert …');
+    if (!(await cloudSave(true))) { slotNote('Sichern fehlgeschlagen. Wechseln geht nur online, damit kein Spielstand verloren geht.', true); return false; }
+    slotRemember(); return true;
+  }
+  async function slotSwitch(code) {
+    if (slotBusy) return;
+    if (slotArmed !== 'go' + code) { slotArmed = 'go' + code; slotNote('Dein aktueller Spielstand wird vorher in der Cloud gesichert und bleibt in der Liste. Zum Wechseln nochmal tippen.'); renderSlots(); return; }
+    slotArmed = ''; slotBusy = true;
+    try {
+      if (!(await slotPrepare())) return;
+      const r = await O.load(code);
+      if (!r || !r.data || !r.data.meta) { slotNote('Zu diesem Spielstand ist nichts in der Cloud gesichert.', true); return; }
+      r.data.meta.cloudAt = r.updated_at; O.adopt(code); applyImport(r.data, 'slot');
+    } catch (e) { slotNote('Wechseln fehlgeschlagen: ' + e.message, true); }
+    finally { slotBusy = false; if (current === 'profile' && !frozenSave) renderSlots(); }
+  }
+  $('slotNew').addEventListener('click', async () => {
+    if (slotBusy) return;
+    if (slotArmed !== 'new') { slotArmed = 'new'; slotNote('Du beginnst ganz von vorn mit neuem Namen. Der aktuelle Spielstand wird in der Cloud gesichert, du kannst jederzeit hierher zurückwechseln. Zum Bestätigen nochmal tippen.'); renderSlots(); return; }
+    slotArmed = ''; slotBusy = true;
+    try {
+      if (!(await slotPrepare())) return;
+      // Einstellungen mitnehmen, alles andere beginnt neu (Willkommen mit Namenswahl erscheint beim Start)
+      const m = C.newMeta(); m.sfx = meta.sfx; m.music = meta.music; m.cloudAuto = meta.cloudAuto;
+      O.adopt(O.newCode());
+      applyImport({ v: 1, meta: m }, 'slotnew');
+    } catch (e) { slotNote('Neuer Spielstand fehlgeschlagen: ' + e.message, true); }
+    finally { slotBusy = false; if (current === 'profile' && !frozenSave) renderSlots(); }
+  });
+  // Nur aus der Liste nehmen; der Cloud-Stand bleibt und ist mit dem Spielercode weiter erreichbar
+  function slotForget(code) {
+    if (slotArmed !== 'del' + code) { slotArmed = 'del' + code; slotNote('Der Spielstand verschwindet nur aus dieser Liste. Zurück kommst du dann nur noch mit seinem Spielercode. Zum Entfernen nochmal tippen.'); renderSlots(); return; }
+    slotArmed = ''; put(SKEY, slots().filter(x => x.code !== code)); slotNote('Aus der Liste entfernt.'); renderSlots();
   }
   // Geräte koppeln: Kurzcode erzeugen (Gerät A) bzw. eingeben (Gerät B)
   let pairTimer = 0;
@@ -1925,7 +1986,9 @@
     if (pairArmed !== v) { pairArmed = v; cloudNote('Achtung: Der Spielstand auf diesem Gerät wird durch den des anderen Geräts ersetzt. Zum Verbinden nochmal tippen.'); $('cPairUse').textContent = 'Wirklich verbinden'; return; }
     $('cPairUse').disabled = true;
     try {
+      const old = O.code();
       const r = await O.pairRedeem(v);
+      put(SKEY, slots().filter(x => x.code !== old));
       if (r && r.data && r.data.meta) applyImport(r.data, 'pair');
       else { cloudNote(`Verbunden mit ${r && r.name ? r.name : 'deinem Spieler'}. Es gab noch keinen Cloud-Spielstand, dein lokaler Stand bleibt.`); }
     } catch (e) { cloudNote(e.message, true); pairArmed = ''; $('cPairUse').textContent = 'Verbinden'; }
@@ -2285,7 +2348,7 @@
     });
     setInterval(fetchPolls, 5 * 60e3);
   }
-  try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'pair' ? 'Gerät verbunden: Spielstand vom anderen Gerät übernommen.' : how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
+  try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'pair' ? 'Gerät verbunden: Spielstand vom anderen Gerät übernommen.' : how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : how === 'slot' ? 'Spielstand gewechselt.' : how === 'slotnew' ? 'Neuer Spielstand begonnen. Dein bisheriger liegt sicher in der Cloud.' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
 
   // ---------- Admin ----------
   async function sha(text) {
