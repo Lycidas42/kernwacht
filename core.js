@@ -509,6 +509,10 @@
     { id: 'strike', name: 'Feuer von oben',   what: 'Orbitalschläge',         goals: [50, 250, 1e3, 5e3],                   bonus: 'strike', step: 0.03, bname: 'Orbitalschaden' },
     { id: 'depth',  name: 'Tiefenläufer',     what: 'Echo-Zyklus erreicht',   goals: [2, 3, 4, 6, 8],                       bonus: 'crys',   step: 0.03, bname: 'Kristalle' },
     { id: 'chal',   name: 'Bezwinger',        what: 'Challenge-Stufen',       goals: [5, 10, 20, 30, 40],                   bonus: 'all',    step: 0.01, bname: 'auf alles' },
+    // Elemente (sichtbar ab Freischaltung der Elementarmagie); voller Baum = Rang 15 je Element
+    { id: 'erank',  name: 'Elementarist',     what: 'Elementränge zusammen',  goals: [10, 20, 35, 50, 65, 80],              bonus: 'elem',   step: 0.03, bname: 'Elementschaden', el: 1 },
+    { id: 'eprobe', name: 'Prüfling',         what: 'Elementproben bestanden', goals: [3, 9, 15, 21, 27],                   bonus: 'elxp',   step: 0.05, bname: 'Element-Erfahrung', el: 1 },
+    { id: 'ekill',  name: 'Naturgewalt',      what: 'Abschüsse mit Elementen', goals: [1e3, 1e4, 1e5, 1e6],                 bonus: 'elem',   step: 0.03, bname: 'Elementschaden', el: 1 },
   ];
   const statOf = m => (m.stat = m.stat || { waves: Math.round(record(m) * (m.runs || 0) * 0.5), bosses: 0, strikes: 0 });
   function achVal(m, id) {
@@ -526,12 +530,15 @@
       case 'strike': return st.strikes || 0;
       case 'depth': return cycleOf(record(m));
       case 'chal': return CHALLENGES.reduce((a, c) => a + chalTier(m, c.id), 0);
+      case 'erank': return Object.keys(ELEMENTS).reduce((a, el) => a + elRank(m, el).rank, 0);
+      case 'eprobe': return Object.keys((m.elem && m.elem.probes) || {}).filter(id => PROBE_BY_ID[id]).length;
+      case 'ekill': return st.elKills || 0;
     }
     return 0;
   }
   const achTier = (m, a) => { const v = achVal(m, a.id); return a.goals.filter(g => v >= g).length; };
   function achBonus(m) {
-    const b = { dmg: 1, hp: 1, rate: 1, crys: 1, boss: 1, mod: 1, frag: 1, loot: 1, mine: 1, strike: 1, all: 1 };
+    const b = { dmg: 1, hp: 1, rate: 1, crys: 1, boss: 1, mod: 1, frag: 1, loot: 1, mine: 1, strike: 1, all: 1, elem: 1, elxp: 1 };
     for (const a of ACH) b[a.bonus] += a.step * achTier(m, a);
     return b;
   }
@@ -540,7 +547,7 @@
   function permBonus(m) {
     const c = chalBonus(m), a = achBonus(m), r = researchBonus(m), ms = Math.pow(SK_MASTER_K, skMastery(m));
     return { hp: c.hp * a.hp * a.all * r.hp * ms, rate: c.rate * a.rate * a.all * r.rate, dmg: c.dmg * a.dmg * a.all * r.dmg * ms, master: ms, loot: c.loot * a.loot * a.all * r.loot, crys: c.crys * a.crys * a.all,
-      boss: a.boss * r.boss, rateAll: r.rateAll, mod: a.mod, strike: a.strike, frag: a.frag, mine: a.mine };
+      boss: a.boss * r.boss, rateAll: r.rateAll, mod: a.mod, strike: a.strike, frag: a.frag, mine: a.mine, elem: a.elem, elxp: a.elxp };
   }
   // ---------- Kommandant: Rang aus Erfahrung (jede überstandene Welle), je Rang ein Skillpunkt ----------
   const xpFor = w => Math.round(5 + w * 0.5);
@@ -1090,7 +1097,7 @@
         // Basis ist die Kanonenleistung pro Sekunde (Schuss × Feuerrate × Mehrfachschuss × Krit), normiert auf P.elF,
         // sonst bleiben Elemente bei Spielständen mit viel Feuerrate und Krit weit hinter der Kanone zurück
         const gunF = s.rate * (1 + s.multi * s.multiDmg) * (1 + s.crit * (s.critx - 1));
-        const E = id => elLv(this.meta, id), gb = s.gunDmg * gunF / P.elF * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)), g = gb, form = elForm(this.meta, el);
+        const E = id => elLv(this.meta, id), gb = s.gunDmg * gunF / P.elF * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)) * cb.elem, g = gb, form = elForm(this.meta, el);
         const o = { k: el, form, cap: ELEM_SKILLS.some(k => k.el === el && k.form === form && k.cap && E(k.id)) };
         if (el === 'fire') {
           const f = 1 + P.fDmgLv * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
@@ -1752,9 +1759,9 @@
     elemXp(e) {
       if (this.admin || !this.s.el || e.type === 'bomb') return;
       const o = this.s.el, boss = e.type === 'boss' && !e.child;
-      const v = (1 + this.wave / 50) * (boss ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[o.k] * (o.form === 'lens' ? 2 : 1) * (this.glow || 1); // Brennglas trifft nur ein Ziel; Fusionsglut vervielfacht
+      const v = (1 + this.wave / 50) * (boss ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[o.k] * (o.form === 'lens' ? 2 : 1) * (this.glow || 1) * (this.s.chal.elxp || 1); // Brennglas trifft nur ein Ziel; Fusionsglut vervielfacht
       const E = elemState(this.home); E.xp[o.k] = (E.xp[o.k] || 0) + v; this.elXp = (this.elXp || 0) + v;
-      this.elKills = (this.elKills || 0) + 1; this.probe(PROBE_KILL[o.form], this.elKills);
+      this.elKills = (this.elKills || 0) + 1; const st = statOf(this.home); st.elKills = (st.elKills || 0) + 1; this.probe(PROBE_KILL[o.form], this.elKills);
       if (boss && this.time - e.elemT <= 1.5) {
         if (o.form === 'meteor' ? this.time - (e.meteorT || -9) <= 1 : o.form === 'storm' ? this.time - (e.stormT || -9) <= 0.5 : o.form !== 'lens') this.probe(PROBE_BOSS[o.form]);
       }
@@ -2960,6 +2967,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.45.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.46.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -554,6 +554,8 @@ window.KW_EN = {
   'Wellen überstanden': 'Waves survived', 'Höchste Welle': 'Highest wave', 'Kristalle verdient': 'Crystals earned', 'Bosse besiegt': 'Bosses defeated',
   'Modulkopien gesammelt': 'Module copies collected', 'Kernfusionen': 'Core fusions', 'Tagesläufe': 'Daily runs', 'Erz abgebaut': 'Ore mined', 'Orbitalschläge': 'Orbital strikes',
   'Schaden gegen Bosse': 'Damage vs. bosses', 'Modulwirkung': 'Module effect', 'Fusionsfragmente': 'Fusion fragments', 'Förderung': 'Output', 'Orbitalschaden': 'Orbital damage', 'auf alles': 'to everything',
+  'Elementarist': 'Elementalist', 'Prüfling': 'Examinee', 'Naturgewalt': 'Force of Nature', 'Elementränge zusammen': 'Element ranks combined', 'Elementproben bestanden': 'Element trials passed',
+  'Abschüsse mit Elementen': 'Element kills', 'Elementschaden': 'Element damage', 'Element-Erfahrung': 'Element XP',
   '+{0} % {1}': '+{0} % {1}',
 
   // ---------- Hangar ----------

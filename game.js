@@ -527,10 +527,11 @@
   const achBonusTxt = (a, t) => '+' + Math.round(a.step * 100 * t) + ' % ' + a.bname;
   function renderAch() {
     meta.seen = meta.seen || {}; meta.seen.ach = C.achPoints(meta);
-    const pts = C.achPoints(meta), max = C.ACH.reduce((s, a) => s + a.goals.length, 0);
+    const vis = C.ACH.filter(a => !a.el || C.elUnlocked(meta)); // Element-Erfolge erst mit der Elementarmagie
+    const pts = C.achPoints(meta), max = vis.reduce((s, a) => s + a.goals.length, 0);
     $('achSum').innerHTML = `<b>${pts}</b> von ${max} Stufen erreicht`;
     const list = $('achList'); list.innerHTML = '';
-    for (const a of C.ACH) {
+    for (const a of vis) {
       const v = C.achVal(meta, a.id), t = C.achTier(meta, a), nx = a.goals[t], prev = t ? a.goals[t - 1] : 0;
       const frac = nx ? Math.max(0, Math.min(1, (v - prev) / (nx - prev))) : 1;
       const el = document.createElement('div'); el.className = 'ach' + (nx ? '' : ' done');
