@@ -1498,7 +1498,7 @@
         el.style.gridTemplateColumns = '1fr auto';
         el.innerHTML = m
           ? `<div><div class="nm">${R_.iconSvg(t, m.rar, 20)}${M.name}<span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span><small>Fund ${m.copies}/10${m.mast ? ' · Meister ' + m.mast + ' (+' + 5 * m.mast + ' %)' : ''}</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
-          : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Bossen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
+          : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Bossen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}) und in Echo-Zyklen (z. B. Wellen ${sec.n * 50 + 201}–${sec.n * 50 + 250})</div></div><span></span>`;
         if (m) el.addEventListener('click', () => {
           if (on) meta.equip = eq.filter(x => x !== t);
           else if (eq.length < C.MODULE_SLOTS) meta.equip = eq.concat(t);
@@ -2506,6 +2506,7 @@
         else { const d = dailyToday(), b = d ? d.best : 0; txt = 'Tageslauf' + (b ? ' · heute ' + b : ''); hit = b > 0 && run.wave > b; }
         $('bestNo').textContent = txt; $('bestNo').classList.toggle('rec', !!hit);
       } else {
+        if (run.anom !== window.__anom) { window.__anom = run.anom; if (run.anom) toast(`<b>Anomalie: ${run.anom.name}</b><br>${run.anom.desc}`, 6000); } // Echo-Zyklus: neue Anomalie ankündigen
         const rec = run.wave > meta.best && meta.best > 0;
         const allRec = C.record(meta);
         $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : run.rush ? 'Durchmarsch' : run.rushWhyAt && run.wave - run.rushWhyAt.w <= 3 ? (run.rushWhyAt.why === 'hull' ? 'Durchmarsch aus: Schaden' : run.rushWhyAt.why === 'field' ? 'Durchmarsch aus: Feld voll' : 'Durchmarsch aus: Boss zäh') : run.catchUp() ? 'Aufholen ×2' : rec ? 'Neue Bestwelle' : 'Rekord ' + allRec;
