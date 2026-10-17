@@ -124,6 +124,7 @@
     A.nextRandom(); syncModeFrame(true);
     R.clear(); armed = null; dpsHist.length = 0;
     setPaused(false); show(null); buildList(); save();
+    $('pollPop').hidden = true; // Umfrage-Einblendung nicht in den Lauf mitnehmen
     if (run.glow) toast(`<b>Fusionsglut</b><br>×${run.glow} Erfahrung in diesem Lauf, auch unter deinem Rekord.`, 5000);
   }
   // Sonderlauf deutlich kennzeichnen: farbiger Rahmen ums Feld und Hinweis mit der Regel
@@ -2318,25 +2319,35 @@
   // ---------- Umfragen ----------
   let polls = [], pollCur = null;
   meta.votes = meta.votes || {};
+  // Spielzeit (aktiver, sichtbarer Lauf): Umfragen erst nach ein paar Stunden. Ältere Spielstände: grob 5 Minuten je Lauf
+  const POLL_AFTER = 3 * 3600;
+  if (meta.playSec == null) meta.playSec = (meta.runs || 0) * 300;
+  setInterval(() => {
+    if (document.hidden || !runAlive() || paused) return;
+    const was = meta.playSec < POLL_AFTER; meta.playSec += 15;
+    if (was && meta.playSec >= POLL_AFTER) syncPollBanner();
+  }, 15e3);
   async function fetchPolls() {
     if (!O.configured) return;
     const p = await O.polls(); if (!p) return;
     polls = p; syncPollBanner();
   }
   function syncPollBanner() {
-    const open = polls.filter(p => meta.votes[p.id] == null);
+    // Nur offene Umfragen; nach dem Abstimmen verschwindet die Umfrage, neue Spieler sehen sie erst nach POLL_AFTER Spielzeit
+    const open = meta.playSec >= POLL_AFTER ? polls.filter(p => meta.votes[p.id] == null) : [];
     $$('.pollbanner').forEach(el => {
-      el.hidden = !polls.length;
-      if (!polls.length) return;
-      const p = open[0] || polls[0];
-      el.classList.toggle('new', !!open.length);
-      el.innerHTML = `<span>${open.length ? 'Neue Umfrage' : 'Umfrage'}</span><b>${esc(p.question)}</b><small>${open.length ? 'Tippen zum Abstimmen' : 'Ergebnis ansehen'}</small>`;
+      el.hidden = !open.length;
+      if (!open.length) return;
+      const p = open[0];
+      el.classList.add('new');
+      el.innerHTML = `<span>Neue Umfrage</span><b>${esc(p.question)}</b><small>Tippen zum Abstimmen</small>`;
       el.onclick = () => { pollCur = p; show('poll'); };
     });
     // Einblendung oben: jede offene Umfrage einmal, bis abgestimmt oder „Später“
     meta.pollLater = meta.pollLater || {};
     const pop = open.find(p => !meta.pollLater[p.id]), box = $('pollPop');
-    if (!pop || current === 'poll') { box.hidden = true; return; }
+    // nicht mitten in einen Lauf hinein, nur im Menü bzw. nach dem Lauf
+    if (!pop || current === 'poll' || runAlive()) { box.hidden = true; return; }
     $('ppQ').textContent = pop.question; box.hidden = false;
     $('ppGo').onclick = () => { box.hidden = true; pollCur = pop; pollFromRun = runAlive() && !current; if (pollFromRun) setPaused(true); A.play('click'); show('poll'); };
     $('ppLater').onclick = () => { box.hidden = true; meta.pollLater[pop.id] = 1; save(); A.play('click'); };
