@@ -121,6 +121,7 @@
     A.nextRandom(); syncModeFrame(true);
     R.clear(); armed = null; dpsHist.length = 0;
     setPaused(false); show(null); buildList(); save();
+    if (run.glow) toast(`<b>Fusionsglut</b><br>×${run.glow} Erfahrung in diesem Lauf, auch unter deinem Rekord.`, 5000);
   }
   // Sonderlauf deutlich kennzeichnen: farbiger Rahmen ums Feld und Hinweis mit der Regel
   function syncModeFrame(intro) {
@@ -1467,6 +1468,9 @@
     else { btn.disabled = false; note.style.color = ''; note.className = 'note'; const fr = w => fmt(C.fragmentsFor(Object.assign({}, meta, { best: w }))); // gleiche Formel wie die Fusion, inkl. Erfolgsbonus
       const w1 = Math.ceil((meta.best + 1) / 10) * 10, w2 = w1 + 20;
       note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
+    const nf = meta.fusions || 0;
+    $('fusMiles').innerHTML = C.FUS_MILES.map(x => `<div class="fusmile${nf >= x.n ? ' ok' : ''}"><i>${nf >= x.n ? '✓' : x.n}</i><span>${x.n}. Fusion: ${x.txt}</span></div>`).join('')
+      + `<small class="dim">${meta.fusGlow ? `Fusionsglut aktiv: Dein nächster Lauf bringt ×${C.fusGlow(meta)} Erfahrung.` : `Nach jeder Fusion: Fusionsglut mit ×${C.fusGlow(meta)} Erfahrung im ersten Lauf, auch unter dem Rekord.`}</small>`;
     const list = $('fusList'); list.innerHTML = '';
     for (const u of C.FUSION_UPG) {
       const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), ok = !mx && !runAlive() && meta.frag >= c;
@@ -1483,10 +1487,11 @@
     const btn = $('fuseBtn');
     if (!fuseArmed) { fuseArmed = setTimeout(() => { fuseArmed = 0; btn.classList.remove('armed'); btn.textContent = 'Fusion auslösen'; }, 3500); btn.classList.add('armed'); btn.textContent = 'Wirklich? Labor wird zurückgesetzt'; return; }
     clearTimeout(fuseArmed); fuseArmed = 0;
-    const gain = C.fuse(meta);
+    const gain = C.fuse(meta), mile = C.FUS_MILES.find(x => x.n === meta.fusions);
     run = null; put(RKEY, null); save(); A.play('fusion');
     renderFusion();
     $('fusNote').className = 'note'; $('fusNote').style.color = ''; $('fusNote').textContent = `Fusion abgeschlossen: +${fmt(gain)} Kernfragmente. Investiere sie unten und starte neu.`;
+    if (mile) toast(`<b>Meilenstein: ${mile.n}. Fusion</b><br>${mile.txt}`, 6000);
   });
   $$('.fus-btn').forEach(b => b.addEventListener('click', () => show('fusion')));
   $('fusClose').addEventListener('click', home);
@@ -1496,7 +1501,7 @@
     meta.seen = meta.seen || {}; meta.seen.mod = modCopies();
     const eq = meta.equip, mods = meta.modules;
     const slots = $('modSlots'); slots.innerHTML = '';
-    for (let i = 0; i < C.MODULE_SLOTS; i++) {
+    for (let i = 0; i < C.modSlots(meta); i++) {
       const t = eq[i], m = t && mods[t];
       const d = document.createElement('div');
       d.className = 'slot' + (m ? ' on r' + m.rar : '');
@@ -1520,7 +1525,7 @@
           : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Bossen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}) und in Echo-Zyklen (z. B. Wellen ${sec.n * 50 + 201}–${sec.n * 50 + 250})</div></div><span></span>`;
         if (m) el.addEventListener('click', () => {
           if (on) meta.equip = eq.filter(x => x !== t);
-          else if (eq.length < C.MODULE_SLOTS) meta.equip = eq.concat(t);
+          else if (eq.length < C.modSlots(meta)) meta.equip = eq.concat(t);
           else { el.animate && el.animate([{ transform: 'translateX(-4px)' }, { transform: 'translateX(4px)' }, { transform: 'none' }], { duration: 200 }); return; }
           A.play('click'); if (runAlive()) run.recalc(); save(); renderModules();
         });
@@ -2596,7 +2601,7 @@
         $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : run.rush ? 'Durchmarsch' : run.rushWhyAt && run.wave - run.rushWhyAt.w <= 3 ? (run.rushWhyAt.why === 'hull' ? 'Durchmarsch aus: Schaden' : run.rushWhyAt.why === 'field' ? 'Durchmarsch aus: Feld voll' : 'Durchmarsch aus: Boss zäh') : run.catchUp() ? 'Aufholen ×2' : rec ? 'Neue Bestwelle' : 'Rekord ' + allRec;
         $('bestNo').classList.toggle('rec', rec);
       }
-      { const k = $('runK'), c = C.cheapest(meta); k.textContent = fmt(Math.floor(meta.crystals)); k.classList.toggle('dot', !!(c && meta.crystals >= c.cost)); } // sofort im Labor verfügbar
+      { const k = $('runK'), c = C.cheapest(meta); k.textContent = fmt(Math.floor(meta.crystals)); k.classList.toggle('dot', !buyLocked() && !!(c && meta.crystals >= c.cost)); } // Punkt nur, wenn im Lauf gekauft werden darf
       { const mp = $('markPill'), f = run.focus && run.focus.hp > 0 ? run.focus : null; mp.hidden = !f; if (f) { const PKN = { arm: 'Tentakel', tentacle: 'Tentakel', eye: 'Auge', turret: 'Geschütz', gate: 'Hangartor', vent: 'Schlot', gwing: 'Schwinge', head: 'Kopf', core: 'Kern', segment: 'Wurmglied', wing: 'Schwinge', armor: 'Panzerplatte', lance: 'Lanze', rack: 'Minenschacht', seal: 'Siegel', prism: 'Prisma' };
         const nm = f.type === 'part' ? (PKN[f.pk] || 'Bauteil') : f.type === 'boss' && f.kind ? C.BOSS_KINDS[f.kind].name : (MARK_NAME[f.type] || 'Ziel'); const tx = '◎ ' + nm; if (mp.textContent !== tx) mp.textContent = tx; } }
       $('myDmg').textContent = fmt(run.s.gunDmg);

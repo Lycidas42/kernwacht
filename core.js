@@ -97,6 +97,7 @@
     }
     meta.cph = (meta.cph || 0) * 0.3;
     meta.lv = lv; meta.crystals = 0; meta.best = 0; meta.startPref = null; meta.milestones = {};
+    meta.fusGlow = 1; // erster Lauf nach der Fusion: Fusionsglut
     return gain;
   }
   // früh exponentiell (günstig), dann polynomiell; ab u.late wieder exponentiell (P.fCoreLate), sonst wächst der Fusionskern
@@ -253,6 +254,8 @@
     return 'kopie';
   }
   const MODULE_SLOTS = 3;
+  // Weitere Modulplätze als Fusions-Meilensteine (siehe FUS_MILES)
+  const modSlots = m => MODULE_SLOTS + ((m.fusions || 0) >= 5 ? 1 : 0) + ((m.fusions || 0) >= 10 ? 1 : 0);
   // Beutechance steigt mit der Welle des Bosses: 20 % bei Welle 30 bis max. 85 %; in Echo-Zyklen 50 % (Herrscher wählen dafür gezielt fehlende Module)
   const dropChance = w => cycleOf(w) > 1 ? 0.5 : Math.max(0, Math.min(0.85, 0.2 + (w - 30) * 0.005));
 
@@ -379,6 +382,16 @@
   const record = m => Math.max(m.bestEver || 0, m.best || 0);
   const gateOk = (m, id) => record(m) >= (GATES[id] || 0);
   const buyInRun = m => record(m) >= BUY_RUN_AT;
+  // Fusions-Meilensteine: sichtbare Ziele über die Fragmente hinaus
+  const FUS_MILES = [
+    { n: 1, txt: 'Fragment-Technik und Farbe Violett' },
+    { n: 3, txt: `Durchmarsch und Wellensprung (ab Rekordwelle ${RUSH_AT})` },
+    { n: 5, txt: 'Vierter Modulplatz und Farbe Plasma' },
+    { n: 7, txt: 'Fusionsglut: dreifache statt doppelte Erfahrung im ersten Lauf nach der Fusion' },
+    { n: 10, txt: 'Fünfter Modulplatz' },
+  ];
+  // Fusionsglut: der erste Lauf nach jeder Fusion bringt mehr Erfahrung (Kommandant und Element), auch unter dem Rekord
+  const fusGlow = m => (m.fusions || 0) >= 7 ? 3 : 2;
   const rushOpen = m => record(m) >= RUSH_AT && (m.fusions || 0) >= RUSH_FUS;
   function nextUnlock(m) { const r = record(m); return ROADMAP.find(x => x.w > r) || null; }
   // Erwartete Energie aus Abschüssen einer Welle (ohne Upgrades im Lauf)
@@ -860,6 +873,7 @@
       // Sondermodus: { kind: 'chal', id } oder { kind: 'daily', day }
       this.mode = opts.mode || null;
       this.home = meta;
+      this.glow = !this.mode && meta.fusGlow ? fusGlow(meta) : 0;
       if (this.mode && this.mode.kind === 'daily') {
         const D = dailyOf(this.mode.day); this.mode.day = D.day; this.mode.twist = D.twist; this.seed = D.seed;
         meta = stdMeta();
@@ -907,7 +921,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot', 'elemCd', 'elemAmmo', 'beamE', 'elXp', 'elKills'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot', 'elemCd', 'elemAmmo', 'beamE', 'elXp', 'elKills', 'glow'];
       const o = {}; keep.forEach(k => (o[k] = this[k])); o.spent = this.spent; o.paid = this.paid; o.rush = this.rush; o.easyRun = this.easyRun; o.leaps = this.leaps;
       o.enemies = this.enemies.map(e => { const c = Object.assign({}, e); if (e.host) { c.hostId = e.host.id; delete c.host; } return c; });
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -1086,7 +1100,7 @@
       for (let w = from + 1; w <= from + n; w++) {
         e += waveEnergy(w) * this.s.loot + this.waveBonusAmount(w);
         k += waveCrystals(w) * this.s.crysMult * (w % 10 === 0 ? 1 + P.cBoss : 1);
-        statOf(this.home).waves++; cmdState(this.home).xp += xpFor(w) * (w < record(this.home) * P.xpLowAt ? P.xpLow : 1);
+        statOf(this.home).waves++; cmdState(this.home).xp += xpFor(w) * this.xpMult(w);
         if (w % 10 === 0) {
           const kind = bossKind(w); if (kind) (this.home.bossBeat = this.home.bossBeat || {})[kind] = 1;
           statOf(this.home).bosses++;
@@ -1175,6 +1189,8 @@
       if (rest.length) { this.queue = rest.concat(this.queue); this.spawnGap = SPAWN_LEN / this.queue.length; this.spawnT = 0; }
       return bonus;
     }
+    // Wellen weit unter dem Rekord bringen kaum Erfahrung (kein Farmen); Fusionsglut hebt das auf und vervielfacht
+    xpMult(w) { return this.glow || (w < record(this.home) * P.xpLowAt ? P.xpLow : 1); }
     bossAlive() { return this.enemies.some(e => e.type === 'boss' && e.hp > 0) || (this.queue || []).includes('boss'); }
 
     nextWave() {
@@ -1208,7 +1224,7 @@
         const bonus = this.waveBonusAmount();
         if (bonus > 0) { this.energy += bonus; if (this.fxOn) this.fx.push({ k: 'bonus', t: 0, v: bonus }); }
       }
-      if (this.wave > 0 && !this.admin && !(this.mode && this.mode.kind === 'boss')) { statOf(this.home).waves++; cmdState(this.home).xp += xpFor(this.wave) * (this.wave < record(this.home) * P.xpLowAt ? P.xpLow : 1); } // Wellen weit unter dem Rekord bringen kaum Erfahrung (kein Farmen)
+      if (this.wave > 0 && !this.admin && !(this.mode && this.mode.kind === 'boss')) { statOf(this.home).waves++; cmdState(this.home).xp += xpFor(this.wave) * this.xpMult(this.wave); }
       this.skipCrystalsOnce = false;
       if (doLeap) this.leap(10); // nach der Gutschrift der gerade beendeten Welle
       this.wave++;
@@ -1675,7 +1691,7 @@
     elemXp(e) {
       if (this.admin || !this.s.el || e.type === 'bomb') return;
       const o = this.s.el, boss = e.type === 'boss' && !e.child;
-      const v = (1 + this.wave / 50) * (boss ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[o.k] * (o.form === 'lens' ? 2 : 1); // Brennglas trifft nur ein Ziel
+      const v = (1 + this.wave / 50) * (boss ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[o.k] * (o.form === 'lens' ? 2 : 1) * (this.glow || 1); // Brennglas trifft nur ein Ziel; Fusionsglut vervielfacht
       const E = elemState(this.home); E.xp[o.k] = (E.xp[o.k] || 0) + v; this.elXp = (this.elXp || 0) + v;
       this.elKills = (this.elKills || 0) + 1; this.probe(PROBE_KILL[o.form], this.elKills);
       if (boss && this.time - e.elemT <= 1.5) {
@@ -2602,6 +2618,7 @@
     finish() {
       this.dead = true;
       if (this.mode) return this.finishMode();
+      if (this.glow) delete this.home.fusGlow;
       const m = this.meta, c = Math.floor(this.crystals), rest = c - (this.paid || 0);
       m.crystals += rest; m.totalCrystals = (m.totalCrystals || 0) + rest; this.paid = c;
       m.runs++; m.kills += this.kills;
@@ -2875,6 +2892,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.35.4'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, RUSH_AT, RUSH_FUS, rushOpen, BUY_RUN_AT, buyInRun, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.36.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, RUSH_AT, RUSH_FUS, rushOpen, BUY_RUN_AT, buyInRun, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
