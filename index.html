@@ -423,6 +423,8 @@ button.buy, [data-fac], [data-res] { -webkit-user-select: none; user-select: non
 .fusbox { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
 .fusrow { display: flex; justify-content: space-between; gap: 10px; font-size: .84rem; }
 .fusrow span { color: var(--ink-dim); }
+.fuslord { margin: 0; font-size: .8rem; border-left: 3px solid var(--energy); padding: 4px 10px; color: var(--ink); }
+.fuslord b { color: var(--energy); }
 .fragbal { position: sticky; top: -1px; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0 0 8px; padding: 8px 12px; border: 1px solid var(--heat); border-radius: 4px; background: var(--deck); font-size: .82rem; }
 .fragbal b { font-size: 1.05rem; }
 .fusmiles { display: grid; gap: 4px; font-size: .8rem; }
@@ -1195,6 +1197,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
       <div class="fusrow"><span>Fusionen bisher · Rekord aller Zeiten</span><b class="num" id="fusStats">0 · 0</b></div>
     </div>
     <p class="note" id="fusNote"></p>
+    <p class="fuslord" id="fusLord"></p>
     <button class="cta fuse" id="fuseBtn">Fusion auslösen</button>
     <h3>Meilensteine</h3>
     <div class="fusmiles" id="fusMiles"></div>

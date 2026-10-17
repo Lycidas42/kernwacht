@@ -42,7 +42,7 @@
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
     const ICON_PATH = {}; for (const k in ICONS) ICON_PATH[k] = new Path2D(ICONS[k]);
-    const LIFE = { fireball: 0.7, lance: 0.35, shatter: 0.45, meteor: 0.9, frostnova: 0.8, probe: 0.1, leap: 2.2, rush: 2.8, exec: 0.45, reflect: 0.3, emerg: 0.9, phoenix: 1.4, stun: 0.6, drone: 0.12, barrage: 0.6, hole: 0.6, aegis: 0.7, thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { fireball: 0.7, lance: 0.35, shatter: 0.45, meteor: 0.9, frostnova: 0.8, probe: 0.1, leap: 2.2, rush: 2.8, lordwin: 3.5, exec: 0.45, reflect: 0.3, emerg: 0.9, phoenix: 1.4, stun: 0.6, drone: 0.12, barrage: 0.6, hole: 0.6, aegis: 0.7, thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -1345,6 +1345,14 @@
         } else if (f.k === 'freeze' || f.k === 'over') {
           ctx.fillStyle = f.k === 'freeze' ? `rgba(220,248,255,${(k < 0.08 ? 0.7 : 0.3) * (1 - k)})` : `rgba(255,138,61,${0.22 * (1 - k)})`;
           ctx.fillRect(0, 0, W, H);
+        } else if (f.k === 'lordwin') {
+          // Erster Herrscher besiegt: große Einblendung
+          ctx.globalAlpha = Math.min(1, (1 - k) * 2.5); ctx.textAlign = 'center'; ctx.fillStyle = PAL.energy;
+          ctx.font = `800 ${Math.round(Math.min(W, H) * 0.07)}px ${FONT_UI()}`;
+          ctx.fillText('HERRSCHER BESIEGT', W / 2, H * 0.3 - k * 10);
+          ctx.font = `600 ${Math.round(Math.min(W, H) * 0.036)}px ${FONT_UI()}`; ctx.fillStyle = PAL.dim;
+          ctx.fillText(f.first ? 'Archiv freigeschaltet · Herrscherkern' : 'Herrscherkern: doppelte Fragmente', W / 2, H * 0.3 + Math.min(W, H) * 0.06 - k * 10);
+          ctx.globalAlpha = 1;
         } else if (f.k === 'leap' || f.k === 'rush') {
           // Wellensprung / Durchmarsch: große Einblendung in der Bildmitte
           ctx.globalAlpha = Math.min(1, (1 - k) * 2.2); ctx.textAlign = 'center';

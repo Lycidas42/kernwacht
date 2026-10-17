@@ -1513,6 +1513,7 @@
       const w1 = Math.ceil((meta.best + 1) / 10) * 10, w2 = w1 + 20;
       note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
     const fw = C.fusWave(meta);
+    $('fusLord').innerHTML = C.lordCore(meta) ? '<b>Herrscherkern aktiv:</b> doppelte Fragmente (bis Welle 100, danach gibt es ohnehin die volle Menge).' : `Besiege den Herrscher bei Welle ${C.LORD_W} für den <b>Herrscherkern</b>: doppelte Fragmente bei der Fusion.`;
     $('fusMiles').innerHTML = `<small class="dim">Zählt die höchste Bestwelle, bei der du fusioniert hast (bisher: ${fw ? 'Welle ' + fw : 'noch keine Fusion'}).</small>`
       + C.FUS_MILES.map(x => { const ok = C.mileOk(meta, x); return `<div class="fusmile${ok ? ' ok' : ''}"><i>${ok ? '✓' : ''}</i><span>Fusion bei Welle ${x.w}, ab der ${x.n}. Fusion: ${x.txt}</span></div>`; }).join('')
       + `<small class="dim">${meta.fusGlow ? `Fusionsglut aktiv: Dein nächster Lauf bringt ×${C.fusGlow(meta)} Erfahrung.` : `Nach jeder Fusion: Fusionsglut mit ×${C.fusGlow(meta)} Erfahrung im ersten Lauf, auch unter dem Rekord.`}</small>`;
@@ -2652,7 +2653,7 @@
       while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
       autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); if ((!tempoWas && tempoOk()) || (!tempo4Was && tempo4Ok())) syncTempo(); elemRankCheck(); autoBuy(); if (meta.autoCall && tempoOk() && !run.queue.length && run.canCallWave()) run.callWave(); }
       dpsT += realDt * speed; if (dpsT >= 1) { dpsT = 0; sampleDps(); }
-      for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); if (f.k === 'probe') probeToast(f.id); }
+      for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); if (f.k === 'probe') probeToast(f.id); if (f.k === 'lordwin') { A.play('loot'); toast(f.first ? `<b>${f.name || 'Herrscher'} besiegt!</b><br>Archiv dauerhaft freigeschaltet: Schockwelle, Stasis, Sprungtor und Co. bleiben bei jeder Fusion erhalten. Dazu der Herrscherkern: Deine nächste Fusion bringt doppelte Fragmente.` : `<b>${f.name || 'Herrscher'} besiegt</b><br>Herrscherkern: Deine nächste Fusion bringt doppelte Fragmente.`, 8000); } }
       run.fx.length = 0;
       if (run.shots !== lastShots) { lastShots = run.shots; A.play('shot', { over: run.overActive }); }
       A.setIntensity(run.bossAlive() ? 1 : 0.2);
