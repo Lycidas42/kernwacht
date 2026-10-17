@@ -104,6 +104,9 @@
   }
   const runAlive = () => run && !run.dead;
   function home() { show(runAlive() ? 'pause' : 'menu'); }
+  // Dauerhafte Verbesserungen kaufen: im laufenden Lauf erst ab C.BUY_RUN_AT Rekordwelle
+  const buyLocked = () => runAlive() && !C.buyInRun(meta);
+  const LOCK_TXT = () => `Im Lauf erst ab Rekordwelle ${C.BUY_RUN_AT}. Nach dem Lauf geht es.`;
   function setPaused(p) { paused = p; $('pauseBtn').textContent = p ? '▶' : 'II'; }
 
   let lastMode = null, dayOverride = null;
@@ -411,15 +414,16 @@
       else if (k.par && !C.skLv(meta, k.par)) req = `Braucht zuerst „${C.SKILLS.find(x => x.id === k.par).name}“`;
       else if (k.cap) { const o = C.SKILLS.find(x => x.br === k.br && x.cap && x.id !== k.id && C.skLv(meta, x.id)); req = o ? `Im Ast ist schon „${o.name}“ gewählt. Den zweiten Schlussstein gibt es ab Rang ${C.SK_CAP2_AT}.` : `Braucht ${C.SK_CAP_AT} Punkte in ${brName(k.br)} (jetzt ${C.skBranchPts(meta, k.br)})`; }
     } else if (!st.full && !st.can && C.skPoints(meta) < 1) req = 'Kein freier Skillpunkt';
+    else if (!st.full && st.can && buyLocked()) req = 'Punkte verteilen: ' + LOCK_TXT();
     if (req) txt += `<small class="req">${req}</small>`;
     const canRef = st.l > 0 && !runAlive() && C.skCanRefund(meta, k.id);
     const why = st.l > 0 && !canRef ? (runAlive() ? 'Zurücknehmen nach dem Lauf' : 'Andere Knoten hängen davon ab') : '';
-    const btn = `<div class="skbtns">${st.full ? '' : `<button id="skBuy" ${st.can ? '' : 'disabled'}>${k.cap || k.link ? 'Wählen' : st.l ? '+1 Stufe' : 'Lernen'}</button>`}${st.l ? `<button id="skRef" class="ref" ${canRef ? '' : 'disabled'}>${k.cap || k.link ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
+    const btn = `<div class="skbtns">${st.full ? '' : `<button id="skBuy" ${st.can && !buyLocked() ? '' : 'disabled'}>${k.cap || k.link ? 'Wählen' : st.l ? '+1 Stufe' : 'Lernen'}</button>`}${st.l ? `<button id="skRef" class="ref" ${canRef ? '' : 'disabled'}>${k.cap || k.link ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
     d.innerHTML = `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div>${txt}${btn}`;
     const b = $('skBuy');
     const rb = $('skRef');
     if (rb) rb.addEventListener('click', () => { if (!runAlive() && C.skRefund(meta, k.id)) { A.play('click'); save(); renderSkills(); } });
-    if (b) b.addEventListener('click', () => { if (C.skBuy(meta, k.id)) { meta.skLast = k.br === 'x' ? meta.skLast : k.br; A.play('buy'); if (runAlive()) run.recalc(); save(); renderSkills(); } });
+    if (b) b.addEventListener('click', () => { if (!buyLocked() && C.skBuy(meta, k.id)) { meta.skLast = k.br === 'x' ? meta.skLast : k.br; A.play('buy'); if (runAlive()) run.recalc(); save(); renderSkills(); } });
   }
   function renderSkills() {
     const R = C.rankOf(meta), pts = C.skPoints(meta);
@@ -999,17 +1003,18 @@
   }
   function renderLab() {
     $('labK').textContent = fmt(meta.crystals);
+    const lk = buyLocked(); $('labLock').hidden = !lk; $('labLock').textContent = 'Kaufen: ' + LOCK_TXT();
     renderCannonView();
     const list = $('labList'); list.innerHTML = '';
     renderJump();
     // Empfehlung: zeigt, was sich gerade am meisten lohnt, und warum
     const rec = C.recommend(meta), ch = C.cheapest(meta);
     if (rec) {
-      const can = meta.crystals >= rec.cost;
-      $('recTxt').innerHTML = `Empfehlung: <b>${rec.u.name}</b> (${fmt(rec.cost)} Kristalle). ${rec.why}${can ? '' : ` Spare noch ${fmt(rec.cost - meta.crystals)} Kristalle.`}`;
-      $('recBuy').disabled = !can; $('recBuy').textContent = can ? 'Empfohlen kaufen' : 'Spare für ' + rec.u.name;
+      const can = meta.crystals >= rec.cost && !lk;
+      $('recTxt').innerHTML = `Empfehlung: <b>${rec.u.name}</b> (${fmt(rec.cost)} Kristalle). ${rec.why}${meta.crystals >= rec.cost ? '' : ` Spare noch ${fmt(rec.cost - meta.crystals)} Kristalle.`}`;
+      $('recBuy').disabled = !can; $('recBuy').textContent = can ? 'Empfohlen kaufen' : lk ? 'Kaufen nach dem Lauf' : 'Spare für ' + rec.u.name;
     } else { $('recTxt').textContent = 'Alles ausgebaut.'; $('recBuy').disabled = true; }
-    $('cheapBuy').disabled = !rec || meta.crystals < rec.cost;
+    $('cheapBuy').disabled = lk || !rec || meta.crystals < rec.cost;
     $('cheapBuy').textContent = 'Alle Empfehlungen kaufen';
     for (const u of C.META_UPG) {
       if (!C.gateOk(meta, u.id)) {
@@ -1019,7 +1024,7 @@
         list.appendChild(el); continue;
       }
       if (u.req && !C.mlv(meta, u.req)) continue;
-      const l = C.mlv(meta, u.id), mx = u.max != null && l >= u.max, c = C.metaCost(u, l), ok = !mx && meta.crystals >= c;
+      const l = C.mlv(meta, u.id), mx = u.max != null && l >= u.max, c = C.metaCost(u, l), ok = !mx && !lk && meta.crystals >= c;
       const el = document.createElement('div'); el.className = 'row' + (rec && rec.u === u ? ' recd' : '');
       el.style.gridTemplateColumns = '1fr auto';
       let extra = '';
@@ -1033,18 +1038,19 @@
       }
       el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'frei' : 'Freischaltung') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small>${rec && rec.u === u ? '<span class="tag">Empfohlen</span>' : ''}</div><div class="ds">${u.desc}${extra}</div></div>
         <button class="buy num ${mx ? 'max' : 'k-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? (u.unlock ? 'OK' : 'MAX') : fmt(c)}</button>`;
-      holdBuy(el.querySelector('button'), () => { if (!C.metaBuy(meta, u)) return false; A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab(); return true; });
+      holdBuy(el.querySelector('button'), () => { if (buyLocked() || !C.metaBuy(meta, u)) return false; A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab(); return true; });
       list.appendChild(el);
     }
   }
 
   function labBuy(pick) {
-    const o = pick(meta); if (!o || !C.metaBuy(meta, o.u)) return;
+    const o = pick(meta); if (buyLocked() || !o || !C.metaBuy(meta, o.u)) return;
     A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderLab();
   }
   $('recBuy').addEventListener('click', () => labBuy(C.recommend));
   // So lange die jeweils beste Empfehlung kaufen, wie die Kristalle reichen
   $('cheapBuy').addEventListener('click', () => {
+    if (buyLocked()) return;
     const got = {}; let n = 0, spent = 0;
     for (let guard = 0; guard < 2000; guard++) {
       const o = C.recommend(meta); if (!o || meta.crystals < o.cost) break;
@@ -1104,7 +1110,7 @@
   }
   $('mMine').addEventListener('click', () => { A.play('click'); show('mine'); });
   // Pausenmenü: Punkt am Labor, wenn die laufend gutgeschriebenen Kristalle für etwas reichen
-  function syncPauseLab() { const c = C.cheapest(meta); $('labBtn3').classList.toggle('dot', !!(c && meta.crystals >= c.cost)); }
+  function syncPauseLab() { const c = C.cheapest(meta); $('labBtn3').classList.toggle('dot', !buyLocked() && !!(c && meta.crystals >= c.cost)); }
   function renderMenu() {
     renderLbTeaser(); renderMineTeaser(); if (O.configured) presence();
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
@@ -1368,9 +1374,10 @@
       else if (k.form && C.elStemPts(meta, id) < C.ELEM_FORM_AT) req = `Braucht ${C.ELEM_FORM_AT} Punkte im Stamm (jetzt ${C.elStemPts(meta, id)})`;
       else if (k.cap) req = `Braucht ${C.ELEM_CAP_AT} Punkte in der Form (jetzt ${C.elFormPts(meta, id, k.form)})`;
     } else if (!full && !can && pts < 1) req = 'Kein freier Elementpunkt';
+    else if (!full && can && buyLocked()) req = 'Punkte verteilen: ' + LOCK_TXT();
     const why = l > 0 && !ref ? (inRun ? 'Zurücknehmen nach dem Lauf' : 'Andere Knoten hängen davon ab') : '';
     return `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div><small>${k.desc(Math.max(1, l))}</small>${l && !full ? `<small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>` : ''}${req ? `<small class="req">${req}</small>` : ''}`
-      + `<div class="skbtns">${full ? '' : `<button id="elBuy" ${can ? '' : 'disabled'}>${k.cap ? 'Wählen' : l ? '+1 Stufe' : 'Lernen'}</button>`}${l ? `<button id="elRef" class="ref" ${ref ? '' : 'disabled'}>${k.cap ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
+      + `<div class="skbtns">${full ? '' : `<button id="elBuy" ${can && !buyLocked() ? '' : 'disabled'}>${k.cap ? 'Wählen' : l ? '+1 Stufe' : 'Lernen'}</button>`}${l ? `<button id="elRef" class="ref" ${ref ? '' : 'disabled'}>${k.cap ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
   }
   function renderElems() {
     const act = C.elActive(meta), inRun = runAlive();
@@ -1395,7 +1402,7 @@
     $$('#elPick [data-el]').forEach(b => b.addEventListener('click', () => { if (elView !== b.dataset.el) elSel = null; elView = b.dataset.el; A.play('click'); renderElems(); }));
     $$('#elBody [data-es]').forEach(g => g.addEventListener('click', () => { elSel = g.dataset.es === 'hub' ? null : g.dataset.es; A.play('click'); renderElems(); }));
     const ch = $('elChoose'); if (ch) ch.addEventListener('click', () => { if (!runAlive() && C.elChoose(meta, id)) { A.play('buy'); redraw(); } });
-    const bu = $('elBuy'); if (bu) bu.addEventListener('click', () => { if (C.elBuy(meta, elSel)) { A.play('buy'); if (runAlive()) run.recalc(); redraw(); } });
+    const bu = $('elBuy'); if (bu) bu.addEventListener('click', () => { if (!buyLocked() && C.elBuy(meta, elSel)) { A.play('buy'); if (runAlive()) run.recalc(); redraw(); } });
     const rf = $('elRef'); if (rf) rf.addEventListener('click', () => { if (!runAlive() && C.elRefund(meta, elSel)) { A.play('click'); redraw(); } });
     const fo = $('elForm'); if (fo) fo.addEventListener('click', () => { if (!runAlive() && C.elSetForm(meta, id, elSel.slice(5))) { A.play('buy'); redraw(); } });
     const rs = $('elReset'); if (rs) rs.addEventListener('click', () => { if (runAlive()) return; C.elReset(meta, id); A.play('click'); redraw(); });
@@ -1460,12 +1467,12 @@
       note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
     const list = $('fusList'); list.innerHTML = '';
     for (const u of C.FUSION_UPG) {
-      const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), ok = !mx && meta.frag >= c;
+      const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), ok = !mx && !buyLocked() && meta.frag >= c;
       const fx = F_FX[u.id], extra = fx ? ` <b style="color:var(--core)">${fx(l)}${mx ? '' : ' → ' + fx(l + 1)}</b>` : '';
       const el = document.createElement('div'); el.className = 'row'; el.style.gridTemplateColumns = '1fr auto';
       el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'aktiv' : 'Technik') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
         <button class="buy num ${mx ? 'max' : 'f-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? 'OK' : fmt(c)}</button>`;
-      holdBuy(el.querySelector('button'), () => { if (!C.fusionBuy(meta, u)) return false; A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderFusion(); return true; });
+      holdBuy(el.querySelector('button'), () => { if (buyLocked() || !C.fusionBuy(meta, u)) return false; A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderFusion(); return true; });
       list.appendChild(el);
     }
   }
