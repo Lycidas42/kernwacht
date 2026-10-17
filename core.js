@@ -121,7 +121,13 @@
     { n: 4, name: 'Roter Riese',    enemy: 'splitter', boss: 'nova' },
     { n: 5, name: 'Die Leere',      enemy: 'mender',   boss: 'mend' },
   ];
-  const sectorOf = w => SECTORS[Math.min(SECTORS.length - 1, Math.floor((Math.max(1, w) - 1) / 50))];
+  // Echo-Zyklen: ab Welle 251 laufen die Zonen im Kreis (251–300 Randzone II, 301–350 Smaragdnebel II …, ab 501 Zyklus III).
+  // Die Bosse passen dazu (bossKind wiederholt den Plan alle 250 Wellen), die Gegnerstärke hängt weiter nur an der Welle.
+  const ECHO_AT = 251, CYCLE_LEN = 250;
+  const cycleOf = w => w < ECHO_AT ? 1 : 2 + Math.floor((w - ECHO_AT) / CYCLE_LEN);
+  const sectorOf = w => { const i = Math.floor((Math.max(1, w) - 1) / 50); return SECTORS[w < ECHO_AT ? Math.min(SECTORS.length - 1, i) : i % SECTORS.length]; };
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+  const cycleName = c => ROMAN[c - 1] || String(c);
 
   // ---------- Bosse: je Zone vier Wächter (Welle x10–x40) und ein riesiger Herrscher (x50) ----------
   // acts: Fähigkeiten im Wechsel; ph2/ph3: kommen beim Herrscher unter 66 % bzw. 33 % Lebenspunkten dazu.
@@ -211,12 +217,23 @@
     const ms = 1 + 0.05 * (m.mast || 0); // Meisterung (Werkstatt, nach legendär 10/10)
     return (M.add ? M.base + M.add * (k - 1) + M.add : M.base * k) * ms;
   }
-  // Beute würfeln: Typ aus dem Sektor der Welle, Seltenheit steigt mit der Welle
-  function rollModule(w) {
-    const sec = sectorOf(w).n, types = Object.keys(MODULES).filter(t => MODULES[t].sector === sec);
-    const type = types[Math.floor(Math.random() * types.length)];
-    const r = Math.random(), within = ((w - 1) % 50) / 50;
-    const rar = r < 0.02 + 0.08 * within ? 3 : r < 0.1 + 0.15 * within ? 2 : r < 0.35 + 0.15 * within ? 1 : 0;
+  // Beute würfeln: Typ aus dem Sektor der Welle (in Echo-Zyklen die gerade gezeigte Zone), Seltenheit steigt mit der Welle
+  // und mit dem Zyklus: ab Zyklus II wird „gewöhnlich“ seltener, ab Zyklus III mindestens „selten“.
+  // meta + lord: Herrscher in Echo-Zyklen wählen aus allen Modulen, bevorzugt die mit den wenigsten Kopien
+  function rollModule(w, meta, lord) {
+    const sec = sectorOf(w).n, c = cycleOf(w);
+    let type;
+    if (lord && c > 1) {
+      const all = Object.keys(MODULES), wt = all.map(t => { const m = meta && meta.modules && meta.modules[t]; return m ? 11 - Math.min(10, m.copies) + (m.rar < 3 ? 2 : 0) : 14; });
+      let q = Math.random() * wt.reduce((a, b) => a + b, 0); type = all[all.length - 1];
+      for (let i = 0; i < all.length; i++) { if (q < wt[i]) { type = all[i]; break; } q -= wt[i]; }
+    } else {
+      const types = Object.keys(MODULES).filter(t => MODULES[t].sector === sec);
+      type = types[Math.floor(Math.random() * types.length)];
+    }
+    const r = Math.random(), within = Math.min(1.6, ((w - 1) % 50) / 50 + 0.3 * (c - 1));
+    let rar = r < 0.02 + 0.08 * within ? 3 : r < 0.1 + 0.15 * within ? 2 : r < 0.35 + 0.15 * within ? 1 : 0;
+    if (c >= 3) rar = Math.max(1, rar);
     return { type, rar };
   }
   // Fund ins Inventar übernehmen: bessere Seltenheit ersetzt, jeder Fund zählt als Kopie
@@ -236,8 +253,8 @@
     return 'kopie';
   }
   const MODULE_SLOTS = 3;
-  // Beutechance steigt mit der Welle des Bosses: 20 % bei Welle 30 bis max. 85 %
-  const dropChance = w => Math.max(0, Math.min(0.85, 0.2 + (w - 30) * 0.005));
+  // Beutechance steigt mit der Welle des Bosses: 20 % bei Welle 30 bis max. 85 %; Herrscher in Echo-Zyklen immer
+  const dropChance = w => w % 50 === 0 && cycleOf(w) > 1 ? 1 : Math.max(0, Math.min(0.85, 0.2 + (w - 30) * 0.005));
 
   // Meilensteine: einmalige Kristalle für neue Bestwellen (25, 50, 75 …), je Fusionszyklus
   const milestoneReward = w => Math.round(30 * Math.pow(w / 10, 2));
@@ -344,6 +361,7 @@
     { w: 101, label: 'Sektor 3: Glutgürtel, Glutwelt Ignis' },
     { w: 151, label: 'Sektor 4: Roter Riese, Roter Zwerg Nox' },
     { w: 201, label: 'Sektor 5: Die Leere, Rand der Leere' },
+    { w: 251, label: 'Echo-Zyklen: die Zonen kehren wieder, alle Module wieder auffindbar' },
   ];
   const record = m => Math.max(m.bestEver || 0, m.best || 0);
   const gateOk = (m, id) => record(m) >= (GATES[id] || 0);
@@ -424,6 +442,7 @@
     { id: 'daily',  name: 'Stammgast',        what: 'Tagesläufe',             goals: [5, 20, 50, 100],                      bonus: 'loot',   step: 0.03, bname: 'Energie' },
     { id: 'ore',    name: 'Tiefbohrer',       what: 'Erz abgebaut',           goals: [1e4, 1e6, 1e8, 1e10],                 bonus: 'mine',   step: 0.05, bname: 'Förderung' },
     { id: 'strike', name: 'Feuer von oben',   what: 'Orbitalschläge',         goals: [50, 250, 1e3, 5e3],                   bonus: 'strike', step: 0.03, bname: 'Orbitalschaden' },
+    { id: 'depth',  name: 'Tiefenläufer',     what: 'Echo-Zyklus erreicht',   goals: [2, 3, 4, 6, 8],                       bonus: 'crys',   step: 0.03, bname: 'Kristalle' },
     { id: 'chal',   name: 'Bezwinger',        what: 'Challenge-Stufen',       goals: [5, 10, 20, 30, 40],                   bonus: 'all',    step: 0.01, bname: 'auf alles' },
   ];
   const statOf = m => (m.stat = m.stat || { waves: Math.round(record(m) * (m.runs || 0) * 0.5), bosses: 0, strikes: 0 });
@@ -440,6 +459,7 @@
       case 'daily': return m.dailyCount || 0;
       case 'ore': return Math.floor((m.mine && m.mine.mined) || 0);
       case 'strike': return st.strikes || 0;
+      case 'depth': return cycleOf(record(m));
       case 'chal': return CHALLENGES.reduce((a, c) => a + chalTier(m, c.id), 0);
     }
     return 0;
@@ -822,7 +842,7 @@
           if (Math.max(record(this.meta), w) >= MODULES_AT) {
             this.bossKills = (this.bossKills || 0) + 1;
             const ch = dropChance(w) + 0.1 * (this.meta.dry || 0);
-            if (Math.random() < ch) { this.loot.push(rollModule(w)); this.meta.dry = 0; } else this.meta.dry = (this.meta.dry || 0) + 1;
+            if (Math.random() < ch) { this.loot.push(rollModule(w, this.meta, w % 50 === 0)); this.meta.dry = 0; } else this.meta.dry = (this.meta.dry || 0) + 1;
           }
         }
       }
@@ -959,7 +979,8 @@
       const sec = sectorOf(w).n;
       // Sektor-Gegner: der neue Typ des Sektors häufig, frühere Typen seltener
       const special = [];
-      for (let k = 2; k <= sec; k++) special.push({ t: SECTORS[k - 1].enemy, p: k === sec ? 0.14 : 0.06 });
+      const top = cycleOf(w) > 1 ? SECTORS.length : sec; // in Echo-Zyklen alle Sektor-Gegner, der Typ der Zone am häufigsten
+      for (let k = 2; k <= top; k++) special.push({ t: SECTORS[k - 1].enemy, p: k === sec ? 0.14 : 0.06 });
       for (let i = 0; i < n; i++) {
         let r = rnd(), t = 'grunt';
         if (w >= 15 && r < 0.08) t = 'shooter';
@@ -976,7 +997,7 @@
       this.queue = list;
       this.spawnGap = boss ? (this.rush ? 0.3 : 1) : this.rush ? Math.min(P.rushGap, SPAWN_LEN / list.length) : SPAWN_LEN / list.length;
       this.spawnT = 0;
-      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Boss' }).name : null, kind: WT.name, rush: this.rush, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null });
+      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Boss' }).name : null, kind: WT.name, rush: this.rush, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null, cycle: cycleOf(w) });
     }
 
     // Neues Schiff an Weltposition (x, y) erzeugen
@@ -1217,7 +1238,7 @@
             // Pech-Ausgleich: jeder Boss ohne Beute erhöht die Chance beim nächsten um 10 Prozentpunkte
             const ch = dropChance(this.wave) + 0.1 * (this.meta.dry || 0);
             if (first && !this.loot.length || Math.random() < ch) {
-              const drop = rollModule(this.wave); this.loot.push(drop); this.meta.dry = 0;
+              const drop = rollModule(this.wave, this.meta, this.wave % 50 === 0); this.loot.push(drop); this.meta.dry = 0;
               if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'loot', x: p.x, y: p.y, t: 0, drop }); }
             } else this.meta.dry = (this.meta.dry || 0) + 1;
           }
@@ -2230,6 +2251,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.30.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.31.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

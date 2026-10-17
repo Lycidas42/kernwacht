@@ -1284,7 +1284,7 @@
         el.style.gridTemplateColumns = '1fr auto';
         el.innerHTML = m
           ? `<div><div class="nm">${R_.iconSvg(t, m.rar, 20)}${M.name}<span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span><small>Fund ${m.copies}/10${m.mast ? ' · Meister ' + m.mast + ' (+' + 5 * m.mast + ' %)' : ''}</small></div><div class="ds">${M.desc(C.moduleValue(m))}</div></div><span class="rar">${on ? 'AUSGERÜSTET' : ''}</span>`
-          : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Bossen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}${sec.n === 5 ? '+' : ''})</div></div><span></span>`;
+          : `<div><div class="nm">${R_.iconSvg(t, null, 20)}Unbekanntes Modul</div><div class="ds">Fällt bei Bossen in Sektor ${sec.n} (Wellen ${sec.n * 50 - 49}–${sec.n * 50}) und in Echo-Zyklen (z. B. Wellen ${sec.n * 50 + 201}–${sec.n * 50 + 250})</div></div><span></span>`;
         if (m) el.addEventListener('click', () => {
           if (on) meta.equip = eq.filter(x => x !== t);
           else if (eq.length < C.MODULE_SLOTS) meta.equip = eq.concat(t);
