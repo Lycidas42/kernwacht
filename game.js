@@ -1211,7 +1211,8 @@
     st('labBtn', lab && meta.crystals >= lab.cost ? 'kaufbar' : '');
     st('cmdBtn', sk > 0 ? sk + ' frei' : ms ? 'Meisterschaft ' + ms : 'Rang ' + R.rank);
     { const ea = C.elActive(meta), ep = ea ? C.elPoints(meta, ea) : 0; st('elemBtn', !C.elUnlocked(meta) ? '' : !ea ? 'wählen' : ep > 0 && elCanAny(ea) ? ep + ' frei' : C.ELEMENTS[ea].name + ' · Rang ' + C.elRank(meta, ea).rank); }
-    st('modBtn', (meta.equip || []).filter(t => meta.modules && meta.modules[t]).length + '/3');
+    st('modBtn', (meta.equip || []).filter(t => meta.modules && meta.modules[t]).length + '/' + C.modSlots(meta));
+    $('modBtn').querySelector('small').textContent = `Beute der Bosse, ${['drei', 'vier', 'fünf'][C.modSlots(meta) - 3] || C.modSlots(meta)} ausrüstbar`;
     st('fusBtn', gain > 0 ? '+' + fmt(gain) : '');
     st('dailyBtn', d && d.bonus ? (d.best ? 'heute ' + d.best : '') : 'Bonus offen');
     st('chalBtn', chalSum() ? chalSum() + ' Stufen' : '');
@@ -1562,6 +1563,7 @@
 
   // ---------- Module ----------
   function renderModules() {
+    if ((meta.equip || []).length > C.modSlots(meta)) meta.equip = meta.equip.slice(0, C.modSlots(meta)); // mehr ausgerüstet als Plätze (frühere Regeln): nur so viele, wie es Plätze gibt
     meta.seen = meta.seen || {}; meta.seen.mod = modCopies();
     const eq = meta.equip, mods = meta.modules;
     const slots = $('modSlots'); slots.innerHTML = '';
@@ -1781,7 +1783,7 @@
     { ic: '✱', col: '#ffd23f', name: 'Minenwerfer', desc: 'Wirft Minen ins Feld, die bei Kontakt oder nach kurzer Zeit zünden. Bevorzugt auf Bosse.', ok: () => C.mlv(meta, 'u_mine') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_mine}` },
     { ic: '➹', col: '#ff8a3d', name: 'Raketenwerfer', desc: 'Nebenkanone links: langsame Rakete mit großem Flächenschaden.', ok: () => C.flv(meta, 'f_rocket') > 0, how: 'Kernfusion' },
     { ic: '❆', col: '#9fe8ff', name: 'Kryowerfer', desc: 'Nebenkanone rechts: verlangsamt getroffene Schiffe.', ok: () => C.flv(meta, 'f_cryo') > 0, how: 'Kernfusion' },
-    { ic: '◈', col: '#c3a6ff', name: 'Module', desc: 'Beute der Bosse. Drei ausgerüstete Module verändern Geschosse und Fähigkeiten.', ok: () => C.modOpen(meta), how: 'nach der ersten Kernfusion' },
+    { ic: '◈', col: '#c3a6ff', name: 'Module', desc: 'Beute der Bosse. Ausgerüstete Module verändern Geschosse und Fähigkeiten: drei Plätze, mit Fusions-Meilensteinen bis zu fünf.', ok: () => C.modOpen(meta), how: 'nach der ersten Kernfusion' },
   ];
   let cxTab = 'enemy', cxR = null, cxRaf = 0;
   const cxVis = new Set();
