@@ -466,6 +466,7 @@ window.KW_EN = {
   'Fusion bei Welle {0}, ab der {1}. Fusion: {2}': 'Fusion at wave {0}, from fusion no. {1}: {2}', 'Durchmarsch, Wellensprung und Bergbau': 'Rush, wave jump and mining',
   'Gesperrt: frei {0} (bisher beste Fusion: Welle {1}, Fusionen: {2})': 'Locked: unlocked {0} (best fusion so far: wave {1}, fusions: {2})',
   'Herausforderungen und Tageslauf': 'Challenges and daily run',
+  'Zum Ausgeben': 'Available',
   'Spielstände': 'Saves', 'Mehrere Spielstände, jeder mit eigenem Namen in den Highscores. Beim Wechseln wird der aktuelle in der Cloud gesichert.': 'Several saves, each with its own name in the high scores. Switching backs up the current one to the cloud first.',
   'Neuen Spielstand beginnen': 'Start new save', 'Wirklich neu beginnen': 'Really start over', 'Wechseln': 'Switch', 'Wirklich wechseln': 'Really switch', 'Wirklich entfernen': 'Really remove',
   'Ohne Namen': 'No name', 'Rekord {0} · aktiv': 'Record {0} · active', 'Aus der Liste entfernen': 'Remove from list',

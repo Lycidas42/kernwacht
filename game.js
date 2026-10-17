@@ -1501,7 +1501,7 @@
   let fuseArmed = 0;
   function renderFusion() {
     const gain = C.fragmentsFor(meta);
-    $('fusFrag').textContent = fmt(meta.frag || 0);
+    $('fusFrag').textContent = $('fusFrag2').textContent = fmt(meta.frag || 0);
     $('fusBest').textContent = meta.best;
     $('fusGain').textContent = gain ? '+' + fmt(gain) : '–';
     $('fusStats').textContent = (meta.fusions || 0) + ' · ' + (meta.bestEver || 0);
