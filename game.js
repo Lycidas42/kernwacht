@@ -26,6 +26,12 @@
     // Kommandant und Elemente sind jetzt Freischaltungen: wer schon Punkte verteilt bzw. ein Element gewählt hat, behält sie
     if (meta.cmdOpen == null && meta.sk && Object.values(meta.sk).some(v => v > 0)) meta.cmdOpen = 1;
     if (meta.elOpen == null && meta.elem && meta.elem.act) meta.elOpen = 1;
+    // Elementproben gaben früher 500/2000/6000 Erfahrung, jetzt 150/500/900: Zuviel bei abgeschlossenen Proben einmal abziehen
+    if (meta.elem && meta.elem.probes && !meta.probeMig) {
+      const OLD = [0, 500, 2000, 6000];
+      for (const id in meta.elem.probes) { const p = C.ELEM_PROBES.find(x => x.id === id); if (p && meta.elem.xp) meta.elem.xp[p.el] = Math.max(0, (meta.elem.xp[p.el] || 0) - (OLD[p.t] - C.PROBE_XP[p.t])); }
+    }
+    meta.probeMig = 1;
     // Elemente jetzt erst mit einer Fusion bei Welle 150: nach älteren, früheren Regeln geöffnet, aber nie benutzt → wieder schließen
     if (meta.elOpen && !(meta.elem && meta.elem.act) && (meta.elMig || 0) < 1) delete meta.elOpen;
     meta.elMig = 1;
