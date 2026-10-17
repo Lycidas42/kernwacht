@@ -23,6 +23,9 @@
     meta.name = meta.name || '';
     meta.flv = meta.flv || {}; meta.frag = meta.frag || 0; meta.modules = meta.modules || {}; meta.equip = meta.equip || [];
     meta.bestEver = Math.max(meta.bestEver || 0, meta.best || 0);
+    // Kommandant und Elemente sind jetzt Freischaltungen: wer schon Punkte verteilt bzw. ein Element gewählt hat, behält sie
+    if (meta.cmdOpen == null && meta.sk && Object.values(meta.sk).some(v => v > 0)) meta.cmdOpen = 1;
+    if (meta.elOpen == null && meta.elem && meta.elem.act) meta.elOpen = 1;
   }
   // Fusionskern neu bewertet (ab Stufe 200 steigen die Kosten wieder exponentiell): alte Ausgaben anrechnen und neu kaufen
   function migrateFusionCore() {
@@ -267,7 +270,7 @@
     const ro = C.rushOpen(meta);
     $$('#settings [data-set="rush"] button').forEach(b => { b.disabled = !ro; });
     $('rushLock').hidden = ro;
-    $('rushLock').textContent = `Gesperrt: ab Rekordwelle ${C.RUSH_AT} und der ${C.RUSH_FUS}. Fusion (jetzt Rekord ${C.record(meta)}, Fusionen: ${meta.fusions || 0})`;
+    $('rushLock').textContent = `Gesperrt: frei nach einer Fusion bei Welle ${C.FUS_MILES[0].w} oder höher (bisher beste Fusion: Welle ${C.fusWave(meta)})`;
     $('numEx').textContent = 'Beispiel: ' + fmt(27.9e12) + ' · ' + fmt(4.2e18);
   }
   $$('#settings .seg button').forEach(b => b.addEventListener('click', () => {
@@ -480,7 +483,7 @@
   $('cmdBtn').addEventListener('click', () => show('skills'));
   $('elemBtn').addEventListener('click', () => {
     // gesperrt: nur erklären, ab wann es die Elemente gibt
-    if (!C.elUnlocked(meta)) { A.play('click'); toast(`<b>Elemente</b><br>Ab Rekordwelle ${C.ELEM_AT} wählst du Feuer, Eis oder Licht: eine eigene Fähigkeit im Lauf mit eigenem Baum. Dein Rekord: Welle ${C.record(meta)}.`, 4500); return; }
+    if (!C.elUnlocked(meta)) return;
     show('elems');
   });
   $('elClose').addEventListener('click', home);
@@ -489,7 +492,7 @@
   setInterval(() => {
     const r = C.rankOf(meta).rank;
     if (meta.rankSeen == null) { meta.rankSeen = r; return; }
-    if (r > meta.rankSeen) { const n = r - meta.rankSeen; meta.rankSeen = r; save(); A.play('loot'); const ms = C.skMastery(meta); toast(ms ? `<b>Kommandant: Rang ${r}</b><br>Meisterschaft ${ms}: ×${mult(Math.pow(C.SK_MASTER_K, ms))} Schaden und Strukturpunkte.` : `<b>Kommandant: Rang ${r}</b><br>+${n} Skillpunkt${n > 1 ? 'e' : ''}. Im Menü unter „Kommandant“.`, 5000); if (runAlive()) run.recalc(); }
+    if (r > meta.rankSeen && C.cmdOpen(meta)) { const n = r - meta.rankSeen; meta.rankSeen = r; save(); A.play('loot'); const ms = C.skMastery(meta); toast(ms ? `<b>Kommandant: Rang ${r}</b><br>Meisterschaft ${ms}: ×${mult(Math.pow(C.SK_MASTER_K, ms))} Schaden und Strukturpunkte.` : `<b>Kommandant: Rang ${r}</b><br>+${n} Skillpunkt${n > 1 ? 'e' : ''}. Im Menü unter „Kommandant“.`, 5000); if (runAlive()) run.recalc(); }
   }, 2000);
 
   // ---------- Erfolge ----------
@@ -1167,7 +1170,7 @@
     const lab = C.cheapest(meta), ms = C.skMastery(meta), sk = C.skPoints(meta) - ms, gain = C.fragmentsFor(meta), d = dailyToday();
     st('labBtn', lab && meta.crystals >= lab.cost ? 'kaufbar' : '');
     st('cmdBtn', sk > 0 ? sk + ' frei' : ms ? 'Meisterschaft ' + ms : 'Rang ' + R.rank);
-    { const ea = C.elActive(meta), ep = ea ? C.elPoints(meta, ea) : 0; st('elemBtn', !C.elUnlocked(meta) ? 'Rekord ' + C.record(meta) + '/' + C.ELEM_AT : !ea ? 'wählen' : ep > 0 && elCanAny(ea) ? ep + ' frei' : C.ELEMENTS[ea].name + ' · Rang ' + C.elRank(meta, ea).rank); }
+    { const ea = C.elActive(meta), ep = ea ? C.elPoints(meta, ea) : 0; st('elemBtn', !C.elUnlocked(meta) ? '' : !ea ? 'wählen' : ep > 0 && elCanAny(ea) ? ep + ' frei' : C.ELEMENTS[ea].name + ' · Rang ' + C.elRank(meta, ea).rank); }
     st('modBtn', (meta.equip || []).filter(t => meta.modules && meta.modules[t]).length + '/3');
     st('fusBtn', gain > 0 ? '+' + fmt(gain) : '');
     st('dailyBtn', d && d.bonus ? (d.best ? 'heute ' + d.best : '') : 'Bonus offen');
@@ -1441,10 +1444,10 @@
     // Leere Zweierreihen ausblenden
     $$('button.sec.daily-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
     $$('button.sec.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
-    $('cmdBtn').hidden = !C.rankOf(meta).rank && !C.skSpent(meta);
+    // Kommandant und Elemente erscheinen erst, wenn sie freigeschaltet sind (der Fahrplan nennt die Bedingung)
+    $('cmdBtn').hidden = !C.cmdOpen(meta);
     { const on = C.elUnlocked(meta), b = $('elemBtn');
-      b.classList.toggle('locked', !on); b.setAttribute('aria-disabled', on ? 'false' : 'true');
-      b.querySelector('small').textContent = on ? 'Feuer, Eis oder Licht: eine eigene Fähigkeit mit eigenem Baum' : `Gesperrt · ab Rekordwelle ${C.ELEM_AT}: Feuer, Eis oder Licht mit eigener Fähigkeit und eigenem Baum`; }
+      b.hidden = !on; b.classList.remove('locked'); b.setAttribute('aria-disabled', 'false'); }
     $('hangBtn').hidden = C.record(meta) < 20 && !(meta.skinSeen || []).length;
     try { if (!$('menu').hidden) renderHub(); } catch (e) {}
   }
@@ -1468,8 +1471,9 @@
     else { btn.disabled = false; note.style.color = ''; note.className = 'note'; const fr = w => fmt(C.fragmentsFor(Object.assign({}, meta, { best: w }))); // gleiche Formel wie die Fusion, inkl. Erfolgsbonus
       const w1 = Math.ceil((meta.best + 1) / 10) * 10, w2 = w1 + 20;
       note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
-    const nf = meta.fusions || 0;
-    $('fusMiles').innerHTML = C.FUS_MILES.map(x => `<div class="fusmile${nf >= x.n ? ' ok' : ''}"><i>${nf >= x.n ? '✓' : x.n}</i><span>${x.n}. Fusion: ${x.txt}</span></div>`).join('')
+    const fw = C.fusWave(meta);
+    $('fusMiles').innerHTML = `<small class="dim">Zählt die höchste Bestwelle, bei der du fusioniert hast (bisher: ${fw ? 'Welle ' + fw : 'noch keine Fusion'}).</small>`
+      + C.FUS_MILES.map(x => `<div class="fusmile${fw >= x.w ? ' ok' : ''}"><i>${fw >= x.w ? '✓' : ''}</i><span>Fusion bei Welle ${x.w}: ${x.txt}</span></div>`).join('')
       + `<small class="dim">${meta.fusGlow ? `Fusionsglut aktiv: Dein nächster Lauf bringt ×${C.fusGlow(meta)} Erfahrung.` : `Nach jeder Fusion: Fusionsglut mit ×${C.fusGlow(meta)} Erfahrung im ersten Lauf, auch unter dem Rekord.`}</small>`;
     const list = $('fusList'); list.innerHTML = '';
     for (const u of C.FUSION_UPG) {
@@ -1487,11 +1491,11 @@
     const btn = $('fuseBtn');
     if (!fuseArmed) { fuseArmed = setTimeout(() => { fuseArmed = 0; btn.classList.remove('armed'); btn.textContent = 'Fusion auslösen'; }, 3500); btn.classList.add('armed'); btn.textContent = 'Wirklich? Labor wird zurückgesetzt'; return; }
     clearTimeout(fuseArmed); fuseArmed = 0;
-    const gain = C.fuse(meta), mile = C.FUS_MILES.find(x => x.n === meta.fusions);
+    const fw0 = C.fusWave(meta), gain = C.fuse(meta), miles = C.FUS_MILES.filter(x => x.w > fw0 && C.fusWave(meta) >= x.w);
     run = null; put(RKEY, null); save(); A.play('fusion');
     renderFusion();
     $('fusNote').className = 'note'; $('fusNote').style.color = ''; $('fusNote').textContent = `Fusion abgeschlossen: +${fmt(gain)} Kernfragmente. Investiere sie unten und starte neu.`;
-    if (mile) toast(`<b>Meilenstein: ${mile.n}. Fusion</b><br>${mile.txt}`, 6000);
+    if (miles.length) toast(`<b>Fusions-Meilenstein</b><br>${miles.map(x => x.txt).join('<br>')}`, 6000);
   });
   $$('.fus-btn').forEach(b => b.addEventListener('click', () => show('fusion')));
   $('fusClose').addEventListener('click', home);
@@ -2609,7 +2613,7 @@
       $('hpTxt').textContent = fmt(Math.max(0, run.hp)) + ' / ' + fmt(run.s.maxHp);
       // Kommandant: Erfahrung bis zum nächsten Rang (gedämpft, wenn die Welle unter dem halben Rekord liegt)
       { const av = (meta.avatar | 0) + ':' + (meta.color | 0); if ($('xpAv')._av !== av) { $('xpAv')._av = av; $('xpAv').innerHTML = avatarSvg(meta.avatar, meta.color, 20); } }
-      { const R = C.rankOf(meta), xl = $('xpLine'), rt = 'Rang ' + R.rank, tx = fmt(R.cur) + ' / ' + fmt(R.need);
+      { const R = C.rankOf(meta), xl = $('xpLine'), rt = 'Rang ' + R.rank; xl.hidden = !C.cmdOpen(meta); const tx = fmt(R.cur) + ' / ' + fmt(R.need);
         if (xl._t !== rt + tx) { xl._t = rt + tx; $('xpRank').textContent = rt; $('xpTxt').textContent = tx; $('xpbar').firstElementChild.style.width = Math.min(100, R.cur / R.need * 100) + '%'; }
         xl.classList.toggle('low', run.wave < C.record(meta) * C.P.xpLowAt); }
       // Element: Rang und Erfahrung bis zum nächsten Rang (nur mit aktivem Element)
