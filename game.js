@@ -47,6 +47,7 @@
   }
   normMeta(); migrateFusionCore();
   C.skFix(meta); // Skillbaum umgebaut: ungültige Knoten geben ihre Punkte zurück
+  C.elFix(meta); // ebenso die Elementbäume
   let run = null;
   let frozenSave = false; // beim Ersetzen des Spielstands: nichts mehr zurückschreiben
   function save() {
@@ -70,7 +71,7 @@
   let speed = 1, paused = false, tab = 'atk', armed = null, adminOk = false; // armed: 'strike' | 'freeze' | 'over'
   try { adminOk = sessionStorage.getItem('kw.admin') === '1'; } catch (e) {}
   const R = window.KWRender.create($('cv'));
-  const OV = ['welcome', 'online', 'codex', 'pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
+  const OV = ['welcome', 'online', 'codex', 'pcard', 'menu', 'over', 'lab', 'back', 'pause', 'board', 'admin', 'fusion', 'modules', 'chal', 'ach', 'bosses', 'settings', 'guide', 'skills', 'elems', 'daily', 'profile', 'feedback', 'poll', 'hangar', 'mine'];
   let current = 'menu';
   function show(name) {
     current = name;
@@ -94,6 +95,7 @@
     if (name === 'settings') renderSettings();
     if (name === 'daily') renderDaily();
     if (name === 'profile') renderProfile();
+    if (name === 'elems') renderElems();
     if (name === 'feedback') renderFeedback();
     if (name === 'poll') renderPoll();
     if (name === 'hangar') renderHangar();
@@ -287,6 +289,9 @@
     { id: 'bulwark', when: r => r.enemies.some(e => e.type === 'bulwark'), txt: '<b>Schildträger</b><br>Der Frontschild muss erst brechen und lädt sich ohne Treffer wieder auf. Dauerfeuer hilft.' },
     { id: 'phantom', when: r => r.enemies.some(e => e.type === 'phantom'), txt: '<b>Phantom</b><br>Tarnt sich zeitweise. Das Modul Zielerfassung macht Tarnung wirkungslos.' },
     { id: 'bomb', when: r => r.enemies.some(e => e.type === 'bomb'), txt: '<b>Bombe</b><br>Fliegt direkt auf die Kanone zu. Die Kanone schießt Bomben immer zuerst.' },
+    { id: 'el_fire', when: r => r.s.el && r.s.el.k === 'fire', txt: '<b>Element Feuer</b><br>Der Knopf mit der 4 macht den Feuerball scharf, dann tippst du ins Feld. Ein zweiter Tipp auf den Knopf wirft ihn automatisch.' },
+    { id: 'el_ice', when: r => r.s.el && r.s.el.k === 'ice', txt: '<b>Element Eis</b><br>Der Knopf mit der 4 schießt die Frostlanze auf das markierte Ziel und friert es ein. Markiere vorher, was gestoppt werden soll: Heiler, Bomben oder den Boss.' },
+    { id: 'el_light', when: r => r.s.el && r.s.el.k === 'light', txt: '<b>Element Licht</b><br>Tippe den Knopf mit der 4 an, dann lege den Finger aufs Feld und ziehe: Der Strahl folgt dir. Lange drücken lässt ihn selbst zielen.' },
   ];
   let tipT = 0;
   if (!meta.tips && (meta.runs || 0) > 20) meta.tips = { mark: 1, buy: 1, strike: 1, boss: 1, freeze: 1, over: 1 }; // erfahrene Spieler: Grundlagen-Tipps überspringen
@@ -456,6 +461,8 @@
   })();
   $('skReset').addEventListener('click', () => { if (runAlive()) return; C.skReset(meta); A.play('click'); save(); renderSkills(); });
   $('cmdBtn').addEventListener('click', () => show('skills'));
+  $('elemBtn').addEventListener('click', () => show('elems'));
+  $('elClose').addEventListener('click', home);
   $('skClose').addEventListener('click', home);
   // Rangaufstieg melden
   setInterval(() => {
@@ -583,6 +590,12 @@
     }
     if (run.abilityReady('freeze') && run.hp < run.s.maxHp * 0.35 && run.enemies.length > 3) run.useAbility('freeze');
     if (run.abilityReady('over') && (run.bossAlive() || run.enemies.length > 12)) run.useAbility('over');
+    const o = run.s.el;
+    if (o && run.elemReady() && run.enemies.some(e => e.hp > 0)) {
+      if (o.k === 'fire' && (run.enemies.length >= 4 || run.bossAlive())) run.useElem(null, null, false);
+      else if (o.k === 'ice') run.useElem(null, null, false);
+      else if (o.k === 'light' && !run.beam && run.beamE >= o.dur) run.beamAuto(false);
+    }
   }
   let toastT = 0;
   function toast(html, ms) { const t = $('toast'); t.innerHTML = html; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), ms || 5000); }
@@ -765,6 +778,7 @@
     { k: 'dot', name: 'Gift & Feuer', hit: () => 0, rate: () => 'Dauer', on: s => !!(s.K && (s.K('p_poison') || s.K('a_toxin') || s.K('a_burn') || s.K('t_quake'))) },
     { k: 'skill', name: 'Kommandant', hit: () => 0, rate: () => 'Skills', on: s => !!(s.K && ['a_drones', 'a_barrage', 't_hole', 'b_reflect', 'p_charge', 'p_exec', 'x_shrap'].some(id => s.K(id))) },
     { k: 'mod', name: 'Module (direkt)', hit: () => 0, rate: () => 'passiv', on: s => Object.keys(s.mod || {}).length > 0 },
+    { k: 'elem', name: 'Element', hit: s => s.el ? s.el.dmg || s.el.dps || 0 : 0, rate: s => !s.el ? '–' : s.el.k === 'fire' ? s.el.ammo + ' Ladungen' : s.el.k === 'ice' ? 'alle ' + dec(s.el.cd, 0) + ' s' : 'Strahl', on: s => !!s.el },
   ];
   let statEls = null;
   // Schadensbeitrag eines Moduls: gemessene DPS (10 s) und Anteil am Gesamtschaden des Laufs
@@ -840,12 +854,55 @@
       b.classList.toggle('ready', cd <= 0); b.classList.toggle('active', active); b.classList.toggle('armed', armed === id);
       b.querySelector('.st').textContent = active ? dec(left, 1) + ' s' : cd > 0 ? Math.ceil(cd) + ' s' : 'bereit';
     }
+    updateElemBtn();
   }
-  const HINT = { strike: 'Tipp ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen' };
-  function canArm(id) { return runAlive() && (id === 'strike' ? run.charge >= 1 : run.abilityReady(id)); }
+  // ---------- Element (vierter Knopf) ----------
+  // Feuer: Knopf macht scharf, Tipp ins Feld wirft; zweiter Tipp auf den Knopf wirft automatisch.
+  // Eis: ein Tipp, trifft das markierte Ziel. Licht: Knopf schaltet den Strahl bereit, dann Finger aufs Feld und ziehen;
+  // lange drücken lässt den Strahl selbst zielen (halber Schaden).
+  let elemLp = 0, elemLpDone = false, beamPtr = null;
+  function updateElemBtn() {
+    const b = $('ab-elem'), o = run.s.el;
+    $('stage').classList.toggle('beam', armed === 'beam');
+    b.hidden = !o; if (!o) return;
+    const E = C.ELEMENTS[o.k];
+    if (b.dataset.k !== o.k) { b.dataset.k = o.k; b.style.setProperty('--glow', E.col); b.querySelector('.ring').setAttribute('stroke', E.col); b.querySelector('.nm').textContent = E.name; b.setAttribute('aria-label', C.ELEM_FORMS[o.k].find(f => f.id === o.form).name); }
+    let frac, txt;
+    if (o.k === 'fire') { const n = Math.floor(run.elemAmmo || 0); frac = n >= o.ammo ? 1 : (run.elemAmmo || 0) - n; txt = armed === 'elem' ? 'Ziel' : n + '/' + o.ammo; }
+    else if (o.k === 'ice') { frac = 1 - run.elemCd / o.cd; txt = run.elemCd > 0 ? Math.ceil(run.elemCd) + ' s' : 'bereit'; }
+    else { frac = (run.beamE || 0) / o.dur; txt = run.beam ? 'Strahl' : armed === 'beam' ? 'Feld' : Math.floor(frac * 100) + ' %'; }
+    setRing(b, frac);
+    b.classList.toggle('ready', run.elemReady()); b.classList.toggle('armed', armed === 'elem' || armed === 'beam'); b.classList.toggle('active', !!run.beam);
+    b.querySelector('.st').textContent = txt;
+  }
+  function elemPress() {
+    if (!runAlive() || !run.s.el) return;
+    const k = run.s.el.k;
+    if (k === 'fire') {
+      if (armed === 'elem') { armed = null; if (!fire('elem')) toast('Kein Ziel in Sicht.', 1500); return; }
+      if (!canArm('elem')) { A.play('hurt'); return; }
+      armed = 'elem'; A.play('click'); return;
+    }
+    if (k === 'ice') { armed = null; if (!run.useElem(null, null, true)) A.play('hurt'); return; }
+    if (run.beam && run.beam.auto) { run.beam = null; return; } // selbstzielender Strahl: Tipp beendet ihn
+    armed = armed === 'beam' ? null : 'beam'; A.play('click');
+  }
+  {
+    const b = $('ab-elem');
+    b.addEventListener('pointerdown', () => {
+      elemLpDone = false; clearTimeout(elemLp);
+      if (run && run.s.el && run.s.el.k === 'light') elemLp = setTimeout(() => { elemLpDone = true; if (runAlive() && run.beamAuto(true)) { armed = null; A.play('beam'); } else A.play('hurt'); }, 500);
+    });
+    for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(elemLp));
+    b.addEventListener('contextmenu', ev => ev.preventDefault());
+    b.addEventListener('click', () => { if (elemLpDone) { elemLpDone = false; return; } elemPress(); });
+  }
+  const HINT = { strike: 'Tipp ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen', elem: 'Tipp ins Feld: Feuerball werfen. Knopf: automatisch', beam: 'Finger aufs Feld legen und ziehen: Strahl führen' };
+  function canArm(id) { return runAlive() && (id === 'strike' ? run.charge >= 1 : id === 'elem' ? run.elemReady() : id === 'beam' ? !!(run.s.el && run.s.el.k === 'light') : run.abilityReady(id)); }
   function fire(id, w) {
     if (!runAlive()) return false;
     if (id === 'strike') { if (!w || !run.strike(w.x, w.y)) return false; A.play('strike'); return true; }
+    if (id === 'elem') return run.useElem(w ? w.x : null, w ? w.y : null, true);
     if (run.useAbility(id)) { A.play(id); return true; }
     return false;
   }
@@ -873,7 +930,7 @@
   $('ab-freeze').addEventListener('click', () => { armed = null; fire('freeze'); });
   $('ab-over').addEventListener('click', () => { armed = null; fire('over'); });
   // Tastatur: 1–5 laden eine Fähigkeit, ein Klick ins Feld löst sie aus. Esc bricht ab.
-  const KEYS = { '1': 'strike', '2': 'freeze', '3': 'over' };
+  const KEYS = { '1': 'strike', '2': 'freeze', '3': 'over', '4': 'elem' };
   window.addEventListener('keydown', ev => {
     if (ev.target && ev.target.tagName === 'INPUT') return;
     if (ev.key === 'Escape') { armed = null; return; }
@@ -881,6 +938,7 @@
     const id = KEYS[ev.key];
     if (!id || current || paused) return;
     if (id === 'strike') { strikeNow(); return; }
+    if (id === 'elem') { elemPress(); return; }
     if (!canArm(id)) { A.play('hurt'); return; }
     armed = armed === id ? null : id; A.play('click');
   });
@@ -1040,7 +1098,7 @@
   // ---------- Hauptmenü: Bereiche, Kachel-Status, „Zu tun“ ----------
   let mPage = 'start';
   const PAGE_INFO = {
-    cannon: '<b>Kanone</b><br>Hier machst du die Kanone dauerhaft stärker: Labor, Kommandant, Module und Kernfusion.',
+    cannon: '<b>Kanone</b><br>Hier machst du die Kanone dauerhaft stärker: Labor, Kommandant, Elemente, Module und Kernfusion.',
     modes: '<b>Modi</b><br>Besondere Läufe: der Tageslauf mit gleichen Wellen für alle, Challenges mit Handicap und Bosskämpfe.',
     world: '<b>Welt</b><br>Bergbau auf den Planeten und der Hangar für das Aussehen deiner Kanone.',
   };
@@ -1078,6 +1136,7 @@
     const lab = C.cheapest(meta), ms = C.skMastery(meta), sk = C.skPoints(meta) - ms, gain = C.fragmentsFor(meta), d = dailyToday();
     st('labBtn', lab && meta.crystals >= lab.cost ? 'kaufbar' : '');
     st('cmdBtn', sk > 0 ? sk + ' frei' : ms ? 'Meisterschaft ' + ms : 'Rang ' + R.rank);
+    { const ea = C.elActive(meta), ep = ea ? C.elPoints(meta, ea) : 0; st('elemBtn', !ea ? 'wählen' : ep > 0 && elCanAny(ea) ? ep + ' frei' : C.ELEMENTS[ea].name + ' · Rang ' + C.elRank(meta, ea).rank); }
     st('modBtn', (meta.equip || []).filter(t => meta.modules && meta.modules[t]).length + '/3');
     st('fusBtn', gain > 0 ? '+' + fmt(gain) : '');
     st('dailyBtn', d && d.bonus ? (d.best ? 'heute ' + d.best : '') : 'Bonus offen');
@@ -1105,6 +1164,7 @@
     add(fbUnread > 0, fbUnread === 1 ? 'Neue Antwort auf dein Feedback' : `${fbUnread} neue Antworten auf dein Feedback`, 'Feedback', 'fbBtn');
     add(!meta.name && (meta.runs || 0) >= 1, 'Gib dir einen Namen, damit du in den Highscores erscheinst', 'Profil', 'mMeProf');
     add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kommandant', 'cmdBtn');
+    { const ea = C.elActive(meta); add(!$('elemBtn').hidden && !ea, 'Wähle ein Element: Feuer, Eis oder Licht', 'Elemente', 'elemBtn'); add(!!ea && $('elemBtn').classList.contains('dot'), 'Elementpunkt frei', 'Elemente', 'elemBtn'); }
     add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kernfusion', 'fusBtn');
     add(!$('dailyBtn').hidden && !(d && d.bonus), 'Tageslauf-Bonus wartet', 'Tageslauf', 'dailyBtn');
     add($('labBtn').classList.contains('dot'), 'Im Labor gibt es etwas zu kaufen', 'Labor', 'labBtn');
@@ -1188,10 +1248,63 @@
       dailyBtn: !(d && d.bonus),
       achBtn: C.achPoints(meta) > meta.seen.ach,
       cmdBtn: sk,
+      elemBtn: C.elUnlocked(meta) && (!C.elActive(meta) || C.elPoints(meta, C.elActive(meta)) > 0 && elCanAny(C.elActive(meta))),
       hangBtn: $('hangBtn').classList.contains('new'),
       mineBtn: $('mineBtn').classList.contains('new'),
     };
     for (const id in dots) { const b = $(id); if (b) b.classList.toggle('dot', !!dots[id]); }
+  }
+
+  // ---------- Elemente ----------
+  function elCanAny(el) { return C.ELEM_SKILLS.some(k => k.el === el && C.elCan(meta, k.id)); }
+  let elView = null, elRankSeen = null;
+  function elemRankCheck() {
+    const el = run && run.s.el && run.s.el.k; if (!el || run.home !== meta) return;
+    const r = C.elRank(meta, el).rank;
+    if (elRankSeen && elRankSeen.el === el && r > elRankSeen.r) { toast(`<b>${C.ELEMENTS[el].name}: Rang ${r}</b><br>Neuer Elementpunkt. Verteilen im Menü unter Kanone → Elemente.`, 4000); A.play('loot'); save(); }
+    elRankSeen = { el, r };
+  }
+  function renderElems() {
+    const act = C.elActive(meta), inRun = runAlive();
+    if (!elView || !C.ELEMENTS[elView]) elView = act || 'fire';
+    $('elHead').textContent = act ? C.ELEMENTS[act].name + ' aktiv' : 'noch keins gewählt';
+    $('elPick').innerHTML = Object.keys(C.ELEMENTS).map(id => {
+      const X = C.ELEMENTS[id], dot = id === act && C.elPoints(meta, id) > 0 && elCanAny(id);
+      return `<button class="elcard${id === elView ? ' view' : ''}${id === act ? ' act' : ''}${dot ? ' dot' : ''}" data-el="${id}" style="--c:${X.col}"><span class="ei">${X.icon}</span><b>${X.name}</b><small>${X.ask} · Rang ${C.elRank(meta, id).rank}</small></button>`;
+    }).join('');
+    const id = elView, X = C.ELEMENTS[id], R = C.elRank(meta, id), pts = C.elPoints(meta, id), ms = C.elMastery(meta, id), form = C.elForm(meta, id), F = C.ELEM_FORMS[id].find(f => f.id === form);
+    const node = k => {
+      const l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= k.max, ref = !inRun && C.elCanRefund(meta, k.id);
+      const req = !open ? `Braucht ${C.ELEM_FORM_AT} Punkte im Stamm (jetzt ${C.elStemPts(meta, id)})` : !full && !can && pts < 1 ? 'Kein freier Elementpunkt' : '';
+      return `<div class="elnode${!l && !open ? ' off' : ''}${full ? ' full' : ''}"><div><b>${k.name}</b><span class="lv">${l}/${k.max}</span><br><small>${k.desc(Math.max(1, l))}</small>${l && !full ? `<br><small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>` : ''}${req ? `<br><small class="req">${req}</small>` : ''}</div>`
+        + `<div class="btns">${l ? `<button class="ref" data-ref="${k.id}" ${ref ? '' : 'disabled'} aria-label="Stufe zurücknehmen">−</button>` : ''}${full ? '' : `<button data-buy="${k.id}" ${can ? '' : 'disabled'} aria-label="Stufe lernen">+</button>`}</div></div>`;
+    };
+    let h = `<div class="elbody" style="--c:${X.col}"><small>${X.role}</small>`;
+    if (id !== act) h += inRun ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<button class="cta" id="elChoose">${X.name} wählen</button>`;
+    h += `<div class="elrow"><span>Rang <b>${R.rank}</b></span><span>Freie Punkte: <b>${pts}</b></span></div><div class="bar"><i style="width:${Math.min(100, R.cur / R.need * 100).toFixed(1)}%"></i></div><small>${fmt(R.cur)} / ${fmt(R.need)} Erfahrung bis Rang ${R.rank + 1}</small>`;
+    h += ms ? `<small>Meisterschaft: ${ms} Rang über dem vollen Baum · ×${mult(Math.pow(C.ELEM_MASTER_K, ms))} Elementschaden</small>` : `<small>Mit ${C.elTreeMax(id)} Punkten ist der Baum voll. Danach bringt jeder Rang ×1,03 Elementschaden.</small>`;
+    h += `<h3>Fähigkeit: ${F.name}</h3><small>${F.desc}</small><div class="elhow"><b>Bedienung:</b> ${F.how}</div>`;
+    h += `<h3>Stamm</h3><small>Wirkt für alle Formen.</small><div class="elnodes">${C.ELEM_SKILLS.filter(k => k.el === id && !k.form).map(node).join('')}</div>`;
+    h += `<h3>Form</h3><small>Eine Form verwandelt die Fähigkeit. Ab ${C.ELEM_FORM_AT} Punkten im Stamm öffnen sich ihre Knoten. Wechseln ist außerhalb eines Laufs kostenlos, die Punkte der alten Form werden frei.</small>`;
+    h += `<div class="elforms">${C.ELEM_FORMS[id].map(f => `<div class="elform${f.id === form ? ' on' : ''}${f.soon ? ' soon' : ''}"><div class="hd"><b>${f.name}</b><span>${f.id === form ? 'gewählt' : f.soon ? 'folgt bald' : ''}</span></div><small>${f.desc}</small></div>`).join('')}</div>`;
+    h += `<div class="elnodes">${C.ELEM_SKILLS.filter(k => k.el === id && k.form === form).map(node).join('')}</div>`;
+    h += `<button class="sec" id="elReset" ${inRun || !C.elSpent(meta, id) ? 'disabled' : ''}>Punkte von ${X.name} zurücksetzen</button>${inRun ? '<small>Zurücknehmen und Zurücksetzen gehen nach dem Lauf.</small>' : ''}</div>`;
+    $('elBody').innerHTML = h;
+    $$('#elPick [data-el]').forEach(b => b.addEventListener('click', () => { elView = b.dataset.el; A.play('click'); renderElems(); }));
+    const ch = $('elChoose'); if (ch) ch.addEventListener('click', () => { if (!runAlive() && C.elChoose(meta, id)) { A.play('buy'); save(); renderElems(); renderHub(); } });
+    $$('#elBody [data-buy]').forEach(b => b.addEventListener('click', () => { if (C.elBuy(meta, b.dataset.buy)) { A.play('buy'); if (runAlive()) run.recalc(); save(); renderElems(); renderHub(); } }));
+    $$('#elBody [data-ref]').forEach(b => b.addEventListener('click', () => { if (!runAlive() && C.elRefund(meta, b.dataset.ref)) { A.play('click'); save(); renderElems(); renderHub(); } }));
+    const rs = $('elReset'); if (rs) rs.addEventListener('click', () => { if (runAlive()) return; C.elReset(meta, id); A.play('click'); save(); renderElems(); renderHub(); });
+  }
+  // Elemente im eigenen Profil
+  function elemProfile() {
+    const E = meta.elem, any = E && E.xp && Object.values(E.xp).some(v => v > 0);
+    if (!C.elUnlocked(meta) && !any) return '';
+    const act = C.elActive(meta);
+    return '<div class="pelem"><h3>Elemente</h3>' + Object.keys(C.ELEMENTS).map(id => {
+      const X = C.ELEMENTS[id], R = C.elRank(meta, id), F = C.ELEM_FORMS[id].find(f => f.id === C.elForm(meta, id));
+      return `<div class="pel${id === act ? ' act' : ''}" style="--c:${X.col}"><span class="ei">${X.icon}</span><b>${X.name}${id === act ? '<span>aktiv</span>' : ''}</b><span class="rk">Rang ${R.rank}</span><small>${F.name} · ${C.elSpent(meta, id)} Punkte verteilt · ${fmt(R.cur)} / ${fmt(R.need)} Erfahrung</small><span></span><div class="bar"><i style="width:${Math.min(100, R.cur / R.need * 100).toFixed(1)}%"></i></div></div>`;
+    }).join('') + '</div>';
   }
 
   // ---------- Kernfusion ----------
@@ -1211,6 +1324,7 @@
     $$('button.sec.daily-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
     $$('button.sec.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
     $('cmdBtn').hidden = !C.rankOf(meta).rank && !C.skSpent(meta);
+    $('elemBtn').hidden = !C.elUnlocked(meta);
     $('hangBtn').hidden = C.record(meta) < 20 && !(meta.skinSeen || []).length;
     try { if (!$('menu').hidden) renderHub(); } catch (e) {}
   }
@@ -1363,7 +1477,13 @@
   function publicCard() {
     const eq = (meta.equip || []).filter(t => meta.modules && meta.modules[t] && C.MODULES[t]).map(t => [t, meta.modules[t].rar | 0, meta.modules[t].mast | 0]);
     const lab = C.META_UPG.reduce((a, u) => a + C.mlv(meta, u.id), 0);
-    return { v: 1, rk: C.rankOf(meta).rank, rec: C.record(meta), fus: meta.fusions || 0, fl: Object.assign({}, meta.flv || {}), sk: Object.assign({}, meta.sk || {}), eq, lab, bb: Object.keys(meta.bossBeat || {}).length, ver: C.VERSION };
+    return { v: 1, rk: C.rankOf(meta).rank, rec: C.record(meta), fus: meta.fusions || 0, fl: Object.assign({}, meta.flv || {}), sk: Object.assign({}, meta.sk || {}), eq, lab, bb: Object.keys(meta.bossBeat || {}).length, el: publicElem(), ver: C.VERSION };
+  }
+  function publicElem() {
+    if (!C.elUnlocked(meta) || !meta.elem) return null;
+    const r = {}; for (const id in C.ELEMENTS) r[id] = C.elRank(meta, id).rank;
+    const a = C.elActive(meta);
+    return { a, f: a ? C.elForm(meta, a) : null, r };
   }
   // Mini-Sternkarte (nur Anzeige) für eine fremde Skillverteilung
   function skMiniSvg(sk) {
@@ -1406,6 +1526,12 @@
     // Module
     const eq = (c.eq || []).filter(e => Array.isArray(e) && C.MODULES[e[0]] && C.RARITY[e[1]]);
     h += `<h4>Module</h4>${eq.length ? eq.map(([t, r, ms]) => `<div class="stmod r${r}">${R_.iconSvg(t, r, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[r].name}${ms ? ' ★' + ms : ''}</span></div></div>`).join('') : '<p class="pcst">Keine Module ausgerüstet.</p>'}`;
+    // Element (fremde Daten: nur bekannte Werte anzeigen)
+    if (c.el && typeof c.el === 'object') {
+      const r = c.el.r && typeof c.el.r === 'object' ? c.el.r : {};
+      const fo = (id, f) => (C.ELEM_FORMS[id] || []).find(x => x.id === f);
+      h += `<h4>Elemente</h4><div class="pcfl">${Object.keys(C.ELEMENTS).map(id => { const X = C.ELEMENTS[id], on = c.el.a === id, F = on && fo(id, c.el.f); return `<span style="border-color:${on ? X.col : 'var(--line)'};color:${X.col}">${X.icon} ${X.name}${F ? ' · ' + F.name : ''} <b>Rang ${Math.max(0, Math.floor(+r[id] || 0))}</b></span>`; }).join('')}</div>`;
+    }
     // Skills
     const m = { sk: c.sk || {} }, spent = C.skSpent(m);
     h += `<h4>Kommandant · ${spent} Punkte verteilt</h4>`;
@@ -1592,6 +1718,7 @@
     $$('#pAvatars [data-av]').forEach(b => b.addEventListener('click', () => { pDraft.avatar = +b.dataset.av; A.play('click'); renderProfile(); }));
     $$('#pColors [data-col]').forEach(b => b.addEventListener('click', () => { pDraft.color = +b.dataset.col; A.play('click'); renderProfile(); }));
     $('pStats').innerHTML = [['Rekord', C.record(meta)], ['Läufe', fmt(meta.runs)], ['Abschüsse', fmt(meta.kills)], ['Fusionen', meta.fusions || 0], ['Kernfragmente gesamt', fmt(fragTotal())], ['Challenge-Stufen', chalSum()], ['Erfolgsstufen', C.achPoints(meta)], ['Kristalle gesamt', fmt(meta.totalCrystals || 0)]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+    $('pElem').innerHTML = elemProfile();
     renderCloud();
   }
   $('pName').addEventListener('input', () => { pDraft.name = $('pName').value; });
@@ -2221,15 +2348,21 @@
     if (!runAlive() || paused || current) return;
     const w = R.toWorld(ev.clientX, ev.clientY);
     if (w.y > -4) return; // unterhalb des Horizonts (Kanone, Boden) gibt es nichts zu treffen
+    if (armed === 'beam') { if (run.beamStart(w.x, w.y)) { beamPtr = ev.pointerId; try { $('cv').setPointerCapture(ev.pointerId); } catch (e) {} A.play('beam'); } else A.play('hurt'); return; }
     if (armed) { if (armed === 'strike') run.markAt(w.x, w.y, true); if (fire(armed, w)) armed = null; }
     // Orbitalschlag geladen: Tippen ins Feld schlägt genau dort ein (außer im Modus „nur Knopf“)
     else if (meta.strikeMode !== 'btn' && canArm('strike')) { run.markAt(w.x, w.y, true); fire('strike', w); }
     else if (run.markAt(w.x, w.y)) A.play('mark');
   });
 
+  // Strahl führen: solange der Finger liegt, folgt der Strahl
+  $('cv').addEventListener('pointermove', ev => { if (beamPtr !== ev.pointerId || !run) return; const w = R.toWorld(ev.clientX, ev.clientY); run.beamMove(w.x, w.y); });
+  const beamEnd = ev => { if (beamPtr !== ev.pointerId) return; beamPtr = null; if (run) run.beamStop(); };
+  $('cv').addEventListener('pointerup', beamEnd); $('cv').addEventListener('pointercancel', beamEnd);
+
   const MARK_NAME = { grunt: 'Jäger', runner: 'Flitzer', brute: 'Koloss', shooter: 'Kanonenboot', boss: 'Boss', mender: 'Heiler', bulwark: 'Schildträger', splitter: 'Splitter', shard: 'Splitter', phantom: 'Phantom', bomb: 'Bombe' };
   // ---------- Schleife ----------
-  const SOUND_OF = { loot: 'loot', rlaunch: 'rlaunch', cryo: 'cryo', laserhit: 'laserhit', nova: 'nova', eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
+  const SOUND_OF = { fireball: 'fireball', lance: 'lance', shatter: 'shatter', loot: 'loot', rlaunch: 'rlaunch', cryo: 'cryo', laserhit: 'laserhit', nova: 'nova', eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
   let last = performance.now(), uiT = 0, saveT = 0, autoT = 0, dpsT = 0, lastShots = 0;
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;
@@ -2237,7 +2370,7 @@
     if (live) {
       let left = realDt * speed;
       while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
-      autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); autoBuy(); if (meta.autoCall && !run.queue.length && run.canCallWave()) run.callWave(); }
+      autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); elemRankCheck(); autoBuy(); if (meta.autoCall && !run.queue.length && run.canCallWave()) run.callWave(); }
       dpsT += realDt * speed; if (dpsT >= 1) { dpsT = 0; sampleDps(); }
       for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); }
       run.fx.length = 0;

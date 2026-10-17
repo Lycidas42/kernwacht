@@ -49,6 +49,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `tools/diag_boss.js` | Protokolliert einen Boss-Kampf bei einer Welle |
 | `tools/tune.js` | Zufallssuche über die Balancing-Parameter gegen eine Zielkurve |
 | `tools/shares.js` | Schadensanteile je Quelle in späten Läufen, mit verschiedenen Modulen |
+| `tools/elements.js` | Elementarmagie: Schadensanteil und Erfahrung je Element, aktiver Bot gegen Autopilot |
 | `tools/challenges.js` | Herausforderungen und Tageslauf: welche Wellen ein Bot bei typischem Fortschritt schafft |
 | `tools/build-single.js` | Baut `dist/kernwacht.html` als eigenständige Einzeldatei |
 
@@ -112,3 +113,5 @@ Lokal spielen: `python3 -m http.server` im Repo-Ordner, dann `http://localhost:8
 Sprachen: Deutsch und Englisch (Optionen → Sprache). Der Code enthält die deutschen Texte; `i18n.js` übersetzt beim Anzeigen anhand des Wörterbuchs `i18n-en.js` (Schlüssel = deutscher Text, `{0}`, `{1}` … als Platzhalter). Neue Texte dort ergänzen.
 
 Kommandant (Skilltree): Jede überstandene Welle gibt Erfahrung, jeder Rang einen Skillpunkt (Rang übersteht die Fusion, rückwirkend aus dem Rekord). Vier Äste – Präzision, Arsenal, Bollwerk, Taktik – mit eigenen Mechaniken (Gift, Vampir, Hinrichtung, Brandfelder, Drohnen, Reflexion, Betäubung, Phönix, Aegis, Schwarzes Loch …) und je einem wählbaren Schlussstein. Zurücksetzen außerhalb eines Laufs kostenlos.
+
+Elemente (ab Rekordwelle 50): Feuer, Eis oder Licht wählen, aktiv ist immer nur eines. Jedes Element bringt eine eigene Fähigkeit (vierter Knopf, Taste 4): Feuerball (ins Feld werfen, Brandfeld), Frostlanze (friert das markierte Ziel ein, eingefrorene Schiffe zersplittern) oder Prismastrahl (mit dem Finger führen). Erfahrung gibt es für Schiffe, die das Element zerstört; jeder Elementrang bringt einen Punkt im eigenen Baum (Stamm und Form). Wechseln außerhalb eines Laufs kostenlos, Fortschritt je Element bleibt. Konzept und weitere Formen: `docs/elementarmagie.md`.

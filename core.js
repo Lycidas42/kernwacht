@@ -293,7 +293,7 @@
   }
 
   const MINE_FUSE = 10; // Sekunden, bis eine unberührte Mine von selbst detoniert
-  const SOURCES = ['gun', 'rocket', 'cryo', 'mine', 'shock', 'blade', 'strike', 'mod', 'dot', 'skill'];
+  const SOURCES = ['gun', 'rocket', 'cryo', 'mine', 'shock', 'blade', 'strike', 'mod', 'dot', 'skill', 'elem'];
   const UPG_BY_ID = {}; RUN_UPG.forEach(u => (UPG_BY_ID[u.id] = u));
   const MIX = w => {
     // Wahrscheinlichkeiten der Gegnertypen je Welle (wie in nextWave)
@@ -339,7 +339,7 @@
     { w: 30, label: 'Boss-Module: Bosse lassen Beute fallen' },
     { w: 35, label: 'Minenwerfer im Labor' },
     { w: 40, label: 'Herausforderungen: Läufe mit Handicap für dauerhafte Boni' },
-    { w: 50, label: 'Kernfusion' },
+    { w: 50, label: 'Kernfusion und Elementarmagie' },
     { w: 51, label: 'Sektor 2: Smaragdnebel, Eismond Kryos' },
     { w: 101, label: 'Sektor 3: Glutgürtel, Glutwelt Ignis' },
     { w: 151, label: 'Sektor 4: Roter Riese, Roter Zwerg Nox' },
@@ -565,6 +565,114 @@
   }
   function skRefund(m, id) { if (!skCanRefund(m, id)) return false; m.sk[id]--; if (!m.sk[id]) delete m.sk[id]; return true; }
 
+  // ---------- Elementarmagie: ab Rekordwelle 50 ein Element mit eigener Fähigkeit und eigenem Baum ----------
+  // Aktiv ist immer nur ein Element. Erfahrung gibt es für Schiffe, die das Element zerstört oder in den 3 s davor getroffen hat
+  // (von Hand ausgelöst voll, vom Autopiloten halb). Ränge und Bäume überdauern die Fusion.
+  const ELEM_AT = 50;
+  const ELEM_FORM_AT = 4; // Punkte im Stamm, ab denen die Knoten der Form offen sind
+  const dc = (v, d) => v.toFixed(d).replace('.', ',');
+  const ELEMENTS = {
+    fire:  { name: 'Feuer', col: '#ff8a3d', icon: '✹', ask: 'Wo?', role: 'Flächenschaden gegen Gruppen' },
+    ice:   { name: 'Eis',   col: '#9fe8ff', icon: '❄', ask: 'Wen?', role: 'Kontrolle und Einzelziele, stark gegen Heiler und Bosse' },
+    light: { name: 'Licht', col: '#ffe9a8', icon: '✦', ask: 'Wohin?', role: 'Dauerstrahl, den du mit dem Finger führst' },
+  };
+  // Formen verwandeln die Fähigkeit; vorerst gibt es je Element die Grundform, die übrigen folgen
+  const ELEM_FORMS = {
+    fire: [
+      { id: 'ball', name: 'Feuerball', desc: 'Explosion mit 4× Kanonenschaden, danach brennt der Boden 4 s (0,6× Kanonenschaden pro Sekunde). Zwei Ladungen, jede lädt in 10 s nach.',
+        how: 'Knopf antippen, dann ins Feld tippen: Der Feuerball schlägt genau dort ein. Ein zweiter Tipp auf den Knopf wirft ihn stattdessen automatisch in die dichteste Gruppe.' },
+      { id: 'wall', name: 'Flammenwand', soon: true, desc: 'Eine Linie aus Feuer, die du ins Feld ziehst. Schiffe, die sie durchfliegen, brennen und werden langsamer.' },
+      { id: 'meteor', name: 'Meteor', soon: true, desc: 'Ein schwerer Einschlag nach 1,5 s mit großem Radius. Du musst vorhalten, wo die Schiffe dann sind.' },
+    ],
+    ice: [
+      { id: 'lance', name: 'Frostlanze', desc: 'Trifft ein Ziel mit 6× Kanonenschaden und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
+        how: 'Knopf antippen: Die Lanze trifft das markierte Ziel. Ohne Markierung trifft sie den Boss oder das Schiff mit den meisten Lebenspunkten.' },
+      { id: 'nova', name: 'Frostnova', soon: true, desc: 'Eine Kältewelle um die Kanone, die alle nahen Schiffe einfriert. Die Notbremse, wenn es eng wird.' },
+      { id: 'storm', name: 'Eissturm', soon: true, desc: 'Ein Hagelfeld, in dem Schiffe nach und nach einfrieren.' },
+    ],
+    light: [
+      { id: 'prism', name: 'Prismastrahl', desc: 'Ein Strahl von der Kanone durchs ganze Feld: 1,5× Kanonenschaden pro Sekunde an allen Schiffen auf der Linie. Bleibt er auf einem Schiff, steigt der Schaden alle 0,5 s um 10 % (bis +100 %). Die Energie reicht 4 s und lädt in 12 s wieder voll, solange der Strahl aus ist.',
+        how: 'Knopf antippen schaltet den Strahl bereit. Dann den Finger aufs Feld legen und ziehen: Der Strahl folgt dem Finger. Loslassen spart Energie. Lange auf den Knopf drücken: Der Strahl richtet sich selbst auf das markierte Ziel, mit halbem Schaden.' },
+      { id: 'lens', name: 'Brennglas', soon: true, desc: 'Ein dünner Strahl, der selbst auf dem markierten Ziel bleibt und immer heißer wird. Für Bosse.' },
+      { id: 'mirror', name: 'Spiegelfeld', soon: true, desc: 'Spiegel im Feld lenken den Strahl um und führen ihn durch ganze Gruppen.' },
+    ],
+  };
+  // Stamm (form leer) gilt für alle Formen, Formknoten nur für ihre Form
+  const ELEM_SKILLS = [
+    { id: 'f_dmg',   el: 'fire', max: 3, name: 'Glutkern',       desc: l => `+${pc(0.2 * l)} Schaden von Feuerball und Brandfeld` },
+    { id: 'f_cd',    el: 'fire', max: 3, name: 'Schnellzündung', desc: l => `Ladungen laden ${pc(0.08 * l)} schneller nach` },
+    { id: 'f_burn',  el: 'fire', max: 2, name: 'Zunder',         desc: l => `Brandfelder halten ${dc(1.5 * l, 1)} s länger` },
+    { id: 'fb_ammo', el: 'fire', form: 'ball', max: 2, name: 'Munitionslager', desc: l => `+${l} Ladung${l > 1 ? 'en' : ''}` },
+    { id: 'fb_rad',  el: 'fire', form: 'ball', max: 2, name: 'Flächenbrand',   desc: l => `+${pc(0.15 * l)} Radius von Explosion und Brandfeld` },
+    { id: 'fb_jump', el: 'fire', form: 'ball', max: 2, name: 'Übersprung',     desc: l => `Schiffe, die im Feuer sterben, entzünden ein kleines Brandfeld mit ${pc(0.25 * l)} Stärke` },
+    { id: 'i_dur',   el: 'ice', max: 3, name: 'Permafrost',  desc: l => `Ziele bleiben ${dc(0.5 * l, 1)} s länger eingefroren` },
+    { id: 'i_brit',  el: 'ice', max: 3, name: 'Sprödigkeit', desc: l => `Eingefrorene Ziele erleiden ${pc(0.4 + 0.1 * l)} statt 40 % mehr Schaden` },
+    { id: 'i_cd',    el: 'ice', max: 2, name: 'Kälteschock', desc: l => `−${l} s Abklingzeit` },
+    { id: 'il_chain', el: 'ice', form: 'lance', max: 2, name: 'Eiskette',     desc: l => `Die Lanze springt auf ${l} weitere${l > 1 ? '' : 's'} Schiff${l > 1 ? 'e' : ''} (halber Schaden, halbe Frostdauer)` },
+    { id: 'il_shard', el: 'ice', form: 'lance', max: 2, name: 'Splitterregen', desc: l => `+${pc(0.4 * l)} Schaden beim Zersplittern` },
+    { id: 'il_sog',   el: 'ice', form: 'lance', max: 2, name: 'Kältesog',     desc: l => `Während Stasis lädt die Lanze ${pc(0.5 * l)} schneller` },
+    { id: 'l_dmg',   el: 'light', max: 3, name: 'Bündelung',    desc: l => `+${pc(0.2 * l)} Strahlschaden` },
+    { id: 'l_dur',   el: 'light', max: 3, name: 'Lichtspeicher', desc: l => `Der Strahl hält ${dc(0.5 * l, 1)} s länger` },
+    { id: 'l_cd',    el: 'light', max: 2, name: 'Sonnenzelle',  desc: l => `Die Energie ist ${dc(1.5 * l, 1)} s schneller wieder voll` },
+    { id: 'lp_glow',  el: 'light', form: 'prism', max: 2, name: 'Glühen',    desc: l => `Der Aufbau auf einem Ziel geht bis +${pc(1 + 0.25 * l)} statt +100 %` },
+    { id: 'lp_wide',  el: 'light', form: 'prism', max: 2, name: 'Breitband', desc: l => `+${pc(0.2 * l)} Strahlbreite` },
+    { id: 'lp_blind', el: 'light', form: 'prism', max: 2, name: 'Blendung',  desc: l => `Getroffene Kanonenboote und Heiler setzen ${dc(0.5 * l, 1)} s aus (je Schiff höchstens alle 3 s)` },
+  ];
+  const EL_BY_ID = {}; ELEM_SKILLS.forEach(k => (EL_BY_ID[k.id] = k));
+  // Einzelziel-Elemente kommen auf weniger Abschüsse: ausgleichen, damit alle etwa gleich schnell aufsteigen
+  const ELEM_XP_K = { fire: 1, ice: 3.5, light: 1.6 };
+  const ELEM_MASTER_K = 1.03; // je Rang über dem vollen Baum ×1,03 Elementschaden
+  function elemState(m) {
+    if (!m.elem || typeof m.elem !== 'object') m.elem = { act: null };
+    const E = m.elem; E.xp = E.xp || {}; E.sk = E.sk || {}; E.form = E.form || {};
+    return E;
+  }
+  const elXpNeed = r => Math.round(300 * Math.pow(1.2, r)); // Erfahrung für Rang r → r+1
+  function elRank(m, el) {
+    let xp = (m.elem && m.elem.xp && m.elem.xp[el]) || 0, r = 0;
+    while (xp >= elXpNeed(r)) { xp -= elXpNeed(r); r++; }
+    return { rank: r, cur: xp, need: elXpNeed(r) };
+  }
+  const elLv = (m, id) => (m.elem && m.elem.sk && m.elem.sk[id]) || 0;
+  const elForm = (m, el) => { const f = m.elem && m.elem.form && m.elem.form[el]; return ELEM_FORMS[el].some(x => x.id === f && !x.soon) ? f : ELEM_FORMS[el][0].id; };
+  const elSpent = (m, el) => ELEM_SKILLS.filter(k => k.el === el).reduce((a, k) => a + elLv(m, k.id), 0);
+  const elStemPts = (m, el) => ELEM_SKILLS.filter(k => k.el === el && !k.form).reduce((a, k) => a + elLv(m, k.id), 0);
+  const elTreeMax = el => ELEM_SKILLS.filter(k => k.el === el && (!k.form || k.form === ELEM_FORMS[el][0].id)).reduce((a, k) => a + k.max, 0);
+  const elPoints = (m, el) => elRank(m, el).rank - elSpent(m, el);
+  const elMastery = (m, el) => Math.max(0, elRank(m, el).rank - elTreeMax(el));
+  const elUnlocked = m => record(m) >= ELEM_AT;
+  const elActive = m => elUnlocked(m) && m.elem && ELEMENTS[m.elem.act] ? m.elem.act : null;
+  function elOpen(m, id) {
+    const k = EL_BY_ID[id]; if (!k) return false;
+    return !k.form || (k.form === elForm(m, k.el) && elStemPts(m, k.el) >= ELEM_FORM_AT);
+  }
+  function elCan(m, id) { const k = EL_BY_ID[id]; return !!k && elPoints(m, k.el) >= 1 && elLv(m, id) < k.max && elOpen(m, id); }
+  function elBuy(m, id) { if (!elCan(m, id)) return false; elemState(m).sk[id] = elLv(m, id) + 1; return true; }
+  // Stammpunkte lassen sich nur zurücknehmen, solange die Formknoten offen bleiben
+  function elCanRefund(m, id) {
+    const k = EL_BY_ID[id], l = elLv(m, id); if (!k || !l) return false;
+    if (k.form) return true;
+    const formPts = ELEM_SKILLS.some(x => x.el === k.el && x.form && elLv(m, x.id));
+    return !formPts || elStemPts(m, k.el) - 1 >= ELEM_FORM_AT;
+  }
+  function elRefund(m, id) { if (!elCanRefund(m, id)) return false; const E = elemState(m); E.sk[id]--; if (!E.sk[id]) delete E.sk[id]; return true; }
+  function elReset(m, el) { const E = elemState(m); for (const k of ELEM_SKILLS) if (k.el === el) delete E.sk[k.id]; }
+  function elChoose(m, el) { if (!ELEMENTS[el] || !elUnlocked(m)) return false; elemState(m).act = el; return true; }
+  // Formwechsel: Punkte der alten Form werden frei
+  function elSetForm(m, el, f) {
+    const F = ELEM_FORMS[el] && ELEM_FORMS[el].find(x => x.id === f); if (!F || F.soon) return false;
+    const E = elemState(m); for (const k of ELEM_SKILLS) if (k.el === el && k.form && k.form !== f) delete E.sk[k.id];
+    E.form[el] = f; return true;
+  }
+  // Ungültige Knoten (z. B. nach Umbau des Baums) entfernen
+  function elFix(m) {
+    if (!m.elem || !m.elem.sk) return;
+    const E = m.elem;
+    for (const id in E.sk) if (!EL_BY_ID[id] || !(E.sk[id] > 0)) delete E.sk[id]; else E.sk[id] = Math.min(E.sk[id], EL_BY_ID[id].max);
+    for (const id in E.sk) if (!elOpen(m, id)) delete E.sk[id];
+    for (const el in ELEMENTS) while (elPoints(m, el) < 0) { const k = ELEM_SKILLS.filter(x => x.el === el && elLv(m, x.id)).pop(); if (!k) break; E.sk[k.id]--; if (!E.sk[k.id]) delete E.sk[k.id]; }
+  }
+
   // ---------- Planetenforschung: dauerhafte Boni, bezahlt mit der Ressource des Planeten ----------
   const RESEARCH = {
     // spätere Planeten öffnen später und haben weniger Vorrat angesammelt: günstigerer Einstieg
@@ -646,6 +754,7 @@
       this.aim = -Math.PI / 2; this.shots = 0; this.charge = 0;
       this.focus = null; this.focusUntil = 0; this.uid = 0;
       this.cd = { freeze: 0, over: 0 }; this.freezeUntil = 0; this.overUntil = 0;
+      this.elemCd = 0; this.elemAmmo = null; this.beamE = null; this.beam = null; this.elXp = 0;
       this.dealt = {}; SOURCES.forEach(k => (this.dealt[k] = 0)); this.modDealt = {};
       this.holding = false; this.god = false; this.ring = null;
       this.rockets = []; this.bolts = []; this.rocketT = 0; this.cryoT = 0; this.reinfT = 0; this.loot = []; this.novaT = 0;
@@ -669,7 +778,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot', 'elemCd', 'elemAmmo', 'beamE', 'elXp'];
       const o = {}; keep.forEach(k => (o[k] = this[k])); o.spent = this.spent; o.paid = this.paid; o.rush = this.rush; o.easyRun = this.easyRun; o.leaps = this.leaps;
       o.enemies = this.enemies.map(e => { const c = Object.assign({}, e); if (e.host) { c.hostId = e.host.id; delete c.host; } return c; });
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -679,7 +788,7 @@
     static restore(meta, o) {
       const r = new Run(meta, { noFx: true, mode: o.mode });
       Object.assign(r, o);
-      r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.fires = []; r.hole = null; r.invulnUntil = 0; r.focus = null; r.dead = false; r.ring = null;
+      r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.fires = []; r.hole = null; r.beam = null; r.invulnUntil = 0; r.focus = null; r.dead = false; r.ring = null;
       r.cd = Object.assign({ freeze: 0, over: 0 }, o.cd || {});
       for (const e of r.enemies) if (e.hostId != null) { e.host = r.enemies.find(h => h.id === e.hostId); if (!e.host) e.hp = 0; }
       RUN_UPG.forEach(u => { if (r.lv[u.id] == null) r.lv[u.id] = 0; }); // neue Upgrades in alten Spielständen
@@ -786,6 +895,19 @@
       // Obergrenze gegen Zahlenüberlauf (über 1e308 wird es „unendlich“)
       const CAP = 1e290; for (const k of ['dmg', 'gunDmg', 'shockDmg', 'bladeDmg', 'mineDmg', 'rocketDmg', 'cryoDmg', 'strikeDmg', 'maxHp', 'regen']) if (s[k] > CAP) s[k] = CAP;
       s.dps = Math.min(CAP, s.gunDmg * s.rate * (1 + s.crit * (s.critx - 1)) * (1 + s.multi * s.multiDmg));
+      // Elementarmagie (im Tageslauf gibt es keine, dort gilt die Standard-Ausrüstung; bei „Nur Minen“ gesperrt)
+      const el = s.noGun ? null : elActive(this.meta);
+      s.el = null;
+      if (el) {
+        const E = id => elLv(this.meta, id), g = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el));
+        const o = { k: el, form: elForm(this.meta, el) };
+        if (el === 'fire') { const f = 1 + 0.2 * E('f_dmg'); o.dmg = g * 4 * f; o.burn = g * 0.6 * f; o.burnT = 4 + 1.5 * E('f_burn'); o.r = 50 * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * (1 - 0.08 * E('f_cd')); o.jump = 0.25 * E('fb_jump'); }
+        if (el === 'ice') { o.dmg = g * 6; o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.shard = g * 2 * (1 + 0.4 * E('il_shard')); o.sog = 0.5 * E('il_sog'); }
+        if (el === 'light') { o.dps = g * 1.5 * (1 + 0.2 * E('l_dmg')); o.dur = 4 + 0.5 * E('l_dur'); o.cd = 12 - 1.5 * E('l_cd'); o.ramp = 1 + 0.25 * E('lp_glow'); o.w = 7 * (1 + 0.2 * E('lp_wide')); o.blind = 0.5 * E('lp_blind'); }
+        s.el = o;
+        if (el === 'fire' && this.elemAmmo == null) this.elemAmmo = o.ammo;
+        if (el === 'light' && this.beamE == null) this.beamE = o.dur;
+      }
       this.s = s;
     }
 
@@ -1160,6 +1282,8 @@
       }
       if (e.type === 'boss' && this.s.chal && this.s.chal.boss > 1) d *= this.s.chal.boss;
       if (e === this.focus && this.s.K && this.s.K('p_mark')) d *= 1 + 0.2 * this.s.K('p_mark');
+      const fq = e.frostUntil > this.time && this.s.el && this.s.el.brit ? this.s.el.brit / (1 + this.s.el.brit) : 0; // Frostlanze: eingefroren nimmt mehr Schaden, der Mehrschaden zählt fürs Eis
+      if (fq) d /= 1 - fq;
       if (e.shieldUntil && e.shieldUntil > this.time) { d *= 0.15; if (this.fxOn && Math.random() < 0.25) { const p = this.pos(e); this.fx.push({ k: 'shieldhit', x: p.x, y: p.y, t: 0 }); } }
       if (e.type === 'bulwark' && e.guard > 0) {
         // Frontschild fängt Schaden ab, bis es bricht
@@ -1170,7 +1294,7 @@
       if (e.laser) e.laserDmg = (e.laserDmg || 0) + d;
       e.hitT = this.time; // unter Beschuss keine Reparatur
       const eff = Math.min(d, e.hp);
-      this.dealt[src || 'gun'] += eff;
+      this.dealt[src || 'gun'] += eff * (1 - fq); if (fq) this.dealt.elem += eff * fq;
       // Orbitalschlag lädt nur über zugefügten Schaden: gemessen an einem typischen Schiff der Welle,
       // beim Boss an seinen Lebenspunkten (ein ganzer Boss lädt mehrere Schläge)
       if (!this.s.noGun && e.type !== 'bomb' && e.maxHp > 0 && src !== 'strike' && !(this.time < this.strikeLock)) { // der Schlag selbst lädt nicht, kurz danach lädt nichts
@@ -1191,6 +1315,9 @@
       if (e.hp <= 0) {
         this.energy += e.rw * this.s.loot;
         this.kills++;
+        if (e.elemT != null && (this.time - e.elemT <= 3 || e.frostUntil > this.time)) this.elemXp(e);
+        if (this.s.el && this.s.el.k === 'ice' && e.frostUntil > this.time && !e.frostBig && !this.shattering) this.shatter(e);
+        if (this.s.el && this.s.el.jump && e.elBurn != null && this.time - e.elBurn < 0.25 && this.fires.filter(f => f.el).length < 12) { const p = this.pos(e); this.fires.push({ x: p.x, y: Math.min(p.y, -10), r: 25, dps: this.s.el.burn * this.s.el.jump, until: this.time + 2, k: 'elfire', el: true, hand: e.elemHand }); }
         if (this.fxOn && this.s.mod && (this.s.mod.leech || this.s.mod.crysmod) && Math.random() < 0.5) { const p = this.pos(e); this.fx.push({ k: this.s.mod.leech ? 'leech' : 'crysfx', x: p.x, y: p.y, t: 0 }); }
                 if (this.s.K && this.s.K('b_leech') && !this.dead) this.hp = Math.min(this.s.maxHp, this.hp + this.s.maxHp * 0.003 * this.s.K('b_leech'));
         if (this.s.mod.splinter && src !== 'mod') {
@@ -1273,7 +1400,7 @@
       for (const e of this.enemies) if (e.pdps > 0 && e.hp > 0) { this.hurt(e, e.pdps * dt, false, 'dot'); e.pdps *= Math.max(0, 1 - dt / 3); }
       // Giftgeschosse: zusätzlich ein kleiner Anteil der Lebenspunkte pro Sekunde (stapelt nicht) – stark gegen zähe Gegner
       if (K('p_poison')) for (const e of this.enemies) if (e.ppUntil > this.time && e.hp > 0) this.hurt(e, e.maxHp * (e.type === 'boss' ? 0.0001 : 0.0005) * K('p_poison') * dt, false, 'dot');
-      for (const f of this.fires) for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - f.x, p.y - f.y) < f.r + e.r) this.hurt(e, f.dps * dt, false, 'dot'); }
+      for (const f of this.fires) for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - f.x, p.y - f.y) < f.r + e.r) { if (f.el) { e.elemT = e.elBurn = this.time; e.elemHand = f.hand; } this.hurt(e, f.dps * dt, false, f.el ? 'elem' : 'dot'); } }
       this.fires = this.fires.filter(f => f.until > this.time);
       if (K('p_charge')) this.chargeShotT += dt;
       const inRange = () => this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.range && !this.cloaked(e));
@@ -1335,6 +1462,112 @@
       const d = this.s.gunDmg * this.s.mod.nova;
       for (const e of this.enemies) if (e.hp > 0 && e.dist - e.r <= this.s.range) { this.hurt(e, d, false, 'mod', 'nova'); if (e.hp > 0) this.push(e, 30); }
       if (this.fxOn) this.fx.push({ k: 'nova', t: 0, r: this.s.range });
+    }
+
+    // ---------- Elementarmagie ----------
+    elemTick(dt) {
+      const o = this.s.el; if (!o) { this.beam = null; return; }
+      if (o.k === 'fire') this.elemAmmo = Math.min(o.ammo, (this.elemAmmo || 0) + dt / o.cd);
+      else if (o.k === 'ice') this.elemCd = Math.max(0, this.elemCd - dt * (this.frozen ? 1 + o.sog : 1));
+      else if (o.k === 'light') this.beamTick(dt, o);
+    }
+    elemReady() {
+      const o = this.s.el; if (!o || this.dead) return false;
+      return o.k === 'fire' ? this.elemAmmo >= 1 : o.k === 'ice' ? this.elemCd <= 0 : this.beamE >= Math.min(1, o.dur);
+    }
+    // Ziel für Lanze und selbstzielenden Strahl: Markierung, sonst Boss, sonst das Schiff mit den meisten Lebenspunkten
+    elemTarget() {
+      const vis = e => e.hp > 0 && !this.cloaked(e) && e.dist < FIELD_H + 20 && !e.giant;
+      if (this.focus && vis(this.focus)) return this.focus;
+      const alive = this.enemies.filter(vis); if (!alive.length) return null;
+      return alive.find(e => e.type === 'boss') || alive.find(e => e.host && e.host.hp > 0) || alive.sort((a, b) => b.hp - a.hp)[0]; // Riese: seine Arme und Teile
+    }
+    // Treffer des Elements: merkt sich Zeitpunkt und Auslöser (Hand/Autopilot) für die Erfahrung
+    elHit(e, d, hand) { e.elemT = this.time; e.elemHand = !!hand; return this.hurt(e, d, false, 'elem'); }
+    elemXp(e) {
+      if (this.admin || !this.s.el || e.type === 'bomb') return;
+      const v = (1 + this.wave / 50) * (e.type === 'boss' && !e.child ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[this.s.el.k];
+      const E = elemState(this.home); E.xp[this.s.el.k] = (E.xp[this.s.el.k] || 0) + v; this.elXp = (this.elXp || 0) + v;
+    }
+    // x, y leer: Feuerball automatisch in die dichteste Gruppe
+    useElem(x, y, hand) {
+      const o = this.s.el; if (!this.elemReady()) return false;
+      if (o.k === 'fire') {
+        if (x == null) { const p = this.strikeTarget(); if (!p) return false; x = p.x; y = p.y; }
+        y = Math.min(y, -20);
+        this.elemAmmo -= 1;
+        for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - x, p.y - y) <= o.r + e.r) this.elHit(e, o.dmg, hand); }
+        this.fires.push({ x, y, r: o.r, dps: o.burn, until: this.time + o.burnT, k: 'elfire', el: true, hand: !!hand });
+        if (this.fxOn) this.fx.push({ k: 'fireball', x, y, r: o.r, t: 0 });
+        return true;
+      }
+      if (o.k === 'ice') {
+        const t = this.elemTarget(); if (!t) return false;
+        this.elemCd = o.cd;
+        const tp = this.pos(t);
+        if (this.fxOn) this.fx.push({ k: 'lance', x1: 0, y1: -10, x2: tp.x, y2: tp.y, t: 0 });
+        const done = [t]; let from = tp;
+        for (let i = 0; i < o.chain; i++) {
+          let n = null, nd = 110;
+          for (const e of this.enemies) { if (e.hp <= 0 || done.includes(e) || e.host || e.giant || this.cloaked(e)) continue; const q = this.pos(e), d = Math.hypot(q.x - from.x, q.y - from.y); if (d < nd) { nd = d; n = e; } }
+          if (!n) break;
+          const q = this.pos(n); done.push(n);
+          if (this.fxOn) this.fx.push({ k: 'lance', x1: from.x, y1: from.y, x2: q.x, y2: q.y, t: 0 });
+          from = q;
+        }
+        done.forEach((e, i) => { this.frost(e, i ? o.dur / 2 : o.dur, hand); this.elHit(e, i ? o.dmg / 2 : o.dmg, hand); });
+        return true;
+      }
+      if (o.k === 'light') return this.beamAuto(hand);
+      return false;
+    }
+    frost(e, dur, hand) {
+      if (e.hp <= 0) return;
+      const big = e.type === 'boss' || !!e.host;
+      e.frostUntil = Math.max(e.frostUntil || 0, this.time + dur); e.frostBig = big; e.elemT = this.time; e.elemHand = !!hand;
+      if (!big) e.stunUntil = Math.max(e.stunUntil || 0, e.frostUntil); // steht still, schießt nicht
+      if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'brittle', x: p.x, y: p.y, t: 0 }); }
+    }
+    // Zersplittern: eingefrorenes Schiff stirbt und trifft die Nachbarn
+    shatter(e) {
+      const o = this.s.el, p = this.pos(e); this.shattering = true;
+      for (const n of this.enemies) {
+        if (n === e || n.hp <= 0) continue; const q = this.pos(n);
+        if (Math.hypot(q.x - p.x, q.y - p.y) >= 45 + n.r) continue;
+        this.elHit(n, o.shard, e.elemHand);
+        if (n.hp > 0 && n.type !== 'boss' && !n.host) { n.slow = Math.max(n.slowUntil > this.time ? n.slow : 0, 0.3); n.slowUntil = Math.max(n.slowUntil || 0, this.time + 2); }
+      }
+      this.shattering = false;
+      if (this.fxOn) this.fx.push({ k: 'shatter', x: p.x, y: p.y, t: 0 });
+    }
+    // Prismastrahl: von Hand geführt (beamStart/beamMove/beamStop) oder selbstzielend (beamAuto, halber Schaden)
+    beamStart(x, y) {
+      const o = this.s.el; if (!o || o.k !== 'light' || this.dead || !(this.beamE > 0.1)) return false;
+      this.beam = { x, y: Math.min(y, -10), hand: true, auto: false }; return true;
+    }
+    beamMove(x, y) { if (this.beam && !this.beam.auto) { this.beam.x = x; this.beam.y = Math.min(y, -10); } }
+    beamStop() { if (this.beam && !this.beam.auto) this.beam = null; }
+    beamAuto(hand) {
+      if (!this.elemReady() || !this.elemTarget()) return false;
+      this.beam = { auto: true, hand: !!hand }; return true;
+    }
+    beamTick(dt, o) {
+      if (!this.beam) { this.beamE = Math.min(o.dur, (this.beamE || 0) + dt * o.dur / o.cd); return; }
+      if (this.beamE <= 0) { this.beam = null; return; }
+      let tx = this.beam.x, ty = this.beam.y, k = 1;
+      if (this.beam.auto) { const t = this.elemTarget(); if (!t) { this.beam = null; return; } const p = this.pos(t); tx = p.x; ty = p.y; k = 0.5; }
+      this.beamE = Math.max(0, this.beamE - dt);
+      const L = Math.hypot(tx, ty) || 1, ux = tx / L, uy = ty / L;
+      this.beam.ex = ux * 560; this.beam.ey = uy * 560;
+      for (const e of this.enemies) {
+        if (e.hp <= 0 || this.cloaked(e) || e.giant) continue;
+        const p = this.pos(e), along = p.x * ux + p.y * uy;
+        if (along < 0 || Math.abs(p.x * uy - p.y * ux) > o.w + e.r) continue;
+        if (this.time - (e.beamSeen || -9) > 0.25) e.beamT = 0; // Strahl war weg: Aufbau beginnt neu
+        e.beamSeen = this.time; e.beamT = (e.beamT || 0) + dt;
+        this.elHit(e, o.dps * (1 + Math.min(o.ramp, 0.2 * e.beamT)) * k * dt, this.beam.hand);
+        if (o.blind && (e.type === 'shooter' || e.type === 'mender') && e.hp > 0 && !(e.blindCd > this.time)) { e.stunUntil = Math.max(e.stunUntil || 0, this.time + o.blind); e.blindCd = this.time + 3; }
+      }
     }
 
     // ---------- Spieleraktionen ----------
@@ -1615,6 +1848,7 @@
         }
         const contact = WALL_R + e.r * 0.3;
         if (e.type === 'boss') {
+          const fz = e.frostUntil > this.time ? 0.5 : 1; // Frostlanze: Bosse halb so schnell, auch ihre Fähigkeiten
           // Wut: je länger der Kampf dauert, desto härter schlägt der Boss zu (+100 % alle 90 s)
           e.fightT = (e.fightT || 0) + dt; if (e.dmg0 == null) e.dmg0 = e.dmg;
           e.dmg = e.dmg0 * (1 + e.fightT / P.bossWrath) * (1 + 0.3 * (e.heat || 0));
@@ -1625,15 +1859,15 @@
           if (e.lord) { const ph = e.hp < e.maxHp * 0.33 ? 2 : e.hp < e.maxHp * 0.66 ? 1 : 0; if (ph > e.phase) { e.phase = ph; e.actT = Math.min(e.actT, 1); if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'bossact', act: 'phase', x: p.x, y: p.y, t: 0 }); } } }
           if (e.giant) {
             // Riese: eigene Steuerung, kein Sturmangriff, Fähigkeiten wie gewohnt
-            if (e.dist > e.stop + 5 && !e.phase) { e.dist = Math.max(e.stop, e.dist - e.spd * dt); }
-            else { this.giantTick(e, dt); e.actT -= dt; if (e.actT <= 0) { e.actT = e.actMax = Math.max(3, 5 - this.wave * 0.01); this.bossAct(e); } }
+            if (e.dist > e.stop + 5 && !e.phase) { e.dist = Math.max(e.stop, e.dist - e.spd * fz * dt); }
+            else { this.giantTick(e, dt); e.actT -= dt * fz; if (e.actT <= 0) { e.actT = e.actMax = Math.max(3, 5 - this.wave * 0.01); this.bossAct(e); } }
             continue;
           }
           if (e.retreat) {
             // nach dem Sturmangriff zurück auf Abstand, dann beginnt das Schweben von vorn
             e.dist = Math.min(e.stop, e.dist + e.spd * 1.3 * dt);
             if (e.dist >= e.stop) { e.retreat = false; e.hoverT = 0; e.rushes = (e.rushes || 0) + 1; }
-          } else if (e.dist > e.stop && !e.enraged) { e.dist = Math.max(e.stop, e.dist - e.spd * dt); }
+          } else if (e.dist > e.stop && !e.enraged) { e.dist = Math.max(e.stop, e.dist - e.spd * fz * dt); }
           else {
             e.hoverT += dt;
             const gl = BOSS_KINDS[e.kind] && BOSS_KINDS[e.kind].glide;
@@ -1647,16 +1881,16 @@
               else if (e.laser <= 0) { this.hitBase(e.dmg * 4); if (this.fxOn) this.fx.push({ k: 'laserhit', t: 0, a: e.a, d: e.dist }); }
             }
             if (e.enraged) {
-              if (e.dist > contact) e.dist = Math.max(contact, e.dist - e.spd * 0.8 * dt);
+              if (e.dist > contact) e.dist = Math.max(contact, e.dist - e.spd * 0.8 * fz * dt);
               else { e.atkT -= dt; if (e.atkT <= 0) { e.atkT = 1; this.hitBase(e.dmg); } }
             }
-            e.actT -= dt;
+            e.actT -= dt * fz;
             if (e.actT <= 0) { e.actT = e.actMax = Math.max(2.5, 4.5 - this.wave * 0.02); this.bossAct(e); }
           }
           continue;
         }
         // Heiler: repariert Schiffe in der Nähe
-        if (e.type === 'mender') {
+        if (e.type === 'mender' && !(e.frostUntil > this.time)) { // eingefroren heilt er nicht
           const p = this.pos(e);
           // Heilung stapelt nicht (je Schiff nur ein Heiler pro Moment), Bosse bekommen nur einen Bruchteil
           for (const o of this.enemies) if (o !== e && o.type !== 'mender' && o.hp > 0 && o.hp < o.maxHp && o.mendT !== this.time && !(this.time - (o.hitT || -9) < P.mendCalm)) {
@@ -1924,6 +2158,7 @@
       }
 
       this.skillTick(dt);
+      this.elemTick(dt);
       this.enemies = this.enemies.filter(e => e.hp > 0);
     }
 
@@ -2230,6 +2465,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.30.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.31.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

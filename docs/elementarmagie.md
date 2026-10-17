@@ -1,6 +1,36 @@
 # Vorschlag: Elementarmagie
 
-Stand: Entwurf, Runde 3, Entscheidungen stehen fest. Noch nichts umgesetzt.
+Stand: Phase 1 ist umgesetzt (Version 0.31.0). Phase 2 und 3 sind noch offen.
+
+## Umsetzung Phase 1 (0.31.0)
+
+Umgesetzt:
+
+- Wahl eines Elements ab Rekordwelle 50 (Menü → Kanone → Elemente), kostenloser Wechsel außerhalb des Laufs.
+- Feuer, Eis und Licht mit Stamm (3 Knoten, 8 Punkte) und Grundform samt ihren Knoten (3 Knoten, 6 Punkte): Feuerball, Frostlanze, Prismastrahl. Die übrigen Formen sind als „folgt bald“ sichtbar.
+- Jeder Knoten und jede Form hat im Spiel eine Beschreibung und eine Erklärung der Bedienung.
+- Elementar-Erfahrung durch Wirkung, Rang und Punkte je Element, Meisterschaft (×1,03 Elementschaden je Rang über dem vollen Baum).
+- Vierter Knopf im Lauf (Taste 4), Autopilot-Regeln, Tipps beim ersten Einsatz, Meldung bei neuem Rang.
+- Anzeige im eigenen Profil und auf der öffentlichen Profilkarte.
+- Schadensquelle „Element“ im Werte-Tab und in den Schadensanteilen nach dem Lauf.
+- `tools/elements.js` misst Schadensanteil und Erfahrung je Element.
+
+Abweichungen vom Entwurf, nach Messung mit `tools/elements.js`:
+
+- **Frostlanze** stärker als geplant: 6× statt 3× Kanonenschaden, 8 s statt 12 s Abklingzeit, eingefrorene Ziele +40 % statt +30 % Schaden, Splitter 2× statt 1,5×. Der Mehrschaden auf eingefrorene Ziele zählt als Elementschaden.
+- **Feuerball:** Statt „Dritte Ladung“ (1 Stufe) gibt es „Munitionslager“ mit 2 Stufen (+1 Ladung je Stufe).
+- **Erfahrung:** Eis und Licht treffen weniger Schiffe und bekommen deshalb einen Ausgleich (Eis ×3,5, Licht ×1,6). Rangkurve `300 × 1,2^r`. Gegenüber dem Entwurf: 14 Punkte für einen vollen Baum statt 20, kein Reservepool.
+- **Licht, Bedienung:** Statt Knopf halten und mit einem zweiten Finger führen: Knopf antippen schaltet den Strahlmodus ein, dann mit einem Finger im Feld führen. Das geht auf dem Handy mit einer Hand. Lange auf den Knopf drücken startet den selbstzielenden Strahl.
+
+Messung (Rekord 160, 4 Fusionen, Bot zielt wie ein Spieler bzw. Autopilot, Anteil am Gesamtschaden):
+
+| Element | 4 Punkte aktiv | 14 Punkte aktiv | 14 Punkte Autopilot |
+| --- | --- | --- | --- |
+| Feuer | 10 % | 17 % | 18 % |
+| Eis | 3 % | 8 % | 8 % |
+| Licht | 9 % | 13 % | 7 % |
+
+Eis bleibt beim reinen Schaden zurück. Sein Wert liegt in der Kontrolle (Schiffe, Bomben und Heiler stoppen, Bosse bremsen), die der Bot nicht abbildet. Beim Feuer wirft der Autopilot genauso gut wie der Bot, weil beide in die dichteste Gruppe zielen; ein Spieler, der vorausplant, kann mehr herausholen. Ob der Abstand zwischen Hand und Autopilot beim Feuer reicht, sollte mit echten Läufen geprüft werden.
 
 Entschieden:
 

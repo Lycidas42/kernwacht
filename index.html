@@ -56,6 +56,7 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #app { height: 100%; display: flex; flex-direction: column; }
 #stage { position: relative; flex: 1 1 64%; min-height: 0; touch-action: manipulation; }
 #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#stage.beam #cv { touch-action: none; } /* Lichtstrahl: Ziehen im Feld führt den Strahl, nicht die Seite */
 
 /* HUD */
 #modeFrame { position: absolute; inset: 0; pointer-events: none; z-index: 2; --mc: var(--hostile); box-shadow: inset 0 0 0 3px var(--mc), inset 0 0 46px color-mix(in srgb, var(--mc) 35%, transparent); animation: mframe 2.4s ease-in-out infinite; }
@@ -236,6 +237,50 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .gitem p { margin: 2px 0 0; font-size: .8rem; color: var(--ink-dim); line-height: 1.45; }
 #guide .card { display: grid; gap: 8px; }
 .cmd-btn { border-color: color-mix(in srgb, #ffd23f 55%, var(--line)); color: #ffd23f; }
+#elems .card { width: min(600px, 100%); gap: 10px; }
+.elpick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.elcard { position: relative; display: grid; gap: 2px; justify-items: center; text-align: center; padding: 10px 6px 8px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: color-mix(in srgb, var(--c) 5%, transparent); }
+.elcard .ei { font-size: 1.5rem; line-height: 1.2; color: var(--c); }
+.elcard b { font-size: .92rem; color: var(--c); }
+.elcard small { font-size: .7rem; color: var(--ink-dim); line-height: 1.25; }
+.elcard.view { border-color: var(--c); box-shadow: 0 0 0 1px var(--c) inset; }
+.elcard.act::after { content: 'aktiv'; position: absolute; top: -8px; right: 6px; padding: 0 6px; border-radius: 6px; background: var(--c); color: #120f2a; font: 700 .58rem/15px var(--font-num); text-transform: uppercase; letter-spacing: .06em; }
+.elcard.dot::before { content: ''; position: absolute; top: 6px; left: 6px; width: 8px; height: 8px; border-radius: 50%; background: #ffd23f; box-shadow: 0 0 6px #ffd23f; }
+.elbody { display: grid; gap: 8px; border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: 6px; padding: 10px 12px; }
+.elbody h3 { margin: 4px 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--c); }
+.elbody .elrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .86rem; }
+.elbody .elrow b { color: var(--c); font-family: var(--font-num); }
+.elbody .bar i { background: var(--c); box-shadow: 0 0 8px var(--c); }
+.elbody > small, .elform small, .elnode small { font-size: .78rem; color: var(--ink-dim); line-height: 1.4; }
+.elbody .elhow { font-size: .8rem; line-height: 1.45; border-radius: 4px; padding: 7px 9px; background: color-mix(in srgb, var(--c) 8%, transparent); }
+.elbody > button.cta { justify-self: stretch; }
+.elforms { display: grid; gap: 6px; }
+.elform { display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px; }
+.elform.on { border-color: var(--c); }
+.elform.soon { opacity: .5; }
+.elform .hd { display: flex; justify-content: space-between; gap: 8px; font-size: .88rem; }
+.elform .hd span { font-size: .7rem; color: var(--c); text-transform: uppercase; letter-spacing: .06em; }
+.elnodes { display: grid; gap: 6px; }
+.elnode { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; border: 1px solid var(--line); border-left: 2px solid var(--c); border-radius: 4px; padding: 7px 10px; }
+.elnode.off { opacity: .45; border-left-color: var(--line); }
+.elnode.full { border-left-color: var(--heal); }
+.elnode b { font-size: .88rem; } .elnode .lv { font-family: var(--font-num); font-size: .72rem; color: var(--c); margin-left: 6px; }
+.elnode small.nx { color: var(--c); opacity: .85; }
+.elnode small.req { color: #ff8a8a; }
+.elnode .btns { display: flex; gap: 6px; }
+.elnode .btns button { height: 30px; min-width: 34px; padding: 0 10px; border: 1px solid var(--c); border-radius: 4px; color: var(--c); font-weight: 700; }
+.elnode .btns button.ref { border-color: var(--line); color: var(--ink-dim); }
+.elnode .btns button:disabled { opacity: .3; }
+.pelem { display: grid; gap: 6px; margin-top: 4px; }
+.pelem h3 { margin: 6px 0 0; }
+.pel { display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; }
+.pel.act { border-color: var(--c); }
+.pel .ei { grid-row: span 2; font-size: 1.2rem; color: var(--c); text-align: center; }
+.pel b { font-size: .86rem; } .pel b span { color: var(--c); font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; margin-left: 6px; }
+.pel small { font-size: .72rem; color: var(--ink-dim); }
+.pel .rk { font-family: var(--font-num); color: var(--c); font-weight: 700; }
+.pel .bar { grid-column: 2 / 4; height: 4px; }
+.pel .bar i { background: var(--c); }
 .skxp { display: grid; gap: 4px; }
 .skxp .bar i { background: #ffd23f; box-shadow: 0 0 8px #ffd23f; }
 .skxp small { font-size: .72rem; color: var(--ink-dim); }
@@ -816,6 +861,10 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#17143a" stroke="#3a3474" stroke-width="3"/><circle class="ring" cx="28" cy="28" r="25" fill="none" stroke="#ff8a3d" stroke-width="3" stroke-linecap="round" stroke-dasharray="157.1" stroke-dashoffset="0"/></svg>
         <span class="key">3</span><span class="lbl">Über-<br>ladung<br><span class="st">bereit</span></span>
       </button>
+      <button class="ab" id="ab-elem" aria-label="Element" hidden>
+        <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#17143a" stroke="#3a3474" stroke-width="3"/><circle class="ring" cx="28" cy="28" r="25" fill="none" stroke="#ff8a3d" stroke-width="3" stroke-linecap="round" stroke-dasharray="157.1" stroke-dashoffset="0"/></svg>
+        <span class="key">4</span><span class="smode" hidden></span><span class="lbl"><span class="nm">Feuer</span><br><span class="st">bereit</span></span>
+      </button>
     </div>
     <div id="hint" hidden>Tippe ins Feld, um den Schlag zu setzen</div>
     <div id="ctrl">
@@ -903,6 +952,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <h2>Kanone</h2><p class="mdesc">Alles, was deine Kanone dauerhaft stärker macht.</p>
         <button class="tile lab-btn" id="labBtn" style="--tc:var(--core)"><span class="ic">⚗</span><span class="tx"><b>Labor</b><small>Dauerhafte Upgrades mit Kristallen</small></span><span class="st" id="st-labBtn"></span></button>
         <button class="tile cmd-btn" id="cmdBtn" style="--tc:#ffd23f"><span class="ic">★</span><span class="tx"><b>Kommandant</b><small>Skill-Sternkarte, Punkte aus deinem Rang</small></span><span class="st" id="st-cmdBtn"></span></button>
+        <button class="tile elem-btn" id="elemBtn" style="--tc:#ffe9a8" hidden><span class="ic">✦</span><span class="tx"><b>Elemente</b><small>Feuer, Eis oder Licht: eine eigene Fähigkeit mit eigenem Baum</small></span><span class="st" id="st-elemBtn"></span></button>
         <button class="tile mod-btn" id="modBtn" style="--tc:#c3a6ff"><span class="ic">◈</span><span class="tx"><b>Module</b><small>Beute der Bosse, drei ausrüstbar</small></span><span class="st" id="st-modBtn"></span></button>
         <button class="tile fus-btn" id="fusBtn" style="--tc:var(--heat)"><span class="ic">✺</span><span class="tx"><b>Kernfusion</b><small>Neustart für Kernfragmente und starke Upgrades</small></span><span class="st" id="st-fusBtn"></span></button>
       </section>
@@ -1192,6 +1242,16 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <div class="actions"><button class="sec" id="skClose">Zurück</button></div>
   </div>
 </div>
+<div class="ov" id="elems" hidden>
+  <div class="card">
+    <div class="labhead"><h2>Elemente</h2><span class="num" id="elHead"></span></div>
+    <p class="dim" style="font-size:.8rem">Wähle ein Element. Es bringt eine eigene Fähigkeit (vierter Knopf im Lauf, Taste 4) und einen eigenen Baum. Aktiv ist immer nur ein Element. Wechseln geht jederzeit außerhalb eines Laufs und kostet nichts, der Fortschritt jedes Elements bleibt erhalten.</p>
+    <p class="dim" style="font-size:.8rem">Erfahrung gibt es für jedes Schiff, das dein Element zerstört oder kurz vorher getroffen hat. Von Hand ausgelöst zählt doppelt so viel wie beim Autopiloten. Jeder Rang bringt einen Punkt im Baum dieses Elements. Ränge bleiben auch bei der Kernfusion. Im Tageslauf und in der Challenge „Nur Minen“ wirkt kein Element.</p>
+    <div class="elpick" id="elPick"></div>
+    <div id="elBody"></div>
+    <div class="actions"><button class="sec" id="elClose">Zurück</button></div>
+  </div>
+</div>
 <div class="ov" id="settings" hidden>
   <div class="card">
     <h2>Optionen</h2>
@@ -1281,6 +1341,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <button class="cta" id="pSave">Profil speichern</button>
     <p class="note" id="pNote"></p>
     <div class="kv" id="pStats"></div>
+    <div id="pElem"></div>
 
     <div id="cloudBox" class="box" hidden>
       <h3>Cloud-Spielstand</h3>

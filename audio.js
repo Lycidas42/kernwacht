@@ -95,6 +95,10 @@
     cryo() { if (throttle('cryo', 90)) return; osc('triangle', 2400, 1200, 0.12, 0.05); noise(0.15, 0.06, 9000, 4000, 1, null, 'highpass'); },
     laserhit() { const t = ac.currentTime; osc('sawtooth', 90, 40, 0.6, 0.3, t); noise(0.5, 0.4, 3000, 100, 1, t); },
     nova() { const t = ac.currentTime; osc('sine', 400, 50, 0.7, 0.35, t); noise(0.7, 0.3, 5000, 200, 1, t); },
+    fireball() { const t = ac.currentTime; noise(0.55, 0.32, 1800, 120, 0.8, t); osc('sawtooth', 170, 45, 0.45, 0.14, t); },
+    lance() { const t = ac.currentTime; osc('triangle', 3200, 900, 0.18, 0.07, t); noise(0.25, 0.08, 9000, 3000, 1, t, 'highpass'); [2093, 2637].forEach((f, i) => osc('triangle', f, f, 0.3, 0.04, t + 0.08 + i * 0.05)); },
+    shatter() { if (throttle('shatter', 90)) return; const t = ac.currentTime; [3000, 4200, 5200].forEach((f, i) => osc('square', f, f * 0.6, 0.05, 0.025, t + i * 0.03)); },
+    beam() { if (throttle('beam', 300)) return; const t = ac.currentTime; osc('sine', 520, 1040, 0.35, 0.07, t); osc('triangle', 1560, 1560, 0.3, 0.03, t); },
     gameover() { const t = ac.currentTime; [392, 330, 262, 196].forEach((f, i) => osc('triangle', f, f * 0.97, 0.35, 0.1, t + i * 0.16)); },
   };
   function play(name, o) { if (!ac || !sfxOn || ac.state !== 'running') return; const f = SFX[name]; if (f) f(o); }
