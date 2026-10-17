@@ -104,9 +104,11 @@
   }
   const runAlive = () => run && !run.dead;
   function home() { show(runAlive() ? 'pause' : 'menu'); }
-  // Dauerhafte Verbesserungen kaufen: im laufenden Lauf erst ab C.BUY_RUN_AT Rekordwelle
+  // Im laufenden Lauf ist nichts Dauerhaftes kaufbar (Lauf, Scheitern, Labor, neuer Lauf);
+  // einzige Ausnahme: Labor-Upgrades mit Kristallen ab Rekordwelle C.BUY_RUN_AT
   const buyLocked = () => runAlive() && !C.buyInRun(meta);
   const LOCK_TXT = () => `Im Lauf erst ab Rekordwelle ${C.BUY_RUN_AT}. Nach dem Lauf geht es.`;
+  const RUN_TXT = 'Geht erst nach dem Lauf.';
   function setPaused(p) { paused = p; $('pauseBtn').textContent = p ? '▶' : 'II'; }
 
   let lastMode = null, dayOverride = null;
@@ -414,16 +416,16 @@
       else if (k.par && !C.skLv(meta, k.par)) req = `Braucht zuerst „${C.SKILLS.find(x => x.id === k.par).name}“`;
       else if (k.cap) { const o = C.SKILLS.find(x => x.br === k.br && x.cap && x.id !== k.id && C.skLv(meta, x.id)); req = o ? `Im Ast ist schon „${o.name}“ gewählt. Den zweiten Schlussstein gibt es ab Rang ${C.SK_CAP2_AT}.` : `Braucht ${C.SK_CAP_AT} Punkte in ${brName(k.br)} (jetzt ${C.skBranchPts(meta, k.br)})`; }
     } else if (!st.full && !st.can && C.skPoints(meta) < 1) req = 'Kein freier Skillpunkt';
-    else if (!st.full && st.can && buyLocked()) req = 'Punkte verteilen: ' + LOCK_TXT();
+    else if (!st.full && st.can && runAlive()) req = 'Punkte verteilen: ' + RUN_TXT;
     if (req) txt += `<small class="req">${req}</small>`;
     const canRef = st.l > 0 && !runAlive() && C.skCanRefund(meta, k.id);
     const why = st.l > 0 && !canRef ? (runAlive() ? 'Zurücknehmen nach dem Lauf' : 'Andere Knoten hängen davon ab') : '';
-    const btn = `<div class="skbtns">${st.full ? '' : `<button id="skBuy" ${st.can && !buyLocked() ? '' : 'disabled'}>${k.cap || k.link ? 'Wählen' : st.l ? '+1 Stufe' : 'Lernen'}</button>`}${st.l ? `<button id="skRef" class="ref" ${canRef ? '' : 'disabled'}>${k.cap || k.link ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
+    const btn = `<div class="skbtns">${st.full ? '' : `<button id="skBuy" ${st.can && !runAlive() ? '' : 'disabled'}>${k.cap || k.link ? 'Wählen' : st.l ? '+1 Stufe' : 'Lernen'}</button>`}${st.l ? `<button id="skRef" class="ref" ${canRef ? '' : 'disabled'}>${k.cap || k.link ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
     d.innerHTML = `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div>${txt}${btn}`;
     const b = $('skBuy');
     const rb = $('skRef');
     if (rb) rb.addEventListener('click', () => { if (!runAlive() && C.skRefund(meta, k.id)) { A.play('click'); save(); renderSkills(); } });
-    if (b) b.addEventListener('click', () => { if (!buyLocked() && C.skBuy(meta, k.id)) { meta.skLast = k.br === 'x' ? meta.skLast : k.br; A.play('buy'); if (runAlive()) run.recalc(); save(); renderSkills(); } });
+    if (b) b.addEventListener('click', () => { if (!runAlive() && C.skBuy(meta, k.id)) { meta.skLast = k.br === 'x' ? meta.skLast : k.br; A.play('buy'); save(); renderSkills(); } });
   }
   function renderSkills() {
     const R = C.rankOf(meta), pts = C.skPoints(meta);
@@ -1374,10 +1376,10 @@
       else if (k.form && C.elStemPts(meta, id) < C.ELEM_FORM_AT) req = `Braucht ${C.ELEM_FORM_AT} Punkte im Stamm (jetzt ${C.elStemPts(meta, id)})`;
       else if (k.cap) req = `Braucht ${C.ELEM_CAP_AT} Punkte in der Form (jetzt ${C.elFormPts(meta, id, k.form)})`;
     } else if (!full && !can && pts < 1) req = 'Kein freier Elementpunkt';
-    else if (!full && can && buyLocked()) req = 'Punkte verteilen: ' + LOCK_TXT();
+    else if (!full && can && runAlive()) req = 'Punkte verteilen: ' + RUN_TXT;
     const why = l > 0 && !ref ? (inRun ? 'Zurücknehmen nach dem Lauf' : 'Andere Knoten hängen davon ab') : '';
     return `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div><small>${k.desc(Math.max(1, l))}</small>${l && !full ? `<small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>` : ''}${req ? `<small class="req">${req}</small>` : ''}`
-      + `<div class="skbtns">${full ? '' : `<button id="elBuy" ${can && !buyLocked() ? '' : 'disabled'}>${k.cap ? 'Wählen' : l ? '+1 Stufe' : 'Lernen'}</button>`}${l ? `<button id="elRef" class="ref" ${ref ? '' : 'disabled'}>${k.cap ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
+      + `<div class="skbtns">${full ? '' : `<button id="elBuy" ${can && !runAlive() ? '' : 'disabled'}>${k.cap ? 'Wählen' : l ? '+1 Stufe' : 'Lernen'}</button>`}${l ? `<button id="elRef" class="ref" ${ref ? '' : 'disabled'}>${k.cap ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
   }
   function renderElems() {
     const act = C.elActive(meta), inRun = runAlive();
@@ -1402,7 +1404,7 @@
     $$('#elPick [data-el]').forEach(b => b.addEventListener('click', () => { if (elView !== b.dataset.el) elSel = null; elView = b.dataset.el; A.play('click'); renderElems(); }));
     $$('#elBody [data-es]').forEach(g => g.addEventListener('click', () => { elSel = g.dataset.es === 'hub' ? null : g.dataset.es; A.play('click'); renderElems(); }));
     const ch = $('elChoose'); if (ch) ch.addEventListener('click', () => { if (!runAlive() && C.elChoose(meta, id)) { A.play('buy'); redraw(); } });
-    const bu = $('elBuy'); if (bu) bu.addEventListener('click', () => { if (!buyLocked() && C.elBuy(meta, elSel)) { A.play('buy'); if (runAlive()) run.recalc(); redraw(); } });
+    const bu = $('elBuy'); if (bu) bu.addEventListener('click', () => { if (!runAlive() && C.elBuy(meta, elSel)) { A.play('buy'); redraw(); } });
     const rf = $('elRef'); if (rf) rf.addEventListener('click', () => { if (!runAlive() && C.elRefund(meta, elSel)) { A.play('click'); redraw(); } });
     const fo = $('elForm'); if (fo) fo.addEventListener('click', () => { if (!runAlive() && C.elSetForm(meta, id, elSel.slice(5))) { A.play('buy'); redraw(); } });
     const rs = $('elReset'); if (rs) rs.addEventListener('click', () => { if (runAlive()) return; C.elReset(meta, id); A.play('click'); redraw(); });
@@ -1467,12 +1469,12 @@
       note.textContent = `Weiterspielen lohnt sich auch: bei Bestwelle ${w1} gäbe es ${fr(w1)}, bei ${w2} schon ${fr(w2)} Fragmente.`; }
     const list = $('fusList'); list.innerHTML = '';
     for (const u of C.FUSION_UPG) {
-      const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), ok = !mx && !buyLocked() && meta.frag >= c;
+      const l = C.flv(meta, u.id), mx = u.max != null && l >= u.max, c = C.fusionCost(u, l), ok = !mx && !runAlive() && meta.frag >= c;
       const fx = F_FX[u.id], extra = fx ? ` <b style="color:var(--core)">${fx(l)}${mx ? '' : ' → ' + fx(l + 1)}</b>` : '';
       const el = document.createElement('div'); el.className = 'row'; el.style.gridTemplateColumns = '1fr auto';
       el.innerHTML = `<div><div class="nm">${u.name}<small>${u.unlock ? (mx ? 'aktiv' : 'Technik') : 'St. ' + l + (u.max ? ' / ' + u.max : '')}</small></div><div class="ds">${u.desc}${extra}</div></div>
         <button class="buy num ${mx ? 'max' : 'f-btn' + (ok ? ' ok' : '')}" ${ok ? '' : 'disabled'}>${mx ? 'OK' : fmt(c)}</button>`;
-      holdBuy(el.querySelector('button'), () => { if (buyLocked() || !C.fusionBuy(meta, u)) return false; A.play('buy'); if (runAlive()) { run.recalc(); buildList(); } save(); renderFusion(); return true; });
+      holdBuy(el.querySelector('button'), () => { if (runAlive() || !C.fusionBuy(meta, u)) return false; A.play('buy'); save(); renderFusion(); return true; });
       list.appendChild(el);
     }
   }
@@ -2108,6 +2110,8 @@
     if (!minePid) minePid = (C.PLANETS.slice().reverse().find(P => C.planetOpen(meta, P)) || C.PLANETS[0]).id;
     const P = C.PLANETS.find(x => x.id === minePid), open = C.planetOpen(meta, P), pl = M.p[P.id] || { d: 0, s: 0, stock: 0 }, idx = C.PLANETS.indexOf(P);
     $('mineK').textContent = fmt(meta.crystals);
+    const inRun = runAlive();
+    $('mineLock').hidden = !inRun;
     $('mPrev').disabled = idx === 0; $('mNext').disabled = idx === C.PLANETS.length - 1;
     $('mDots').innerHTML = C.PLANETS.map(Q => `<i class="${Q === P ? 'on' : ''} ${C.planetOpen(meta, Q) ? '' : 'lock'}"></i>`).join('');
     $('mpName').textContent = P.name; $('mpOre').textContent = `${P.ore}: ${fmt(M.ore[P.id] || 0)}`;
@@ -2124,12 +2128,12 @@
     }
     // Einrichtungen
     $('mpFacs').innerHTML = open ? C.FACIL.map(f => {
-      const l = pl[f.id] || 0, need = f.need && !pl[f.need], mx = l >= f.max, c = C.facCost(P, f, l), ok = !need && !mx && meta.crystals >= c;
+      const l = pl[f.id] || 0, need = f.need && !pl[f.need], mx = l >= f.max, c = C.facCost(P, f, l), ok = !inRun && !need && !mx && meta.crystals >= c;
       return `<div class="fac ${need ? 'off' : ''}"><div class="fh"><b>${f.name}</b><span>${l ? 'St. ' + l : 'nicht gebaut'}</span></div>
         <small>${f.desc}${l ? ` · <em>${FAC_FX[f.id](P, l)}</em>` : ''}${!mx && !need ? ` → <em>${FAC_FX[f.id](P, l + 1)}</em>` : ''}</small>
         <button data-fac="${f.id}" ${ok ? '' : 'disabled'}>${need ? 'braucht Bohrturm' : mx ? 'MAX' : (l ? 'Ausbau ' : 'Bauen ') + fmt(c)}</button></div>`;
     }).join('') : '';
-    $$('#mpFacs [data-fac]').forEach(b => holdBuy(b, () => { if (!C.mineUpgrade(meta, P.id, b.dataset.fac)) return false; A.play('buy'); save(); renderMine(); return true; }));
+    $$('#mpFacs [data-fac]').forEach(b => holdBuy(b, () => { if (runAlive() || !C.mineUpgrade(meta, P.id, b.dataset.fac)) return false; A.play('buy'); save(); renderMine(); return true; }));
     // Raffinerie
     const owned = open ? [P] : [];
     $('refinery').innerHTML = owned.length ? owned.map(Q => {
@@ -2141,26 +2145,26 @@
     for (const Q of [P]) {
       if (!C.planetOpen(meta, Q)) continue;
       const ore = M.ore[Q.id] || 0;
-      rows.push(`<div class="rrow" style="--pc:${Q.col}"><div>Neues Modul aus Sektor ${Q.sector}<small>zufälliger Typ, ${C.MOD_CRAFT} ${Q.ore}</small></div><span></span><button data-craft="${Q.sector}" ${ore >= C.MOD_CRAFT ? '' : 'disabled'}>Herstellen</button></div>`);
+      rows.push(`<div class="rrow" style="--pc:${Q.col}"><div>Neues Modul aus Sektor ${Q.sector}<small>zufälliger Typ, ${C.MOD_CRAFT} ${Q.ore}</small></div><span></span><button data-craft="${Q.sector}" ${!inRun && ore >= C.MOD_CRAFT ? '' : 'disabled'}>Herstellen</button></div>`);
       for (const t in (meta.modules || {})) {
         const mod = meta.modules[t]; if (C.MODULES[t].sector !== Q.sector) continue;
         const cc = C.modBoostCost(mod), rc = C.modRarCost(mod), full = mod.copies >= 10 && mod.rar >= 3, mc = C.modMastCost(mod);
         const sub = `${C.RARITY[mod.rar].name} · Fund ${mod.copies}/10${mod.mast ? ' · Meister ' + mod.mast : ''}`;
         rows.push(full
           ? `<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${sub} · +${5 * (mod.mast || 0)} % Wirkung</small></div><span></span>
-            <button data-imp="${t}" data-w="mast" ${ore < mc ? 'disabled' : ''}>Meistern +5 %<br>${fmt(mc)} ${Q.ore}</button></div>`
+            <button data-imp="${t}" data-w="mast" ${inRun || ore < mc ? 'disabled' : ''}>Meistern +5 %<br>${fmt(mc)} ${Q.ore}</button></div>`
           : `<div class="rrow r${mod.rar}" style="--pc:var(--rc)"><div>${R_.iconSvg(t, mod.rar, 16)} ${C.MODULES[t].name}<small>${sub}</small></div>
-          <button data-imp="${t}" data-w="copy" ${mod.copies >= 10 || ore < cc ? 'disabled' : ''}>${mod.copies >= 10 ? 'Fund MAX' : `+1 Fund<br>${fmt(cc)} ${Q.ore}`}</button>
-          <button data-imp="${t}" data-w="rar" ${mod.rar >= 3 || ore < rc ? 'disabled' : ''}>${mod.rar >= 3 ? 'legendär' : `Seltener<br>${fmt(rc)} ${Q.ore}`}</button></div>`);
+          <button data-imp="${t}" data-w="copy" ${inRun || mod.copies >= 10 || ore < cc ? 'disabled' : ''}>${mod.copies >= 10 ? 'Fund MAX' : `+1 Fund<br>${fmt(cc)} ${Q.ore}`}</button>
+          <button data-imp="${t}" data-w="rar" ${inRun || mod.rar >= 3 || ore < rc ? 'disabled' : ''}>${mod.rar >= 3 ? 'legendär' : `Seltener<br>${fmt(rc)} ${Q.ore}`}</button></div>`);
       }
     }
     $('workshop').innerHTML = rows.join('') || '<p class="dim" style="font-size:.8rem">Planet noch nicht erreichbar.</p>';
     // Reiter: aktiver Bereich, Punkt bei etwas Kaufbarem
     const oreP = M.ore[P.id] || 0, can = {
-      fac: open && C.FACIL.some(f => { const l = pl[f.id] || 0; return !(f.need && !pl[f.need]) && l < f.max && meta.crystals >= C.facCost(P, f, l); }),
+      fac: !inRun && open && C.FACIL.some(f => { const l = pl[f.id] || 0; return !(f.need && !pl[f.need]) && l < f.max && meta.crystals >= C.facCost(P, f, l); }),
       ref: false,
-      res: open && !!C.RESEARCH[P.id] && oreP >= C.researchCost(C.researchLv(meta, P.id), P.id),
-      ws: open && (oreP >= C.MOD_CRAFT || Object.keys(meta.modules || {}).some(t => { const m = meta.modules[t]; if (C.MODULES[t].sector !== P.sector) return false; return m.copies >= 10 && m.rar >= 3 ? oreP >= C.modMastCost(m) : (m.copies < 10 && oreP >= C.modBoostCost(m)) || (m.rar < 3 && oreP >= C.modRarCost(m)); })),
+      res: !inRun && open && !!C.RESEARCH[P.id] && oreP >= C.researchCost(C.researchLv(meta, P.id), P.id),
+      ws: !inRun && open && (oreP >= C.MOD_CRAFT || Object.keys(meta.modules || {}).some(t => { const m = meta.modules[t]; if (C.MODULES[t].sector !== P.sector) return false; return m.copies >= 10 && m.rar >= 3 ? oreP >= C.modMastCost(m) : (m.copies < 10 && oreP >= C.modBoostCost(m)) || (m.rar < 3 && oreP >= C.modRarCost(m)); })),
     };
     $$('#mTabs [data-mt]').forEach(b => { b.setAttribute('aria-selected', b.dataset.mt === mineTab ? 'true' : 'false'); b.classList.toggle('can', !!can[b.dataset.mt]); });
     $$('#mine .msec').forEach(s => (s.hidden = s.dataset.sec !== mineTab));
@@ -2168,12 +2172,12 @@
     $('research').innerHTML = [P].filter(Q => C.planetOpen(meta, Q) && C.RESEARCH[Q.id]).map(Q => {
       const R = C.RESEARCH[Q.id], l = C.researchLv(meta, Q.id), c = C.researchCost(l, Q.id), ore = M.ore[Q.id] || 0;
       return `<div class="rrow" style="--pc:${Q.col}"><div>${R.name} <b class="num">+${Math.round(R.step * 100 * l)} %</b><small>St. ${l} → +${Math.round(R.step * 100 * (l + 1))} % · Vorrat ${fmt(ore)} ${Q.ore}</small></div><span></span>
-        <button data-res="${Q.id}" ${ore < c ? 'disabled' : ''}>Forschen<br>${fmt(c)} ${Q.ore}</button></div>`;
+        <button data-res="${Q.id}" ${inRun || ore < c ? 'disabled' : ''}>Forschen<br>${fmt(c)} ${Q.ore}</button></div>`;
     }).join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
-    $$('#research [data-res]').forEach(b => holdBuy(b, () => { if (!C.research(meta, b.dataset.res)) return false; A.play('buy'); const R = C.RESEARCH[b.dataset.res]; mineNote(`Forschung: ${R.name} jetzt +${Math.round(R.step * 100 * C.researchLv(meta, b.dataset.res))} %.`); if (runAlive()) run.recalc(); save(); renderMine(); return true; }));
+    $$('#research [data-res]').forEach(b => holdBuy(b, () => { if (runAlive() || !C.research(meta, b.dataset.res)) return false; A.play('buy'); const R = C.RESEARCH[b.dataset.res]; mineNote(`Forschung: ${R.name} jetzt +${Math.round(R.step * 100 * C.researchLv(meta, b.dataset.res))} %.`); if (runAlive()) run.recalc(); save(); renderMine(); return true; }));
     $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
-    $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); modReveal(d.type, d.rar, d.result, d); if (runAlive()) run.recalc(); save(); renderMine(); } }));
-    $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.imp, w = b.dataset.w; if (C.modImprove(meta, t, w)) { A.play('loot'); modReveal(t, null, w === 'rar' ? 'besser' : w === 'mast' ? 'meister' : 'kopie'); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = !runAlive() && C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); modReveal(d.type, d.rar, d.result, d); if (runAlive()) run.recalc(); save(); renderMine(); } }));
+    $$('#workshop [data-imp]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.imp, w = b.dataset.w; if (!runAlive() && C.modImprove(meta, t, w)) { A.play('loot'); modReveal(t, null, w === 'rar' ? 'besser' : w === 'mast' ? 'meister' : 'kopie'); if (runAlive()) run.recalc(); save(); renderMine(); } }));
     syncMineBadge();
   }
   // Ergebnis aus der Werkstatt groß anzeigen: was ist es, welche Seltenheit, was bewirkt es jetzt
