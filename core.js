@@ -597,26 +597,27 @@
       { id: 'mirror', name: 'Spiegelfeld', soon: true, desc: 'Spiegel im Feld lenken den Strahl um und führen ihn durch ganze Gruppen.' },
     ],
   };
-  // Stamm (form leer) gilt für alle Formen, Formknoten nur für ihre Form
+  // Baum je Element: Stamm (form leer, gilt für alle Formen) aus Wurzel und zwei Ästen; darunter die gewählte Form
+  // (ab ELEM_FORM_AT Punkten im Stamm) mit eigenem Wurzelknoten und zwei Ästen. par: Elternknoten
   const ELEM_SKILLS = [
     { id: 'f_dmg',   el: 'fire', max: 3, name: 'Glutkern',       desc: l => `+${pc(0.2 * l)} Schaden von Feuerball und Brandfeld` },
-    { id: 'f_cd',    el: 'fire', max: 3, name: 'Schnellzündung', desc: l => `Ladungen laden ${pc(0.08 * l)} schneller nach` },
-    { id: 'f_burn',  el: 'fire', max: 2, name: 'Zunder',         desc: l => `Brandfelder halten ${dc(1.5 * l, 1)} s länger` },
+    { id: 'f_cd',    el: 'fire', par: 'f_dmg', max: 3, name: 'Schnellzündung', desc: l => `Ladungen laden ${pc(0.08 * l)} schneller nach` },
+    { id: 'f_burn',  el: 'fire', par: 'f_dmg', max: 2, name: 'Zunder',         desc: l => `Brandfelder halten ${dc(1.5 * l, 1)} s länger` },
     { id: 'fb_ammo', el: 'fire', form: 'ball', max: 2, name: 'Munitionslager', desc: l => `+${l} Ladung${l > 1 ? 'en' : ''}` },
-    { id: 'fb_rad',  el: 'fire', form: 'ball', max: 2, name: 'Flächenbrand',   desc: l => `+${pc(0.15 * l)} Radius von Explosion und Brandfeld` },
-    { id: 'fb_jump', el: 'fire', form: 'ball', max: 2, name: 'Übersprung',     desc: l => `Schiffe, die im Feuer sterben, entzünden ein kleines Brandfeld mit ${pc(0.25 * l)} Stärke` },
+    { id: 'fb_rad',  el: 'fire', form: 'ball', par: 'fb_ammo', max: 2, name: 'Flächenbrand',   desc: l => `+${pc(0.15 * l)} Radius von Explosion und Brandfeld` },
+    { id: 'fb_jump', el: 'fire', form: 'ball', par: 'fb_ammo', max: 2, name: 'Übersprung',     desc: l => `Schiffe, die im Feuer sterben, entzünden ein kleines Brandfeld mit ${pc(0.25 * l)} Stärke` },
     { id: 'i_dur',   el: 'ice', max: 3, name: 'Permafrost',  desc: l => `Ziele bleiben ${dc(0.5 * l, 1)} s länger eingefroren` },
-    { id: 'i_brit',  el: 'ice', max: 3, name: 'Sprödigkeit', desc: l => `Eingefrorene Ziele erleiden ${pc(0.4 + 0.1 * l)} statt 40 % mehr Schaden` },
-    { id: 'i_cd',    el: 'ice', max: 2, name: 'Kälteschock', desc: l => `−${l} s Abklingzeit` },
+    { id: 'i_brit',  el: 'ice', par: 'i_dur', max: 3, name: 'Sprödigkeit', desc: l => `Eingefrorene Ziele erleiden ${pc(0.4 + 0.1 * l)} statt 40 % mehr Schaden` },
+    { id: 'i_cd',    el: 'ice', par: 'i_dur', max: 2, name: 'Kälteschock', desc: l => `−${l} s Abklingzeit` },
     { id: 'il_chain', el: 'ice', form: 'lance', max: 2, name: 'Eiskette',     desc: l => `Die Lanze springt auf ${l} weitere${l > 1 ? '' : 's'} Schiff${l > 1 ? 'e' : ''} (halber Schaden, halbe Frostdauer)` },
-    { id: 'il_shard', el: 'ice', form: 'lance', max: 2, name: 'Splitterregen', desc: l => `+${pc(0.4 * l)} Schaden beim Zersplittern` },
-    { id: 'il_sog',   el: 'ice', form: 'lance', max: 2, name: 'Kältesog',     desc: l => `Während Stasis lädt die Lanze ${pc(0.5 * l)} schneller` },
+    { id: 'il_shard', el: 'ice', form: 'lance', par: 'il_chain', max: 2, name: 'Splitterregen', desc: l => `+${pc(0.4 * l)} Schaden beim Zersplittern` },
+    { id: 'il_sog',   el: 'ice', form: 'lance', par: 'il_chain', max: 2, name: 'Kältesog',     desc: l => `Während Stasis lädt die Lanze ${pc(0.5 * l)} schneller` },
     { id: 'l_dmg',   el: 'light', max: 3, name: 'Bündelung',    desc: l => `+${pc(0.2 * l)} Strahlschaden` },
-    { id: 'l_dur',   el: 'light', max: 3, name: 'Lichtspeicher', desc: l => `Der Strahl hält ${dc(0.5 * l, 1)} s länger` },
-    { id: 'l_cd',    el: 'light', max: 2, name: 'Sonnenzelle',  desc: l => `Die Energie ist ${dc(1.5 * l, 1)} s schneller wieder voll` },
+    { id: 'l_dur',   el: 'light', par: 'l_dmg', max: 3, name: 'Lichtspeicher', desc: l => `Der Strahl hält ${dc(0.5 * l, 1)} s länger` },
+    { id: 'l_cd',    el: 'light', par: 'l_dmg', max: 2, name: 'Sonnenzelle',  desc: l => `Die Energie ist ${dc(1.5 * l, 1)} s schneller wieder voll` },
     { id: 'lp_glow',  el: 'light', form: 'prism', max: 2, name: 'Glühen',    desc: l => `Der Aufbau auf einem Ziel geht bis +${pc(1 + 0.25 * l)} statt +100 %` },
-    { id: 'lp_wide',  el: 'light', form: 'prism', max: 2, name: 'Breitband', desc: l => `+${pc(0.2 * l)} Strahlbreite` },
-    { id: 'lp_blind', el: 'light', form: 'prism', max: 2, name: 'Blendung',  desc: l => `Getroffene Kanonenboote und Heiler setzen ${dc(0.5 * l, 1)} s aus (je Schiff höchstens alle 3 s)` },
+    { id: 'lp_wide',  el: 'light', form: 'prism', par: 'lp_glow', max: 2, name: 'Breitband', desc: l => `+${pc(0.2 * l)} Strahlbreite` },
+    { id: 'lp_blind', el: 'light', form: 'prism', par: 'lp_glow', max: 2, name: 'Blendung',  desc: l => `Getroffene Kanonenboote und Heiler setzen ${dc(0.5 * l, 1)} s aus (je Schiff höchstens alle 3 s)` },
   ];
   const EL_BY_ID = {}; ELEM_SKILLS.forEach(k => (EL_BY_ID[k.id] = k));
   // Einzelziel-Elemente kommen auf weniger Abschüsse: ausgleichen, damit alle etwa gleich schnell aufsteigen
@@ -644,16 +645,17 @@
   const elActive = m => elUnlocked(m) && m.elem && ELEMENTS[m.elem.act] ? m.elem.act : null;
   function elOpen(m, id) {
     const k = EL_BY_ID[id]; if (!k) return false;
+    if (k.par && !elLv(m, k.par)) return false;
     return !k.form || (k.form === elForm(m, k.el) && elStemPts(m, k.el) >= ELEM_FORM_AT);
   }
   function elCan(m, id) { const k = EL_BY_ID[id]; return !!k && elPoints(m, k.el) >= 1 && elLv(m, id) < k.max && elOpen(m, id); }
   function elBuy(m, id) { if (!elCan(m, id)) return false; elemState(m).sk[id] = elLv(m, id) + 1; return true; }
-  // Stammpunkte lassen sich nur zurücknehmen, solange die Formknoten offen bleiben
+  // Zurücknehmen nur, wenn danach alle gekauften Knoten offen bleiben (Kinder und Formknoten)
   function elCanRefund(m, id) {
     const k = EL_BY_ID[id], l = elLv(m, id); if (!k || !l) return false;
-    if (k.form) return true;
-    const formPts = ELEM_SKILLS.some(x => x.el === k.el && x.form && elLv(m, x.id));
-    return !formPts || elStemPts(m, k.el) - 1 >= ELEM_FORM_AT;
+    const sk = Object.assign({}, m.elem.sk); sk[id] = l - 1; if (!sk[id]) delete sk[id];
+    const t = Object.assign({}, m, { elem: Object.assign({}, m.elem, { sk }) });
+    return Object.keys(sk).every(x => elOpen(t, x));
   }
   function elRefund(m, id) { if (!elCanRefund(m, id)) return false; const E = elemState(m); E.sk[id]--; if (!E.sk[id]) delete E.sk[id]; return true; }
   function elReset(m, el) { const E = elemState(m); for (const k of ELEM_SKILLS) if (k.el === el) delete E.sk[k.id]; }
@@ -669,7 +671,7 @@
     if (!m.elem || !m.elem.sk) return;
     const E = m.elem;
     for (const id in E.sk) if (!EL_BY_ID[id] || !(E.sk[id] > 0)) delete E.sk[id]; else E.sk[id] = Math.min(E.sk[id], EL_BY_ID[id].max);
-    for (const id in E.sk) if (!elOpen(m, id)) delete E.sk[id];
+    let ch = true; while (ch) { ch = false; for (const id in E.sk) if (!elOpen(m, id)) { delete E.sk[id]; ch = true; } }
     for (const el in ELEMENTS) while (elPoints(m, el) < 0) { const k = ELEM_SKILLS.filter(x => x.el === el && elLv(m, x.id)).pop(); if (!k) break; E.sk[k.id]--; if (!E.sk[k.id]) delete E.sk[k.id]; }
   }
 
@@ -2465,6 +2467,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.31.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.31.2'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

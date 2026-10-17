@@ -810,4 +810,8 @@ window.KW_EN = {
   'Glühen': 'Glow', 'Der Aufbau auf einem Ziel geht bis {0} statt {1}': 'The build-up on one target goes up to {0} instead of {1}',
   'Breitband': 'Wide band', '{0} Strahlbreite': '{0} beam width',
   'Blendung': 'Dazzle', 'Getroffene Kanonenboote und Heiler setzen {0} s aus (je Schiff höchstens alle {1} s)': 'Gunboats and menders that are hit pause for {0} s (each ship at most every {1} s)',
+  'Tippe einen Stern an. Ein Knoten braucht seinen Vorgänger. Ab {0} Punkten im Stamm öffnet sich die gewählte Form mit eigenen Knoten.': 'Tap a star. A node needs the one before it. At {0} points in the trunk, the chosen form opens with nodes of its own.',
+  'Form ab {0} Punkten im Stamm': 'Form from {0} trunk points', 'Form wählen': 'Choose form', 'Kostenlos, die Punkte der alten Form werden frei': 'Free, the points of the old form are refunded',
+  'Form {0}': 'Form {0}', 'Gehört zu einer anderen Form': 'Belongs to another form',
+  'Fähigkeit': 'Ability',
 };

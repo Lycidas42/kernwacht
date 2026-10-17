@@ -1,6 +1,6 @@
 # Vorschlag: Elementarmagie
 
-Stand: Phase 1 ist umgesetzt (Version 0.31.0). Phase 2 und 3 sind noch offen.
+Stand: Phase 1 ist umgesetzt (Version 0.31.0). Phase 2 und 3 sind noch offen. Die defensive Ausrichtung von Eis (Frostnova) kommt mit Phase 2.
 
 ## Umsetzung Phase 1 (0.31.0)
 
@@ -8,6 +8,13 @@ Umgesetzt:
 
 - Wahl eines Elements ab Rekordwelle 50 (Menü → Kanone → Elemente), kostenloser Wechsel außerhalb des Laufs.
 - Feuer, Eis und Licht mit Stamm (3 Knoten, 8 Punkte) und Grundform samt ihren Knoten (3 Knoten, 6 Punkte): Feuerball, Frostlanze, Prismastrahl. Die übrigen Formen sind als „folgt bald“ sichtbar.
+- Der Baum ist ein echter Baum mit Sternkarte wie beim Kommandanten (0.31.2): Kern oben, darunter der Stamm (Wurzelknoten, der sich in zwei Äste gabelt), dann eine Schwelle (4 Punkte im Stamm) zu den drei Formsternen. Unter der gewählten Form wieder ein Wurzelknoten mit zwei Ästen; dort hängen in Phase 2 die Schlusssteine. Jeder Knoten braucht seinen Vorgänger, Zurücknehmen geht nur, wenn nichts darauf aufbaut. Antippen zeigt Beschreibung, nächste Stufe und Voraussetzung.
+
+  | Element | Stamm: Wurzel → Äste | Grundform: Wurzel → Äste |
+  | --- | --- | --- |
+  | Feuer | Glutkern → Schnellzündung, Zunder | Munitionslager → Flächenbrand, Übersprung |
+  | Eis | Permafrost → Sprödigkeit, Kälteschock | Eiskette → Splitterregen, Kältesog |
+  | Licht | Bündelung → Lichtspeicher, Sonnenzelle | Glühen → Breitband, Blendung |
 - Jeder Knoten und jede Form hat im Spiel eine Beschreibung und eine Erklärung der Bedienung.
 - Elementar-Erfahrung durch Wirkung, Rang und Punkte je Element, Meisterschaft (×1,03 Elementschaden je Rang über dem vollen Baum).
 - Vierter Knopf im Lauf (Taste 4), Autopilot-Regeln, Tipps beim ersten Einsatz, Meldung bei neuem Rang.

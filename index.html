@@ -251,26 +251,12 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .elbody .elrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .86rem; }
 .elbody .elrow b { color: var(--c); font-family: var(--font-num); }
 .elbody .bar i { background: var(--c); box-shadow: 0 0 8px var(--c); }
-.elbody > small, .elform small, .elnode small { font-size: .78rem; color: var(--ink-dim); line-height: 1.4; }
-.elbody .elhow { font-size: .8rem; line-height: 1.45; border-radius: 4px; padding: 7px 9px; background: color-mix(in srgb, var(--c) 8%, transparent); }
+.elbody > small { font-size: .78rem; color: var(--ink-dim); line-height: 1.4; }
 .elbody > button.cta { justify-self: stretch; }
-.elforms { display: grid; gap: 6px; }
-.elform { display: grid; gap: 2px; border: 1px solid var(--line); border-radius: 4px; padding: 7px 10px; }
-.elform.on { border-color: var(--c); }
-.elform.soon { opacity: .5; }
-.elform .hd { display: flex; justify-content: space-between; gap: 8px; font-size: .88rem; }
-.elform .hd span { font-size: .7rem; color: var(--c); text-transform: uppercase; letter-spacing: .06em; }
-.elnodes { display: grid; gap: 6px; }
-.elnode { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; border: 1px solid var(--line); border-left: 2px solid var(--c); border-radius: 4px; padding: 7px 10px; }
-.elnode.off { opacity: .45; border-left-color: var(--line); }
-.elnode.full { border-left-color: var(--heal); }
-.elnode b { font-size: .88rem; } .elnode .lv { font-family: var(--font-num); font-size: .72rem; color: var(--c); margin-left: 6px; }
-.elnode small.nx { color: var(--c); opacity: .85; }
-.elnode small.req { color: #ff8a8a; }
-.elnode .btns { display: flex; gap: 6px; }
-.elnode .btns button { height: 30px; min-width: 34px; padding: 0 10px; border: 1px solid var(--c); border-radius: 4px; color: var(--c); font-weight: 700; }
-.elnode .btns button.ref { border-color: var(--line); color: var(--ink-dim); }
-.elnode .btns button:disabled { opacity: .3; }
+.elmap { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; user-select: none; -webkit-user-select: none; background: radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--c) 10%, transparent), transparent 60%); }
+.elsvg { display: block; width: 100%; height: auto; max-height: 62vh; margin: 0 auto; }
+.elsvg text { font-family: inherit; pointer-events: none; }
+#elDet { min-height: 86px; }
 .pelem { display: grid; gap: 6px; margin-top: 4px; }
 .pelem h3 { margin: 6px 0 0; }
 .pel { display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; }

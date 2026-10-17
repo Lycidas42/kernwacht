@@ -1264,6 +1264,87 @@
     if (elRankSeen && elRankSeen.el === el && r > elRankSeen.r) { toast(`<b>${C.ELEMENTS[el].name}: Rang ${r}</b><br>Neuer Elementpunkt. Verteilen im Menü unter Kanone → Elemente.`, 4000); A.play('loot'); save(); }
     elRankSeen = { el, r };
   }
+  // Baumkarte je Element: Kern oben, Stamm (Wurzel und zwei Äste), darunter drei Formsterne, unter jeder Form ihr Wurzelknoten mit zwei Ästen
+  let elSel = null;
+  function elLayout(id) {
+    const pos = { hub: { x: 0, y: 0 } }, K = C.ELEM_SKILLS.filter(k => k.el === id);
+    const kids = par => K.filter(k => k.par === par);
+    const stem = K.find(k => !k.form && !k.par);
+    if (stem) { pos[stem.id] = { x: 0, y: 72 }; kids(stem.id).forEach((k, i) => (pos[k.id] = { x: i ? 72 : -72, y: 134 })); }
+    C.ELEM_FORMS[id].forEach((f, i) => {
+      const fx = (i - 1) * 112; pos['form:' + f.id] = { x: fx, y: 244 };
+      const r = K.find(k => k.form === f.id && !k.par);
+      if (r) { pos[r.id] = { x: fx, y: 316 }; kids(r.id).forEach((k, j) => (pos[k.id] = { x: fx + (j ? 38 : -38), y: 382 })); }
+    });
+    return pos;
+  }
+  function elMapSvg(id) {
+    const X = C.ELEMENTS[id], col = X.col, pos = elLayout(id), form = C.elForm(meta, id), gate = C.elStemPts(meta, id) >= C.ELEM_FORM_AT, out = [];
+    const line = (a, b, lit, dash) => out.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${col}" stroke-width="${lit ? 3 : 1.5}" stroke-opacity="${lit ? 0.9 : 0.25}" ${dash ? 'stroke-dasharray="4 5"' : ''} ${lit ? `style="filter:drop-shadow(0 0 4px ${col})"` : ''}/>`);
+    const K = C.ELEM_SKILLS.filter(k => k.el === id);
+    for (const k of K) {
+      const p = pos[k.id]; if (!p) continue;
+      const from = k.par ? pos[k.par] : k.form ? pos['form:' + k.form] : pos.hub;
+      line(from, p, C.elLv(meta, k.id) > 0, false);
+    }
+    // Schwelle zum Formbereich: von den Ästen des Stamms zu einer Leiste, von dort zu den Formsternen
+    const sx = K.filter(k => !k.form && k.par).map(k => pos[k.id]);
+    for (const q of sx) line(q, { x: q.x, y: 196 }, gate, true);
+    line({ x: -112, y: 196 }, { x: 112, y: 196 }, gate, true);
+    C.ELEM_FORMS[id].forEach(f => line({ x: pos['form:' + f.id].x, y: 196 }, pos['form:' + f.id], gate && f.id === form, true));
+    out.push(`<text x="0" y="188" text-anchor="middle" font-size="8.5" fill="${gate ? col : '#9fb3c8'}" letter-spacing=".5">FORM AB ${C.ELEM_FORM_AT} PUNKTEN IM STAMM</text>`);
+    // Kern
+    const R = C.elRank(meta, id);
+    out.push(`<g class="skn${elSel === null ? ' sel' : ''}" data-es="hub"><circle class="halo" r="35" fill="none"/><circle r="27" fill="var(--deck)" stroke="${col}" stroke-width="2" style="filter:drop-shadow(0 0 8px ${col})"/><text y="-3" text-anchor="middle" font-size="15" fill="${col}">${X.icon}</text><text y="14" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">RANG ${R.rank}</text></g>`);
+    // Formsterne
+    C.ELEM_FORMS[id].forEach(f => {
+      const p = pos['form:' + f.id], on = f.id === form, rad = 20;
+      const cls = ['skn', on ? 'own' : '', f.soon || !on && !gate ? 'lock' : '', elSel === 'form:' + f.id ? 'sel' : ''].join(' ');
+      const hex = [0, 1, 2, 3, 4, 5].map(i => { const an = Math.PI / 3 * i + Math.PI / 6; return (Math.cos(an) * rad).toFixed(1) + ',' + (Math.sin(an) * rad).toFixed(1); }).join(' ');
+      out.push(`<g class="${cls}" data-es="form:${f.id}" transform="translate(${p.x} ${p.y})" ${on ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}><circle class="halo" r="${rad + 9}" fill="none"/><polygon class="bg" points="${hex}" stroke="${col}" ${on ? `fill="${col}" fill-opacity=".3"` : ''}/><text y="4" text-anchor="middle" font-size="12" font-weight="700" fill="${on ? '#fff' : col}">${on ? '✓' : f.soon ? '…' : ''}</text>`
+        + `<text y="${rad + 14}" text-anchor="middle" font-size="9.5" fill="${on ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${f.name}</text></g>`);
+    });
+    // Knoten
+    for (const k of K) {
+      const p = pos[k.id]; if (!p) continue;
+      const l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= k.max, rad = 15;
+      const todo = !full && (open || l > 0) && can;
+      const cls = ['skn', l ? 'own' : '', can ? 'can' : '', todo ? 'todo' : '', full ? 'full' : '', !l && !open ? 'lock' : '', elSel === k.id ? 'sel' : ''].join(' ');
+      const C2 = 2 * Math.PI * (rad + 4);
+      out.push(`<g class="${cls}" data-es="${k.id}" transform="translate(${p.x} ${p.y})" ${l ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}><circle class="halo" r="${rad + 9}" fill="none"/>${todo ? `<circle class="todoring" r="${rad + 10}"/>` : ''}`
+        + `<circle r="${rad + 4}" fill="none" stroke="${col}" stroke-opacity=".2" stroke-width="2.5"/><circle r="${rad + 4}" fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="${(C2 * l / k.max).toFixed(1)} ${C2.toFixed(1)}" transform="rotate(-90)"/>`
+        + `<circle class="bg" r="${rad}" stroke="${col}" ${l ? `fill="${col}" fill-opacity=".18"` : ''}/><text y="4" text-anchor="middle" font-size="10" font-weight="700" fill="${l ? '#fff' : col}">${l}/${k.max}</text>`
+        + `<text y="${rad + 15}" text-anchor="middle" font-size="9.5" fill="${l ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${k.name}</text></g>`);
+    }
+    return `<svg class="elsvg" viewBox="-196 -40 392 466" xmlns="http://www.w3.org/2000/svg">${out.join('')}</svg>`;
+  }
+  // Detail zum gewählten Stern: Kern (Element und Fähigkeit), Form oder Knoten
+  function elDetail(id) {
+    const X = C.ELEMENTS[id], inRun = runAlive(), pts = C.elPoints(meta, id), form = C.elForm(meta, id);
+    if (!elSel || elSel === 'hub') {
+      const F = C.ELEM_FORMS[id].find(f => f.id === form);
+      return `<div class="hd"><b>${X.name}: ${F.name}</b><span class="tag">Fähigkeit</span></div><small>${F.desc}</small><small class="nx"><b>Bedienung:</b> ${F.how}</small>`
+        + `<small>Tippe einen Stern an. Ein Knoten braucht seinen Vorgänger. Ab ${C.ELEM_FORM_AT} Punkten im Stamm öffnet sich die gewählte Form mit eigenen Knoten.</small>`;
+    }
+    if (elSel.startsWith('form:')) {
+      const f = C.ELEM_FORMS[id].find(x => x.id === elSel.slice(5)); if (!f) return '';
+      const on = f.id === form;
+      const btn = on || f.soon ? '' : inRun ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<div class="skbtns"><button id="elForm">Form wählen</button><small>Kostenlos, die Punkte der alten Form werden frei</small></div>`;
+      return `<div class="hd"><b>${f.name}</b><span class="tag"><span>Form</span>${on ? ' · <span>gewählt</span>' : f.soon ? ' · <span>folgt bald</span>' : ''}</span></div><small>${f.desc}</small>${f.how ? `<small class="nx"><b>Bedienung:</b> ${f.how}</small>` : ''}${btn}`;
+    }
+    const k = C.ELEM_SKILLS.find(x => x.id === elSel); if (!k) return '';
+    const l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= k.max, ref = !inRun && C.elCanRefund(meta, k.id);
+    const tag = [k.form ? 'Form ' + C.ELEM_FORMS[id].find(f => f.id === k.form).name : 'Stamm', 'Stufe ' + l + '/' + k.max];
+    let req = '';
+    if (!l && !open) {
+      if (k.par && !C.elLv(meta, k.par)) req = `Braucht zuerst „${C.ELEM_SKILLS.find(x => x.id === k.par).name}“`;
+      else if (k.form && k.form !== form) req = 'Gehört zu einer anderen Form';
+      else if (k.form) req = `Braucht ${C.ELEM_FORM_AT} Punkte im Stamm (jetzt ${C.elStemPts(meta, id)})`;
+    } else if (!full && !can && pts < 1) req = 'Kein freier Elementpunkt';
+    const why = l > 0 && !ref ? (inRun ? 'Zurücknehmen nach dem Lauf' : 'Andere Knoten hängen davon ab') : '';
+    return `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div><small>${k.desc(Math.max(1, l))}</small>${l && !full ? `<small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>` : ''}${req ? `<small class="req">${req}</small>` : ''}`
+      + `<div class="skbtns">${full ? '' : `<button id="elBuy" ${can ? '' : 'disabled'}>${l ? '+1 Stufe' : 'Lernen'}</button>`}${l ? `<button id="elRef" class="ref" ${ref ? '' : 'disabled'}>−1 Stufe</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
+  }
   function renderElems() {
     const act = C.elActive(meta), inRun = runAlive();
     if (!elView || !C.ELEMENTS[elView]) elView = act || 'fire';
@@ -1272,29 +1353,23 @@
       const X = C.ELEMENTS[id], dot = id === act && C.elPoints(meta, id) > 0 && elCanAny(id);
       return `<button class="elcard${id === elView ? ' view' : ''}${id === act ? ' act' : ''}${dot ? ' dot' : ''}" data-el="${id}" style="--c:${X.col}"><span class="ei">${X.icon}</span><b>${X.name}</b><small>${X.ask} · Rang ${C.elRank(meta, id).rank}</small></button>`;
     }).join('');
-    const id = elView, X = C.ELEMENTS[id], R = C.elRank(meta, id), pts = C.elPoints(meta, id), ms = C.elMastery(meta, id), form = C.elForm(meta, id), F = C.ELEM_FORMS[id].find(f => f.id === form);
-    const node = k => {
-      const l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= k.max, ref = !inRun && C.elCanRefund(meta, k.id);
-      const req = !open ? `Braucht ${C.ELEM_FORM_AT} Punkte im Stamm (jetzt ${C.elStemPts(meta, id)})` : !full && !can && pts < 1 ? 'Kein freier Elementpunkt' : '';
-      return `<div class="elnode${!l && !open ? ' off' : ''}${full ? ' full' : ''}"><div><b>${k.name}</b><span class="lv">${l}/${k.max}</span><br><small>${k.desc(Math.max(1, l))}</small>${l && !full ? `<br><small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>` : ''}${req ? `<br><small class="req">${req}</small>` : ''}</div>`
-        + `<div class="btns">${l ? `<button class="ref" data-ref="${k.id}" ${ref ? '' : 'disabled'} aria-label="Stufe zurücknehmen">−</button>` : ''}${full ? '' : `<button data-buy="${k.id}" ${can ? '' : 'disabled'} aria-label="Stufe lernen">+</button>`}</div></div>`;
-    };
+    const id = elView, X = C.ELEMENTS[id], R = C.elRank(meta, id), pts = C.elPoints(meta, id), ms = C.elMastery(meta, id);
     let h = `<div class="elbody" style="--c:${X.col}"><small>${X.role}</small>`;
     if (id !== act) h += inRun ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<button class="cta" id="elChoose">${X.name} wählen</button>`;
     h += `<div class="elrow"><span>Rang <b>${R.rank}</b></span><span>Freie Punkte: <b>${pts}</b></span></div><div class="bar"><i style="width:${Math.min(100, R.cur / R.need * 100).toFixed(1)}%"></i></div><small>${fmt(R.cur)} / ${fmt(R.need)} Erfahrung bis Rang ${R.rank + 1}</small>`;
     h += ms ? `<small>Meisterschaft: ${ms} Rang über dem vollen Baum · ×${mult(Math.pow(C.ELEM_MASTER_K, ms))} Elementschaden</small>` : `<small>Mit ${C.elTreeMax(id)} Punkten ist der Baum voll. Danach bringt jeder Rang ×1,03 Elementschaden.</small>`;
-    h += `<h3>Fähigkeit: ${F.name}</h3><small>${F.desc}</small><div class="elhow"><b>Bedienung:</b> ${F.how}</div>`;
-    h += `<h3>Stamm</h3><small>Wirkt für alle Formen.</small><div class="elnodes">${C.ELEM_SKILLS.filter(k => k.el === id && !k.form).map(node).join('')}</div>`;
-    h += `<h3>Form</h3><small>Eine Form verwandelt die Fähigkeit. Ab ${C.ELEM_FORM_AT} Punkten im Stamm öffnen sich ihre Knoten. Wechseln ist außerhalb eines Laufs kostenlos, die Punkte der alten Form werden frei.</small>`;
-    h += `<div class="elforms">${C.ELEM_FORMS[id].map(f => `<div class="elform${f.id === form ? ' on' : ''}${f.soon ? ' soon' : ''}"><div class="hd"><b>${f.name}</b><span>${f.id === form ? 'gewählt' : f.soon ? 'folgt bald' : ''}</span></div><small>${f.desc}</small></div>`).join('')}</div>`;
-    h += `<div class="elnodes">${C.ELEM_SKILLS.filter(k => k.el === id && k.form === form).map(node).join('')}</div>`;
+    h += `<div class="elmap">${elMapSvg(id)}</div><div class="skdet" id="elDet">${elDetail(id)}</div>`;
     h += `<button class="sec" id="elReset" ${inRun || !C.elSpent(meta, id) ? 'disabled' : ''}>Punkte von ${X.name} zurücksetzen</button>${inRun ? '<small>Zurücknehmen und Zurücksetzen gehen nach dem Lauf.</small>' : ''}</div>`;
     $('elBody').innerHTML = h;
-    $$('#elPick [data-el]').forEach(b => b.addEventListener('click', () => { elView = b.dataset.el; A.play('click'); renderElems(); }));
-    const ch = $('elChoose'); if (ch) ch.addEventListener('click', () => { if (!runAlive() && C.elChoose(meta, id)) { A.play('buy'); save(); renderElems(); renderHub(); } });
-    $$('#elBody [data-buy]').forEach(b => b.addEventListener('click', () => { if (C.elBuy(meta, b.dataset.buy)) { A.play('buy'); if (runAlive()) run.recalc(); save(); renderElems(); renderHub(); } }));
-    $$('#elBody [data-ref]').forEach(b => b.addEventListener('click', () => { if (!runAlive() && C.elRefund(meta, b.dataset.ref)) { A.play('click'); save(); renderElems(); renderHub(); } }));
-    const rs = $('elReset'); if (rs) rs.addEventListener('click', () => { if (runAlive()) return; C.elReset(meta, id); A.play('click'); save(); renderElems(); renderHub(); });
+    $('elDet').style.setProperty('--c', X.col);
+    const redraw = () => { save(); renderElems(); renderHub(); };
+    $$('#elPick [data-el]').forEach(b => b.addEventListener('click', () => { if (elView !== b.dataset.el) elSel = null; elView = b.dataset.el; A.play('click'); renderElems(); }));
+    $$('#elBody [data-es]').forEach(g => g.addEventListener('click', () => { elSel = g.dataset.es === 'hub' ? null : g.dataset.es; A.play('click'); renderElems(); }));
+    const ch = $('elChoose'); if (ch) ch.addEventListener('click', () => { if (!runAlive() && C.elChoose(meta, id)) { A.play('buy'); redraw(); } });
+    const bu = $('elBuy'); if (bu) bu.addEventListener('click', () => { if (C.elBuy(meta, elSel)) { A.play('buy'); if (runAlive()) run.recalc(); redraw(); } });
+    const rf = $('elRef'); if (rf) rf.addEventListener('click', () => { if (!runAlive() && C.elRefund(meta, elSel)) { A.play('click'); redraw(); } });
+    const fo = $('elForm'); if (fo) fo.addEventListener('click', () => { if (!runAlive() && C.elSetForm(meta, id, elSel.slice(5))) { A.play('buy'); redraw(); } });
+    const rs = $('elReset'); if (rs) rs.addEventListener('click', () => { if (runAlive()) return; C.elReset(meta, id); A.play('click'); redraw(); });
   }
   // Elemente im eigenen Profil
   function elemProfile() {
