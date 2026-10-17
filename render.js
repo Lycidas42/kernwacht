@@ -42,7 +42,7 @@
     const FONT_NUM = () => col('--font-num'), FONT_UI = () => col('--font-ui');
     const stars = Array.from({ length: 110 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + 0.3, p: Math.random() * 6 }));
     const ICON_PATH = {}; for (const k in ICONS) ICON_PATH[k] = new Path2D(ICONS[k]);
-    const LIFE = { fireball: 0.7, lance: 0.35, shatter: 0.45, leap: 2.2, rush: 2.8, exec: 0.45, reflect: 0.3, emerg: 0.9, phoenix: 1.4, stun: 0.6, drone: 0.12, barrage: 0.6, hole: 0.6, aegis: 0.7, thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
+    const LIFE = { fireball: 0.7, lance: 0.35, shatter: 0.45, meteor: 0.9, frostnova: 0.8, probe: 0.1, leap: 2.2, rush: 2.8, exec: 0.45, reflect: 0.3, emerg: 0.9, phoenix: 1.4, stun: 0.6, drone: 0.12, barrage: 0.6, hole: 0.6, aegis: 0.7, thorn: 0.35, brittle: 0.4, echo: 0.8, wallhit: 0.3, leech: 0.6, crysfx: 0.6, cryo: 0.5, chain: 0.25, splinter: 0.3, nova: 0.8, laserhit: 0.5, loot: 2.4, emp: 0.9, bonus: 1.4, boom: 0.55, shock: 0.6, mine: 0.6, dmg: 0.7, hurt: 0.25, wave: 1.8, strike: 0.7, freeze: 0.8, over: 0.6, bossact: 0.8, shieldhit: 0.25, mark: 0.5 };
 
     function resize() {
       const r = cv.getBoundingClientRect();
@@ -811,6 +811,7 @@
       if (f.k === 'splinter') for (let i = 0; i < np(10); i++) { const a = Math.random() * 6.28, v = 80 + Math.random() * 100; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35, t: 0, c: '#ffb0b0', k: 'spark' }); }
       if (f.k === 'mine') mineBoom(f);
       if (f.k === 'shatter') for (let i = 0; i < np(14); i++) { const a = Math.random() * 6.28, v = 70 + Math.random() * 110; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.5, t: 0, c: Math.random() < 0.5 ? '#ffffff' : PAL.frost, k: 'shard', rot: Math.random() * 6, vr: (Math.random() - 0.5) * 12, sz: 2.5 + Math.random() * 3 }); }
+      if (f.k === 'meteor') { shake = Math.max(shake, 0.4); for (let i = 0; i < np(30); i++) { const a = Math.random() * 6.28, v = 80 + Math.random() * 160; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, life: 0.7, t: 0, c: Math.random() < 0.5 ? '#ffd27a' : '#ff5a1a', k: 'spark' }); } }
       if (f.k === 'fireball') { shake = Math.max(shake, 0.18); for (let i = 0; i < np(18); i++) { const a = Math.random() * 6.28, v = 60 + Math.random() * 130; parts.push({ x: f.x, y: f.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, life: 0.55, t: 0, c: Math.random() < 0.5 ? '#ffd27a' : '#ff6a2a', k: 'spark' }); } }
       if (f.k === 'strike') shake = Math.max(shake, 0.35);
       if (f.k === 'freeze') {
@@ -898,16 +899,56 @@
         ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.7 + 0.08 * Math.sin(t * 0.02)), 0, 7); glow(`rgb(${col})`, 1.6, 0.6 * a);
         if (Math.random() < 0.3) parts.push({ x: f.x + (Math.random() - 0.5) * f.r, y: f.y + (Math.random() - 0.5) * f.r, vx: 0, vy: -40, life: 0.5, t: 0, c: f.k === 'quake' ? '#ff9ae6' : '#ffb347', k: 'spark' });
       }
-      if (run.beam && run.beam.ex != null && run.s.el) {
-        // Prismastrahl: von der Kanone durchs Feld, flackernder heller Kern
-        const B = run.beam, w = run.s.el.w || 7, fl = 0.85 + 0.15 * Math.sin(t * 0.05);
+      // Elementarmagie im Feld: Flammenwände, Meteor-Ziele, Eisstürme, Spiegel, Strahlen
+      for (const w of run.walls || []) {
+        const left = Math.max(0, w.until - run.time), a = Math.min(1, left / 0.5), fl = 0.8 + 0.2 * Math.sin(t * 0.03 + (w.x1 || w.x));
+        ctx.save(); ctx.lineCap = 'round'; ctx.beginPath();
+        if (w.ring) ctx.arc(w.x, w.y, w.r, 0, 7); else { ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); }
+        ctx.strokeStyle = `rgba(255,90,20,${0.35 * a})`; ctx.lineWidth = 16; ctx.stroke();
+        ctx.strokeStyle = `rgba(255,190,90,${0.7 * a * fl})`; ctx.lineWidth = 5; ctx.stroke();
+        glow('#ffd27a', 1.4, 0.8 * a); ctx.restore();
+        if (Math.random() < 0.6) { const q = Math.random(), an = q * 6.28, px = w.ring ? w.x + Math.cos(an) * w.r : w.x1 + (w.x2 - w.x1) * q, py = w.ring ? w.y + Math.sin(an) * w.r : w.y1 + (w.y2 - w.y1) * q; parts.push({ x: px, y: py, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 40, life: 0.5, t: 0, c: Math.random() < 0.5 ? '#ffb347' : '#ff5a1a', k: 'spark' }); }
+      }
+      if (run.wallPreview) {
+        const P = run.wallPreview; ctx.save(); ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(P.x1, P.y1); ctx.lineTo(P.x2, P.y2); glow('#ffb347', 2, 0.9); ctx.restore();
+      }
+      for (const m of run.meteors || []) {
+        const k = Math.max(0, Math.min(1, 1 - (m.at - run.time) / 1.5)), r0 = (run.s.el && run.s.el.r || 70) * (m.k < 1 ? 0.8 : 1);
+        ctx.save(); ctx.setLineDash([5, 5]); ctx.lineDashOffset = -t * 0.05; ctx.beginPath(); ctx.arc(m.x, m.y, r0, 0, 7); glow('#ff8a3d', 1.4, 0.5 + 0.4 * k); ctx.restore();
+        ctx.beginPath(); ctx.arc(m.x, m.y, r0 * (1 - k), 0, 7); glow('#ffd27a', 1.2, 0.6);
+        const hx = m.x + 120 * (1 - k), hy = m.y - 420 * (1 - k);
+        ctx.beginPath(); ctx.moveTo(hx + 30, hy - 100); ctx.lineTo(hx, hy); glow('#ffb347', 5, 0.8 * k);
+        ctx.beginPath(); ctx.arc(hx, hy, 6 + 4 * k, 0, 7); ctx.fillStyle = '#ffe9c0'; ctx.fill();
+      }
+      for (const st of run.storms || []) {
+        const left = Math.max(0, st.until - run.time), a = Math.min(1, left / 0.5, (run.time - st.t0) / 0.3), R = run.s.el && run.s.el.r || 70;
+        const gr = ctx.createRadialGradient(st.x, st.y, 0, st.x, st.y, R);
+        gr.addColorStop(0, `rgba(200,240,255,${0.22 * a})`); gr.addColorStop(1, 'rgba(160,220,255,0)');
+        ctx.beginPath(); ctx.arc(st.x, st.y, R, 0, 7); ctx.fillStyle = gr; ctx.fill();
+        ctx.save(); ctx.setLineDash([3, 7]); ctx.lineDashOffset = t * 0.04; ctx.beginPath(); ctx.arc(st.x, st.y, R, 0, 7); glow(PAL.frost, 1.2, 0.7 * a); ctx.restore();
+        for (let i = 0; i < 2; i++) if (Math.random() < 0.8) { const an = Math.random() * 6.28, d = Math.random() * R; parts.push({ x: st.x + Math.cos(an) * d, y: st.y + Math.sin(an) * d - 20, vx: -20, vy: 120, life: 0.25, t: 0, c: '#e8fbff', k: 'spark' }); }
+      }
+      for (const m of run.mirrors || []) {
+        const left = Math.max(0, m.until - run.time), a = Math.min(1, left / 1.5);
+        ctx.save(); ctx.translate(m.x, m.y); ctx.rotate(t * 0.002);
+        ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(7, 0); ctx.lineTo(0, 9); ctx.lineTo(-7, 0); ctx.closePath();
+        ctx.fillStyle = `rgba(255,245,210,${0.25 * a})`; ctx.fill(); glow('#fff3c4', 1.4, 0.9 * a); ctx.restore();
+      }
+      if (run.beam && run.beam.segs && run.s.el) {
+        // Strahl: heller Kern über allen Abschnitten (Prisma, Spiegel, Brennglas)
+        const fl = 0.85 + 0.15 * Math.sin(t * 0.05);
         ctx.save(); ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(B.ex, B.ey);
-        ctx.strokeStyle = `rgba(255,233,168,${0.18 * fl})`; ctx.lineWidth = w * 2.6; ctx.stroke();
-        ctx.strokeStyle = `rgba(255,240,200,${0.55 * fl})`; ctx.lineWidth = w * 1.1; ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(B.ex, B.ey); glow('#ffffff', 1.6, 0.9 * fl);
+        for (const q of run.beam.segs) {
+          const w = q.w || 7;
+          ctx.beginPath(); ctx.moveTo(q.x1, q.y1); ctx.lineTo(q.x2, q.y2);
+          ctx.strokeStyle = `rgba(255,233,168,${0.18 * fl})`; ctx.lineWidth = w * 2.6; ctx.stroke();
+          ctx.strokeStyle = `rgba(255,240,200,${0.55 * fl})`; ctx.lineWidth = w * 1.1; ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(q.x1, q.y1); ctx.lineTo(q.x2, q.y2); glow('#ffffff', 1.6, 0.9 * fl);
+        }
+        for (const q of run.beam.lens || []) { ctx.beginPath(); ctx.moveTo(q.x1, q.y1); ctx.lineTo(q.x2, q.y2); glow('#fff3c4', 1.2, 0.7); }
         ctx.restore();
-        if (Math.random() < 0.5) { const q = Math.random(); parts.push({ x: B.ex * q * 0.8, y: -10 + (B.ey + 10) * q * 0.8, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, life: 0.35, t: 0, c: '#fff3c4', k: 'spark' }); }
+        const q0 = run.beam.segs[run.beam.segs.length - 1];
+        if (q0 && Math.random() < 0.5) { const q = Math.random(); parts.push({ x: q0.x1 + (q0.x2 - q0.x1) * q * 0.8, y: q0.y1 + (q0.y2 - q0.y1) * q * 0.8, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, life: 0.35, t: 0, c: '#fff3c4', k: 'spark' }); }
       }
       if (run.hole) {
         // Schwarzes Loch: dunkler Kern, spiralige Ringe
@@ -1023,6 +1064,7 @@
           glow(PAL.frost, 2, Math.min(1, left) * (0.7 + 0.3 * Math.sin(t * 0.02)));
         }
         if (frozen) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.8, 0, 7); ctx.strokeStyle = PAL.frost; ctx.globalAlpha = 0.35; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1; }
+        if (e.burnUntil > run.time) { ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.5, 0, 7); glow('#ff7a2a', 1.4, 0.4 + 0.25 * Math.sin(t * 0.03 + e.seed)); if (Math.random() < 0.3) parts.push({ x: p.x + (Math.random() - 0.5) * e.r, y: p.y, vx: 0, vy: -45, life: 0.4, t: 0, c: '#ffb347', k: 'spark' }); }
         if (e.frostUntil > run.time) {
           // Frostlanze: Eisblock um das Schiff (Bosse: nur ein Frostring)
           const fl = Math.min(1, (e.frostUntil - run.time) / 0.4), R1 = e.r * (e.frostBig ? 2.1 : 1.65);
@@ -1133,9 +1175,19 @@
           if (k < 0.25) { const q = k / 0.25; ctx.beginPath(); ctx.moveTo(f.x + 40 * (1 - q), f.y - 160 * (1 - q)); ctx.lineTo(f.x, f.y); glow('#ffb347', 4, 1 - q); }
           const R = f.r * (0.4 + 0.8 * Math.min(1, k * 2));
           const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, R);
-          g.addColorStop(0, `rgba(255,240,200,${0.7 * a})`); g.addColorStop(0.5, `rgba(255,120,40,${0.45 * a})`); g.addColorStop(1, 'rgba(255,60,20,0)');
+          const lt = f.col === 'light';
+          g.addColorStop(0, `rgba(255,240,200,${0.7 * a})`); g.addColorStop(0.5, lt ? `rgba(255,233,168,${0.45 * a})` : `rgba(255,120,40,${0.45 * a})`); g.addColorStop(1, 'rgba(255,60,20,0)');
           ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, R, 0, 7); ctx.fill();
-          ctx.beginPath(); ctx.arc(f.x, f.y, R, 0, 7); glow('#ff8a3d', 2, a);
+          ctx.beginPath(); ctx.arc(f.x, f.y, R, 0, 7); glow(lt ? '#fff3c4' : '#ff8a3d', 2, a);
+        } else if (f.k === 'meteor') {
+          const R = f.r * (0.5 + 0.9 * Math.min(1, k * 2.5));
+          const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, R);
+          g.addColorStop(0, `rgba(255,250,220,${0.85 * a})`); g.addColorStop(0.45, `rgba(255,120,40,${0.55 * a})`); g.addColorStop(1, 'rgba(255,40,10,0)');
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x, f.y, R, 0, 7); ctx.fill();
+          ctx.beginPath(); ctx.arc(f.x, f.y, R * 1.1, 0, 7); glow('#ff8a3d', 3, a);
+        } else if (f.k === 'frostnova') {
+          ctx.beginPath(); ctx.arc(0, -8, f.r * (0.2 + 0.8 * Math.min(1, k * 1.6)), Math.PI, 0); ctx.fillStyle = `rgba(190,240,255,${0.16 * a})`; ctx.fill();
+          ctx.beginPath(); ctx.arc(0, -8, f.r * (0.2 + 0.8 * Math.min(1, k * 1.6)), Math.PI, 0); glow('#dff8ff', 3 * a + 1, a);
         } else if (f.k === 'lance') {
           ctx.beginPath(); ctx.moveTo(f.x1, f.y1); ctx.lineTo(f.x2, f.y2); glow('#dff8ff', 3 * a + 1, a);
           ctx.beginPath(); ctx.arc(f.x2, f.y2, 10 + 10 * k, 0, 7); glow(PAL.frost, 1.4, a);

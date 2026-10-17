@@ -1,5 +1,5 @@
 // Elementarmagie: Schadensanteil, Erfahrung und erlittener Hüllenschaden (gegenüber ohne Element) je Element, mit einem aktiven Bot (zielt wie ein Spieler) und dem Autopiloten
-// Aufruf: node tools/elements.js [Läufe je Variante] [Punkte im Baum]   (nutzt den Fortschritt aus tools/shares.js, falls vorhanden)
+// Aufruf: node tools/elements.js [Läufe je Variante] [Punkte im Baum] [Formen, z. B. ball,nova]   (nutzt den Fortschritt aus tools/shares.js, falls vorhanden)
 globalThis.KW_P = process.env.KW_P ? JSON.parse(process.env.KW_P) : undefined;
 require('../core.js');
 const { botBuy } = require('./tune.js');
@@ -19,21 +19,32 @@ else {
   }
   fs.writeFileSync(CACHE, JSON.stringify(meta));
 }
-// aktiv: Feuerball auf die dichteste Gruppe, Lanze aufs stärkste Ziel, Strahl voll entladen auf die dichteste Gruppe
+// aktiv: zielt wie ein Spieler (dichteste Gruppe, nächste Gefahr, Strahl voll entladen); auto: Regeln wie der Autopilot
 function elemBot(r, active) {
   const o = r.s.el; if (!o || !r.enemies.some(e => e.hp > 0)) return;
-  if (o.k === 'light') {
+  if (o.form === 'prism') {
     if (!active) { if (r.beamE >= o.dur && !r.beam) r.beamAuto(false); return; }
     if (r.beam) { const p = r.strikeTarget(); if (p && r.beamE > 0) r.beamMove(p.x, p.y); else r.beamStop(); }
     else if (r.beamE >= o.dur) { const p = r.strikeTarget(); if (p) r.beamStart(p.x, p.y); }
     return;
   }
-  if (o.k === 'ice' && active && r.elemReady()) {
-    // wie ein Spieler: die nächste Gefahr einfrieren (Bomben und Schiffe nah an der Mauer), sonst den Boss
+  if (o.form === 'lens') { if (!r.beam && r.beamE >= o.dur) r.lensToggle(active); return; }
+  if (o.form === 'mirror') {
+    if (active) {
+      // Spiegel quer durch die Gruppen setzen, Feld an, solange Energie da ist
+      if (r.mirrors.length < o.mirrors && (r.mirrorT = (r.mirrorT || 0) + 0.1) > 1.5) { r.mirrorT = 0; const p = r.densest(r.mirrors); if (p) r.placeMirror(p.x, p.y); }
+      if (!r.mirrorMode && r.beamE >= o.dur && r.mirrors.length) r.setMirrorMode(true, true);
+      if (r.mirrorMode && r.beamE <= 0) r.setMirrorMode(false, true);
+    } else if ((!r.mirrorMode || !r.mirrors.length) && r.beamE >= o.dur) r.mirrorAuto(false);
+    return;
+  }
+  if (!r.elemReady()) return;
+  if (o.form === 'nova') { if (r.enemies.filter(e => e.hp > 0 && e.dist < o.r).length >= 3 || r.hp < r.s.maxHp * 0.4) r.useElem(null, null, active); return; }
+  if (o.form === 'lance' && active) {
     const near = r.enemies.filter(e => e.hp > 0 && !e.host && !e.giant && e.type !== 'boss' && !(e.frostUntil > r.time) && e.dist < 160).sort((a, b) => a.dist - b.dist)[0];
     const keep = r.focus; if (near) r.focus = near; r.useElem(null, null, true); r.focus = keep; return;
   }
-  if (r.elemReady() && (o.k === 'ice' || active || r.enemies.length >= 4 || r.bossAlive())) r.useElem(null, null, active);
+  if (o.form === 'lance' || active || r.enemies.length >= 4 || r.bossAlive()) r.useElem(null, null, active);
 }
 function play(m, el, active) {
   const r = new Run(m, { noFx: true, startWave: C.startWaveFor(m) }); let lb = 0;
@@ -46,11 +57,14 @@ function play(m, el, active) {
   return r;
 }
 let base = 0;
+const ONLY = process.argv[4] ? process.argv[4].split(',') : null;
 console.log(`Stand: Rekord ${C.record(meta)}, Fusionen ${meta.fusions || 0}, ${PTS} Punkte im Elementbaum`);
-for (const el of [null, 'fire', 'ice', 'light']) for (const active of el ? [true, false] : [false]) {
+const VARS = [[null, null]];
+for (const el in C.ELEMENTS) for (const f of C.ELEM_FORMS[el]) if (!ONLY || ONLY.includes(f.id)) VARS.push([el, f.id]);
+for (const [el, form] of VARS) for (const active of el ? [true, false] : [false]) {
   const m = JSON.parse(JSON.stringify(meta));
   if (el) {
-    const E = C.elemState(m); E.act = el; E.xp = { [el]: 0 }; E.sk = {};
+    const E = C.elemState(m); E.act = el; E.xp = { [el]: 0 }; E.sk = {}; C.elSetForm(m, el, form);
     let need = 0; for (let i = 0; i < PTS; i++) need += C.elXpNeed(i); E.xp[el] = need;
     for (let i = 0; i < PTS; i++) { const k = C.ELEM_SKILLS.find(x => x.el === el && C.elCan(m, x.id)); if (!k) break; C.elBuy(m, k.id); }
   }
@@ -59,5 +73,6 @@ for (const el of [null, 'fire', 'ice', 'light']) for (const active of el ? [true
   const share = runs.reduce((a, r) => a + (r.dealt.elem || 0) / tot(r), 0) / RUNS;
   const xp = runs.reduce((a, r) => a + (r.elXp || 0), 0) / RUNS, waves = runs.reduce((a, r) => a + r.wave - r.startWave + 1, 0) / RUNS;
   const taken = runs.reduce((a, r) => a + (r.takenMid != null ? r.takenMid / Math.max(1, r.timeMid) : (r.taken || 0) / Math.max(1, r.time)), 0) / RUNS; if (!el) base = taken; // Hüllenschaden pro Sekunde
-  console.log(`${(el ? C.ELEMENTS[el].name : 'ohne').padEnd(6)} ${el ? (active ? 'aktiv' : 'auto ') : '     '}  Wellen ${runs.map(r => r.wave).join('/').padEnd(14)} Anteil ${(share * 100).toFixed(1).padStart(5)} %  Erfahrung/Lauf ${Math.round(xp)} (${(xp / Math.max(1, waves)).toFixed(1)} je Welle)  Hüllenschaden ${base ? (taken / base * 100 - 100).toFixed(0).padStart(4) + ' %' : '–'}`);
+  const probes = el ? Object.keys(C.elemState(m).probes).length : 0;
+  console.log(`${(el ? form : 'ohne').padEnd(7)} ${el ? (active ? 'aktiv' : 'auto ') : '     '}  Wellen ${runs.map(r => r.wave).join('/').padEnd(12)} Anteil ${(share * 100).toFixed(1).padStart(5)} %  Erfahrung/Welle ${(xp / Math.max(1, waves)).toFixed(1).padStart(5)}  Hüllenschaden ${base ? (taken / base * 100 - 100).toFixed(0).padStart(4) + ' %' : '   –'}  Proben ${probes}`);
 }

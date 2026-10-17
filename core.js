@@ -567,65 +567,135 @@
 
   // ---------- Elementarmagie: ab Rekordwelle 50 ein Element mit eigener Fähigkeit und eigenem Baum ----------
   // Aktiv ist immer nur ein Element. Erfahrung gibt es für Schiffe, die das Element zerstört oder in den 3 s davor getroffen hat
-  // (von Hand ausgelöst voll, vom Autopiloten halb). Ränge und Bäume überdauern die Fusion.
+  // (von Hand ausgelöst voll, vom Autopiloten halb), dazu einmalig für Elementproben. Ränge und Bäume überdauern die Fusion.
   const ELEM_AT = 50;
   const ELEM_FORM_AT = 4; // Punkte im Stamm, ab denen die Knoten der Form offen sind
+  const ELEM_CAP_AT = 4; // Punkte in der Form, ab denen ihr Schlussstein offen ist
   const dc = (v, d) => v.toFixed(d).replace('.', ',');
   const ELEMENTS = {
-    fire:  { name: 'Feuer', col: '#ff8a3d', icon: '✹', ask: 'Wo?', role: 'Flächenschaden gegen Gruppen' },
-    ice:   { name: 'Eis',   col: '#9fe8ff', icon: '❄', ask: 'Wen?', role: 'Kontrolle und Einzelziele, stark gegen Heiler und Bosse' },
-    light: { name: 'Licht', col: '#ffe9a8', icon: '✦', ask: 'Wohin?', role: 'Dauerstrahl, den du mit dem Finger führst' },
+    fire:  { name: 'Feuer', col: '#ff8a3d', icon: '✹', ask: 'Wo?', role: 'Das offensive Element: Flächenschaden gegen Gruppen' },
+    ice:   { name: 'Eis',   col: '#9fe8ff', icon: '❄', ask: 'Wen?', role: 'Kontrolle: stoppt Schiffe, schützt die Hülle, stark gegen Heiler und Bosse' },
+    light: { name: 'Licht', col: '#ffe9a8', icon: '✦', ask: 'Wohin?', role: 'Dauerstrahl, den du selbst führst' },
   };
-  // Formen verwandeln die Fähigkeit; vorerst gibt es je Element die Grundform, die übrigen folgen
+  // Formen verwandeln die Fähigkeit (andere Wirkung, oft andere Bedienung); Wechsel außerhalb des Laufs kostenlos
   const ELEM_FORMS = {
     fire: [
       { id: 'ball', name: 'Feuerball', desc: 'Explosion mit 6× Kanonenschaden, danach brennt der Boden 4 s (0,9× Kanonenschaden pro Sekunde). Zwei Ladungen, jede lädt in 10 s nach.',
         how: 'Knopf antippen, dann ins Feld tippen: Der Feuerball schlägt genau dort ein. Ein zweiter Tipp auf den Knopf wirft ihn stattdessen automatisch in die dichteste Gruppe.' },
-      { id: 'wall', name: 'Flammenwand', soon: true, desc: 'Eine Linie aus Feuer, die du ins Feld ziehst. Schiffe, die sie durchfliegen, brennen und werden langsamer.' },
-      { id: 'meteor', name: 'Meteor', soon: true, desc: 'Ein schwerer Einschlag nach 1,5 s mit großem Radius. Du musst vorhalten, wo die Schiffe dann sind.' },
+      { id: 'wall', name: 'Flammenwand', desc: 'Eine Wand aus Feuer, bis 140 lang, hält 6 s. Schiffe, die sie berühren, brennen 3 s (1,6× Kanonenschaden pro Sekunde) und werden 30 % langsamer. Abklingzeit 16 s.',
+        how: 'Knopf antippen, dann im Feld eine Linie ziehen: Dort entsteht die Wand. Am besten quer zur Flugbahn. Ein zweiter Tipp auf den Knopf setzt sie automatisch quer vor die dichteste Gruppe.' },
+      { id: 'meteor', name: 'Meteor', desc: 'Schlägt 1,5 s nach dem Tippen ein: 11× Kanonenschaden im Radius 70, betäubt 1 s, der Krater brennt 5 s. Abklingzeit 22 s.',
+        how: 'Knopf antippen, dann ins Feld tippen. Der Einschlag kommt verzögert: Ziele dorthin, wo die Schiffe in 1,5 s sind. Ein zweiter Tipp auf den Knopf zielt automatisch.' },
     ],
     ice: [
       { id: 'lance', name: 'Frostlanze', desc: 'Trifft ein Ziel mit 6× Kanonenschaden und friert es 3 s ein. Eingefrorene Schiffe bewegen sich nicht, schießen nicht, heilen nicht und erleiden 40 % mehr Schaden. Stirbt ein eingefrorenes Schiff, zersplittert es (2× Kanonenschaden im Umkreis, verlangsamt). Bosse frieren nicht ganz ein, werden aber halb so schnell. Abklingzeit 8 s.',
         how: 'Knopf antippen: Die Lanze trifft das markierte Ziel. Ohne Markierung trifft sie den Boss oder das Schiff mit den meisten Lebenspunkten.' },
-      { id: 'nova', name: 'Frostnova', soon: true, desc: 'Eine Kältewelle um die Kanone, die alle nahen Schiffe einfriert. Die Notbremse, wenn es eng wird.' },
-      { id: 'storm', name: 'Eissturm', soon: true, desc: 'Ein Hagelfeld, in dem Schiffe nach und nach einfrieren.' },
+      { id: 'nova', name: 'Frostnova', desc: 'Eine Kältewelle um die Kanone bis Abstand 120: 0,8× Kanonenschaden, friert alle Schiffe darin 2 s ein, Bosse werden halb so schnell. Die Notbremse, wenn es eng wird. Abklingzeit 18 s.',
+        how: 'Knopf antippen: Die Nova geht sofort von der Kanone aus.' },
+      { id: 'storm', name: 'Eissturm', desc: 'Ein Hagelfeld (Radius 70) für 6 s: 0,6× Kanonenschaden pro Sekunde. Jede Sekunde im Feld kühlt ein Schiff weiter ab, nach 3 s friert es 2 s ein. Abklingzeit 18 s.',
+        how: 'Knopf antippen, dann ins Feld tippen: Dort entsteht der Sturm. Ein zweiter Tipp auf den Knopf setzt ihn automatisch auf die dichteste Gruppe.' },
     ],
     light: [
       { id: 'prism', name: 'Prismastrahl', desc: 'Ein Strahl von der Kanone durchs ganze Feld: 1,5× Kanonenschaden pro Sekunde an allen Schiffen auf der Linie. Bleibt er auf einem Schiff, steigt der Schaden alle 0,5 s um 10 % (bis +100 %). Die Energie reicht 4 s und lädt in 12 s wieder voll, solange der Strahl aus ist.',
         how: 'Knopf antippen schaltet den Strahl bereit. Dann den Finger aufs Feld legen und ziehen: Der Strahl folgt dem Finger. Loslassen spart Energie. Lange auf den Knopf drücken: Der Strahl richtet sich selbst auf das markierte Ziel, mit halbem Schaden.' },
-      { id: 'lens', name: 'Brennglas', soon: true, desc: 'Ein dünner Strahl, der selbst auf dem markierten Ziel bleibt und immer heißer wird. Für Bosse.' },
-      { id: 'mirror', name: 'Spiegelfeld', soon: true, desc: 'Spiegel im Feld lenken den Strahl um und führen ihn durch ganze Gruppen.' },
+      { id: 'lens', name: 'Brennglas', desc: 'Ein dünner Strahl auf ein einziges Ziel: 3× Kanonenschaden pro Sekunde, alle 0,5 s 25 % mehr (bis +300 %). Wechselt das Ziel, beginnt der Aufbau neu. Gemacht für Bosse. Gleiche Energie wie der Prismastrahl.',
+        how: 'Knopf antippen: Der Strahl richtet sich selbst auf das markierte Ziel (ohne Markierung auf den Boss oder das stärkste Schiff) und bleibt dort, bis die Energie leer ist. Noch ein Tipp beendet ihn.' },
+      { id: 'mirror', name: 'Spiegelfeld', desc: 'Spiegel im Feld lenken den Strahl um: Er läuft von der Kanone über alle Spiegel und trifft alles auf dem Weg (1,2× Kanonenschaden pro Sekunde). Bis zu 3 Spiegel, sie halten 15 s. Gleiche Energie wie der Prismastrahl.',
+        how: 'Knopf antippen schaltet das Spiegelfeld ein. Jeder Tipp ins Feld setzt dann einen Spiegel (der älteste verschwindet, wenn alle gesetzt sind). Solange das Spiegelfeld an ist und Energie da ist, läuft der Strahl über die Spiegel. Noch ein Tipp auf den Knopf schaltet es aus.' },
     ],
   };
   // Baum je Element: Stamm (form leer, gilt für alle Formen) aus Wurzel und zwei Ästen; darunter die gewählte Form
-  // (ab ELEM_FORM_AT Punkten im Stamm) mit eigenem Wurzelknoten und zwei Ästen. par: Elternknoten
+  // (ab ELEM_FORM_AT Punkten im Stamm) mit eigenem Wurzelknoten, zwei Ästen und einem Schlussstein (cap, ab ELEM_CAP_AT Punkten in der Form).
+  // par: Elternknoten
   const ELEM_SKILLS = [
-    { id: 'f_dmg',   el: 'fire', max: 3, name: 'Glutkern',       desc: l => `+${pc(0.2 * l)} Schaden von Feuerball und Brandfeld` },
-    { id: 'f_cd',    el: 'fire', par: 'f_dmg', max: 3, name: 'Schnellzündung', desc: l => `Ladungen laden ${pc(0.08 * l)} schneller nach` },
-    { id: 'f_burn',  el: 'fire', par: 'f_dmg', max: 2, name: 'Zunder',         desc: l => `Brandfelder halten ${dc(1.5 * l, 1)} s länger` },
+    { id: 'f_dmg',   el: 'fire', max: 3, name: 'Glutkern',       desc: l => `+${pc(0.2 * l)} Feuerschaden, auch für Brandminen und Nachbeben` },
+    { id: 'f_cd',    el: 'fire', par: 'f_dmg', max: 3, name: 'Schnellzündung', desc: l => `Feuer lädt ${pc(0.08 * l)} schneller nach` },
+    { id: 'f_burn',  el: 'fire', par: 'f_dmg', max: 2, name: 'Zunder',         desc: l => `Brandfelder und Flammenwände halten ${dc(1.5 * l, 1)} s länger` },
     { id: 'fb_ammo', el: 'fire', form: 'ball', max: 2, name: 'Munitionslager', desc: l => `+${l} Ladung${l > 1 ? 'en' : ''}` },
     { id: 'fb_rad',  el: 'fire', form: 'ball', par: 'fb_ammo', max: 2, name: 'Flächenbrand',   desc: l => `+${pc(0.15 * l)} Radius von Explosion und Brandfeld` },
     { id: 'fb_jump', el: 'fire', form: 'ball', par: 'fb_ammo', max: 2, name: 'Übersprung',     desc: l => `Schiffe, die im Feuer sterben, entzünden ein kleines Brandfeld mit ${pc(0.25 * l)} Stärke` },
+    { id: 'fb_inferno', el: 'fire', form: 'ball', par: 'fb_ammo', cap: 1, name: 'Inferno', desc: () => 'Überlappende Brandfelder verstärken sich: jedes weitere Feld an derselben Stelle +50 % Schaden' },
+    { id: 'fw_len',  el: 'fire', form: 'wall', max: 2, name: 'Lange Wand',     desc: l => `Die Wand darf ${pc(0.25 * l)} länger sein` },
+    { id: 'fw_dur',  el: 'fire', form: 'wall', par: 'fw_len', max: 2, name: 'Nachbrennen', desc: l => `Die Wand hält ${l} s länger, Schiffe brennen ${l} s länger` },
+    { id: 'fw_heat', el: 'fire', form: 'wall', par: 'fw_len', max: 2, name: 'Hitzestau',   desc: l => `Brennende Schiffe erleiden ${pc(0.15 * l)} mehr Schaden aus allen Quellen` },
+    { id: 'fw_ring', el: 'fire', form: 'wall', par: 'fw_len', cap: 1, name: 'Feuerring', desc: () => 'Ein kurzer Tipp statt einer Linie legt einen Feuerring um die Stelle; der automatische Wurf legt ihn um die dichteste Gruppe' },
+    { id: 'fm_cd',   el: 'fire', form: 'meteor', max: 2, name: 'Einflugschneise', desc: l => `−${dc(2 * l, 0)} s Abklingzeit` },
+    { id: 'fm_boss', el: 'fire', form: 'meteor', par: 'fm_cd', max: 2, name: 'Kernbrecher', desc: l => `+${pc(0.2 * l)} Meteorschaden gegen Bosse` },
+    { id: 'fm_shower', el: 'fire', form: 'meteor', par: 'fm_cd', max: 2, name: 'Splitterschauer', desc: l => `Drei kleine Einschläge rund um den Krater mit je ${dc(1.5 * l, 1)}× Kanonenschaden` },
+    { id: 'fm_star', el: 'fire', form: 'meteor', par: 'fm_cd', cap: 1, name: 'Sternenfall', desc: () => 'Jeder Meteor zieht zwei weitere nach, auf die nächstdichten Gruppen (je 40 % Schaden)' },
     { id: 'i_dur',   el: 'ice', max: 3, name: 'Permafrost',  desc: l => `Ziele bleiben ${dc(0.5 * l, 1)} s länger eingefroren` },
-    { id: 'i_brit',  el: 'ice', par: 'i_dur', max: 3, name: 'Sprödigkeit', desc: l => `Eingefrorene Ziele erleiden ${pc(0.4 + 0.1 * l)} statt 40 % mehr Schaden` },
+    { id: 'i_brit',  el: 'ice', par: 'i_dur', max: 3, name: 'Sprödigkeit', desc: l => `Eingefrorene Ziele erleiden ${pc(0.4 + 0.1 * l)} statt 40 % mehr Schaden (verlangsamte ein Viertel davon)` },
     { id: 'i_cd',    el: 'ice', par: 'i_dur', max: 2, name: 'Kälteschock', desc: l => `−${l} s Abklingzeit` },
     { id: 'il_chain', el: 'ice', form: 'lance', max: 2, name: 'Eiskette',     desc: l => `Die Lanze springt auf ${l} weitere${l > 1 ? '' : 's'} Schiff${l > 1 ? 'e' : ''} (halber Schaden, halbe Frostdauer)` },
     { id: 'il_shard', el: 'ice', form: 'lance', par: 'il_chain', max: 2, name: 'Splitterregen', desc: l => `+${pc(0.4 * l)} Schaden beim Zersplittern` },
     { id: 'il_sog',   el: 'ice', form: 'lance', par: 'il_chain', max: 2, name: 'Kältesog',     desc: l => `Während Stasis lädt die Lanze ${pc(0.5 * l)} schneller` },
+    { id: 'il_zero',  el: 'ice', form: 'lance', par: 'il_chain', cap: 1, name: 'Nullpunkt', desc: () => 'Schiffe unter 12 % Lebenspunkten zerspringen sofort beim Einfrieren; jede 3. Lanze hält auch Bosse 1 s ganz an' },
+    { id: 'in_rad',  el: 'ice', form: 'nova', max: 2, name: 'Weite Kälte', desc: l => `+${pc(0.125 * l)} Radius der Nova` },
+    { id: 'in_rime', el: 'ice', form: 'nova', par: 'in_rad', max: 2, name: 'Raureif',     desc: l => `Schiffe nahe der Mauer bleiben ${pc(0.5 * l)} länger eingefroren` },
+    { id: 'in_hull', el: 'ice', form: 'nova', par: 'in_rad', max: 2, name: 'Kalte Hülle', desc: l => `Die Nova repariert ${dc(0.4 * l, 1)} % der Hülle je eingefrorenem Schiff` },
+    { id: 'in_age',  el: 'ice', form: 'nova', par: 'in_rad', cap: 1, name: 'Eiszeit', desc: () => 'Zersplitternde Schiffe frieren ihre Nachbarn 1 s ein, Kettenreaktionen sind möglich' },
+    { id: 'is_dur',   el: 'ice', form: 'storm', max: 2, name: 'Dauerfrost', desc: l => `Der Sturm hält ${l} s länger` },
+    { id: 'is_drift', el: 'ice', form: 'storm', par: 'is_dur', max: 2, name: 'Treibeis',  desc: l => `Der Sturm wandert mit ${15 * l} pro Sekunde zum markierten Ziel` },
+    { id: 'is_slick', el: 'ice', form: 'storm', par: 'is_dur', max: 2, name: 'Glatteis',  desc: l => `Schiffe im Sturm sind ${pc(0.15 * l)} langsamer` },
+    { id: 'is_vortex', el: 'ice', form: 'storm', par: 'is_dur', cap: 1, name: 'Polarwirbel', desc: () => 'Der Sturm zieht Schiffe langsam zu seiner Mitte (keine Bosse)' },
     { id: 'l_dmg',   el: 'light', max: 3, name: 'Bündelung',    desc: l => `+${pc(0.2 * l)} Strahlschaden` },
     { id: 'l_dur',   el: 'light', par: 'l_dmg', max: 3, name: 'Lichtspeicher', desc: l => `Der Strahl hält ${dc(0.5 * l, 1)} s länger` },
     { id: 'l_cd',    el: 'light', par: 'l_dmg', max: 2, name: 'Sonnenzelle',  desc: l => `Die Energie ist ${dc(1.5 * l, 1)} s schneller wieder voll` },
     { id: 'lp_glow',  el: 'light', form: 'prism', max: 2, name: 'Glühen',    desc: l => `Der Aufbau auf einem Ziel geht bis +${pc(1 + 0.25 * l)} statt +100 %` },
     { id: 'lp_wide',  el: 'light', form: 'prism', par: 'lp_glow', max: 2, name: 'Breitband', desc: l => `+${pc(0.2 * l)} Strahlbreite` },
     { id: 'lp_blind', el: 'light', form: 'prism', par: 'lp_glow', max: 2, name: 'Blendung',  desc: l => `Getroffene Kanonenboote und Heiler setzen ${dc(0.5 * l, 1)} s aus (je Schiff höchstens alle 3 s)` },
+    { id: 'lp_fan',   el: 'light', form: 'prism', par: 'lp_glow', cap: 1, name: 'Fächer', desc: () => 'Hinter deinem Finger teilt sich der Strahl in drei Strahlen' },
+    { id: 'll_hot',   el: 'light', form: 'lens', max: 2, name: 'Hitzepunkt',  desc: l => `Der Aufbau beginnt bei +${pc(0.25 * l)}` },
+    { id: 'll_after', el: 'light', form: 'lens', par: 'll_hot', max: 2, name: 'Nachglühen', desc: l => `Der Aufbau bleibt nach dem Strahl ${dc(1.5 * l, 1)} s erhalten` },
+    { id: 'll_weak',  el: 'light', form: 'lens', par: 'll_hot', max: 2, name: 'Schwachstelle', desc: l => `Das Ziel erleidet während des Strahls ${pc(0.075 * l)} mehr Schaden aus allen Quellen` },
+    { id: 'll_sun',   el: 'light', form: 'lens', par: 'll_hot', cap: 1, name: 'Sonnenfeuer', desc: () => 'Stirbt das Ziel bei vollem Aufbau, explodiert es und der Strahl springt mit halbem Aufbau aufs nächste Ziel' },
+    { id: 'lm_more',  el: 'light', form: 'mirror', max: 2, name: 'Spiegelkabinett', desc: l => `+${l} Spiegel` },
+    { id: 'lm_refr',  el: 'light', form: 'mirror', par: 'lm_more', max: 2, name: 'Brechung', desc: l => `+${pc(0.1 * l)} Schaden je Spiegel, über den der Strahl schon gelaufen ist` },
+    { id: 'lm_lens',  el: 'light', form: 'mirror', par: 'lm_more', max: 2, name: 'Linsen',   desc: l => `Spiegel schießen selbst auf das nächste Schiff (${dc(0.3 * l, 1)}× Kanonenschaden pro Sekunde, solange der Strahl läuft)` },
+    { id: 'lm_cage',  el: 'light', form: 'mirror', par: 'lm_more', cap: 1, name: 'Lichtkäfig', desc: () => 'Bei 3 oder mehr Spiegeln sind Schiffe innerhalb der Spiegel 2 s gefangen (je Schiff höchstens alle 6 s, keine Bosse)' },
   ];
   const EL_BY_ID = {}; ELEM_SKILLS.forEach(k => (EL_BY_ID[k.id] = k));
+  // Elementproben: einmalig viel Erfahrung, drei je Form (leicht/mittel/schwer)
+  const PROBE_XP = [0, 500, 2000, 6000];
+  const ELEM_PROBES = [
+    { id: 'fb_hit', el: 'fire', form: 'ball', t: 1, n: 8, name: '8 Schiffe mit einem Feuerball treffen' },
+    { id: 'fb_kill', el: 'fire', form: 'ball', t: 2, n: 150, name: '150 Abschüsse mit dem Feuerball in einem Lauf' },
+    { id: 'fb_boss', el: 'fire', form: 'ball', t: 3, name: 'Einen Boss mit dem Feuerball erledigen' },
+    { id: 'fw_hit', el: 'fire', form: 'wall', t: 1, n: 8, name: '8 Schiffe mit einer Flammenwand entzünden' },
+    { id: 'fw_kill', el: 'fire', form: 'wall', t: 2, n: 150, name: '150 Abschüsse mit der Flammenwand in einem Lauf' },
+    { id: 'fw_big', el: 'fire', form: 'wall', t: 3, n: 25, name: '25 Schiffe mit einer Flammenwand entzünden' },
+    { id: 'fm_hit', el: 'fire', form: 'meteor', t: 1, n: 6, name: '6 Schiffe mit einem Meteor treffen' },
+    { id: 'fm_kill', el: 'fire', form: 'meteor', t: 2, n: 150, name: '150 Abschüsse mit dem Meteor in einem Lauf' },
+    { id: 'fm_boss', el: 'fire', form: 'meteor', t: 3, name: 'Einen Boss mit einem Meteor erledigen' },
+    { id: 'il_mend', el: 'ice', form: 'lance', t: 1, name: 'Einen Heiler einfrieren' },
+    { id: 'il_kill', el: 'ice', form: 'lance', t: 2, n: 150, name: '150 Abschüsse mit der Frostlanze in einem Lauf' },
+    { id: 'il_shat', el: 'ice', form: 'lance', t: 3, n: 20, name: '20 Schiffe in einer Welle zersplittern' },
+    { id: 'in_hit', el: 'ice', form: 'nova', t: 1, n: 8, name: '8 Schiffe mit einer Frostnova einfrieren' },
+    { id: 'in_kill', el: 'ice', form: 'nova', t: 2, n: 150, name: '150 Abschüsse mit der Frostnova in einem Lauf' },
+    { id: 'in_save', el: 'ice', form: 'nova', t: 3, name: 'Die Frostnova bei unter 15 % Hülle auslösen und die Welle überstehen' },
+    { id: 'is_hit', el: 'ice', form: 'storm', t: 1, n: 5, name: '5 Schiffe in einem Eissturm einfrieren' },
+    { id: 'is_kill', el: 'ice', form: 'storm', t: 2, n: 150, name: '150 Abschüsse mit dem Eissturm in einem Lauf' },
+    { id: 'is_boss', el: 'ice', form: 'storm', t: 3, name: 'Einen Boss im Eissturm erledigen' },
+    { id: 'lp_hit', el: 'light', form: 'prism', t: 1, n: 6, name: '6 Schiffe gleichzeitig im Strahl' },
+    { id: 'lp_kill', el: 'light', form: 'prism', t: 2, n: 150, name: '150 Abschüsse mit dem Prismastrahl in einem Lauf' },
+    { id: 'lp_boss', el: 'light', form: 'prism', t: 3, name: 'Einen Boss mit dem Prismastrahl erledigen' },
+    { id: 'll_full', el: 'light', form: 'lens', t: 1, name: 'Das Brennglas auf vollen Aufbau bringen' },
+    { id: 'll_kill', el: 'light', form: 'lens', t: 2, n: 150, name: '150 Abschüsse mit dem Brennglas in einem Lauf' },
+    { id: 'll_boss', el: 'light', form: 'lens', t: 3, name: 'Einen Boss mit vollem Brennglas-Aufbau erledigen' },
+    { id: 'lm_path', el: 'light', form: 'mirror', t: 1, n: 3, name: 'Den Strahl über 3 Spiegel lenken' },
+    { id: 'lm_kill', el: 'light', form: 'mirror', t: 2, n: 150, name: '150 Abschüsse mit dem Spiegelfeld in einem Lauf' },
+    { id: 'lm_cage', el: 'light', form: 'mirror', t: 3, n: 6, name: '6 Schiffe gleichzeitig im Lichtkäfig fangen' },
+  ];
+  const PROBE_BY_ID = {}; ELEM_PROBES.forEach(p => (PROBE_BY_ID[p.id] = p));
+  const PROBE_KILL = { ball: 'fb_kill', wall: 'fw_kill', meteor: 'fm_kill', lance: 'il_kill', nova: 'in_kill', storm: 'is_kill', prism: 'lp_kill', lens: 'll_kill', mirror: 'lm_kill' };
+  const PROBE_BOSS = { ball: 'fb_boss', meteor: 'fm_boss', storm: 'is_boss', prism: 'lp_boss' };
+  const elProbeDone = (m, id) => !!(m.elem && m.elem.probes && m.elem.probes[id]);
   // Einzelziel-Elemente kommen auf weniger Abschüsse: ausgleichen, damit alle etwa gleich schnell aufsteigen
   const ELEM_XP_K = { fire: 1, ice: 2, light: 1.6 };
   const ELEM_MASTER_K = 1.03; // je Rang über dem vollen Baum ×1,03 Elementschaden
   function elemState(m) {
     if (!m.elem || typeof m.elem !== 'object') m.elem = { act: null };
-    const E = m.elem; E.xp = E.xp || {}; E.sk = E.sk || {}; E.form = E.form || {};
+    const E = m.elem; E.xp = E.xp || {}; E.sk = E.sk || {}; E.form = E.form || {}; E.probes = E.probes || {};
     return E;
   }
   const elXpNeed = r => Math.round(300 * Math.pow(1.2, r)); // Erfahrung für Rang r → r+1
@@ -635,10 +705,13 @@
     return { rank: r, cur: xp, need: elXpNeed(r) };
   }
   const elLv = (m, id) => (m.elem && m.elem.sk && m.elem.sk[id]) || 0;
-  const elForm = (m, el) => { const f = m.elem && m.elem.form && m.elem.form[el]; return ELEM_FORMS[el].some(x => x.id === f && !x.soon) ? f : ELEM_FORMS[el][0].id; };
+  const elForm = (m, el) => { const f = m.elem && m.elem.form && m.elem.form[el]; return ELEM_FORMS[el].some(x => x.id === f) ? f : ELEM_FORMS[el][0].id; };
   const elSpent = (m, el) => ELEM_SKILLS.filter(k => k.el === el).reduce((a, k) => a + elLv(m, k.id), 0);
   const elStemPts = (m, el) => ELEM_SKILLS.filter(k => k.el === el && !k.form).reduce((a, k) => a + elLv(m, k.id), 0);
-  const elTreeMax = el => ELEM_SKILLS.filter(k => k.el === el && (!k.form || k.form === ELEM_FORMS[el][0].id)).reduce((a, k) => a + k.max, 0);
+  const elFormPts = (m, el, f) => ELEM_SKILLS.filter(k => k.el === el && k.form === f && !k.cap).reduce((a, k) => a + elLv(m, k.id), 0);
+  // voller Baum: Stamm, eine Form und ihr Schlussstein
+  const elTreeMax = el => ELEM_SKILLS.filter(k => k.el === el && (!k.form || k.form === ELEM_FORMS[el][0].id)).reduce((a, k) => a + (k.cap ? 1 : k.max), 0);
+  const elKMax = k => (k.cap ? 1 : k.max);
   const elPoints = (m, el) => elRank(m, el).rank - elSpent(m, el);
   const elMastery = (m, el) => Math.max(0, elRank(m, el).rank - elTreeMax(el));
   const elUnlocked = m => record(m) >= ELEM_AT;
@@ -646,11 +719,13 @@
   function elOpen(m, id) {
     const k = EL_BY_ID[id]; if (!k) return false;
     if (k.par && !elLv(m, k.par)) return false;
-    return !k.form || (k.form === elForm(m, k.el) && elStemPts(m, k.el) >= ELEM_FORM_AT);
+    if (!k.form) return true;
+    if (k.form !== elForm(m, k.el) || elStemPts(m, k.el) < ELEM_FORM_AT) return false;
+    return !k.cap || elFormPts(m, k.el, k.form) >= ELEM_CAP_AT;
   }
-  function elCan(m, id) { const k = EL_BY_ID[id]; return !!k && elPoints(m, k.el) >= 1 && elLv(m, id) < k.max && elOpen(m, id); }
+  function elCan(m, id) { const k = EL_BY_ID[id]; return !!k && elPoints(m, k.el) >= 1 && elLv(m, id) < elKMax(k) && elOpen(m, id); }
   function elBuy(m, id) { if (!elCan(m, id)) return false; elemState(m).sk[id] = elLv(m, id) + 1; return true; }
-  // Zurücknehmen nur, wenn danach alle gekauften Knoten offen bleiben (Kinder und Formknoten)
+  // Zurücknehmen nur, wenn danach alle gekauften Knoten offen bleiben (Kinder, Formknoten, Schlussstein)
   function elCanRefund(m, id) {
     const k = EL_BY_ID[id], l = elLv(m, id); if (!k || !l) return false;
     const sk = Object.assign({}, m.elem.sk); sk[id] = l - 1; if (!sk[id]) delete sk[id];
@@ -662,7 +737,7 @@
   function elChoose(m, el) { if (!ELEMENTS[el] || !elUnlocked(m)) return false; elemState(m).act = el; return true; }
   // Formwechsel: Punkte der alten Form werden frei
   function elSetForm(m, el, f) {
-    const F = ELEM_FORMS[el] && ELEM_FORMS[el].find(x => x.id === f); if (!F || F.soon) return false;
+    const F = ELEM_FORMS[el] && ELEM_FORMS[el].find(x => x.id === f); if (!F) return false;
     const E = elemState(m); for (const k of ELEM_SKILLS) if (k.el === el && k.form && k.form !== f) delete E.sk[k.id];
     E.form[el] = f; return true;
   }
@@ -670,7 +745,7 @@
   function elFix(m) {
     if (!m.elem || !m.elem.sk) return;
     const E = m.elem;
-    for (const id in E.sk) if (!EL_BY_ID[id] || !(E.sk[id] > 0)) delete E.sk[id]; else E.sk[id] = Math.min(E.sk[id], EL_BY_ID[id].max);
+    for (const id in E.sk) if (!EL_BY_ID[id] || !(E.sk[id] > 0)) delete E.sk[id]; else E.sk[id] = Math.min(E.sk[id], elKMax(EL_BY_ID[id]));
     let ch = true; while (ch) { ch = false; for (const id in E.sk) if (!elOpen(m, id)) { delete E.sk[id]; ch = true; } }
     for (const el in ELEMENTS) while (elPoints(m, el) < 0) { const k = ELEM_SKILLS.filter(x => x.el === el && elLv(m, x.id)).pop(); if (!k) break; E.sk[k.id]--; if (!E.sk[k.id]) delete E.sk[k.id]; }
   }
@@ -756,7 +831,8 @@
       this.aim = -Math.PI / 2; this.shots = 0; this.charge = 0;
       this.focus = null; this.focusUntil = 0; this.uid = 0;
       this.cd = { freeze: 0, over: 0 }; this.freezeUntil = 0; this.overUntil = 0;
-      this.elemCd = 0; this.elemAmmo = null; this.beamE = null; this.beam = null; this.elXp = 0;
+      this.elemCd = 0; this.elemAmmo = null; this.beamE = null; this.beam = null; this.elXp = 0; this.elKills = 0;
+      this.walls = []; this.meteors = []; this.storms = []; this.mirrors = []; this.mirrorMode = false; this.lens = null; this.novaSave = 0;
       this.dealt = {}; SOURCES.forEach(k => (this.dealt[k] = 0)); this.modDealt = {};
       this.holding = false; this.god = false; this.ring = null;
       this.rockets = []; this.bolts = []; this.rocketT = 0; this.cryoT = 0; this.reinfT = 0; this.loot = []; this.novaT = 0;
@@ -780,7 +856,7 @@
     // ---------- Speichern / Laden ----------
     snapshot() {
       const keep = ['lv', 'free', 'energy', 'wave', 'time', 'waveT', 'kills', 'crystals', 'fireT', 'shockT', 'mineT', 'bladeA', 'aim', 'charge', 'hp',
-        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot', 'elemCd', 'elemAmmo', 'beamE', 'elXp'];
+        'queue', 'spawnGap', 'spawnT', 'uid', 'cd', 'freezeUntil', 'overUntil', 'dealt', 'modDealt', 'holding', 'startWave', 'god', 'taken', 'blocked', 'rocketT', 'cryoT', 'reinfT', 'loot', 'novaT', 'refHp', 'chargeShotT', 'phoenixUsed', 'aegis', 'emergWave', 'protoWave', 'mode', 'waveType', 'waveMod', 'bossKills', 'noLoot', 'elemCd', 'elemAmmo', 'beamE', 'elXp', 'elKills'];
       const o = {}; keep.forEach(k => (o[k] = this[k])); o.spent = this.spent; o.paid = this.paid; o.rush = this.rush; o.easyRun = this.easyRun; o.leaps = this.leaps;
       o.enemies = this.enemies.map(e => { const c = Object.assign({}, e); if (e.host) { c.hostId = e.host.id; delete c.host; } return c; });
       o.ebullets = this.ebullets.map(b => Object.assign({}, b));
@@ -790,7 +866,7 @@
     static restore(meta, o) {
       const r = new Run(meta, { noFx: true, mode: o.mode });
       Object.assign(r, o);
-      r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.fires = []; r.hole = null; r.beam = null; r.invulnUntil = 0; r.focus = null; r.dead = false; r.ring = null;
+      r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.fires = []; r.hole = null; r.beam = null; r.walls = []; r.meteors = []; r.storms = []; r.mirrors = []; r.mirrorMode = false; r.lens = null; r.invulnUntil = 0; r.focus = null; r.dead = false; r.ring = null;
       r.cd = Object.assign({ freeze: 0, over: 0 }, o.cd || {});
       for (const e of r.enemies) if (e.hostId != null) { e.host = r.enemies.find(h => h.id === e.hostId); if (!e.host) e.hp = 0; }
       RUN_UPG.forEach(u => { if (r.lv[u.id] == null) r.lv[u.id] = 0; }); // neue Upgrades in alten Spielständen
@@ -901,13 +977,30 @@
       const el = s.noGun ? null : elActive(this.meta);
       s.el = null;
       if (el) {
-        const E = id => elLv(this.meta, id), g = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el));
-        const o = { k: el, form: elForm(this.meta, el) };
-        if (el === 'fire') { const f = 1 + 0.2 * E('f_dmg'); o.dmg = g * 6 * f; o.burn = g * 0.9 * f; o.burnT = 4 + 1.5 * E('f_burn'); o.r = 50 * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * (1 - 0.08 * E('f_cd')); o.jump = 0.25 * E('fb_jump'); }
-        if (el === 'ice') { o.dmg = g * 6; o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.shard = g * 2 * (1 + 0.4 * E('il_shard')); o.sog = 0.5 * E('il_sog'); }
-        if (el === 'light') { o.dps = g * 1.5 * (1 + 0.2 * E('l_dmg')); o.dur = 4 + 0.5 * E('l_dur'); o.cd = 12 - 1.5 * E('l_cd'); o.ramp = 1 + 0.25 * E('lp_glow'); o.w = 7 * (1 + 0.2 * E('lp_wide')); o.blind = 0.5 * E('lp_blind'); }
+        const E = id => elLv(this.meta, id), g = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)), form = elForm(this.meta, el);
+        const o = { k: el, form, cap: ELEM_SKILLS.some(k => k.el === el && k.form === form && k.cap && E(k.id)) };
+        if (el === 'fire') {
+          const f = 1 + 0.2 * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
+          o.glut = f; o.burnT = 4 + 1.5 * E('f_burn');
+          if (form === 'ball') { o.dmg = g * 6 * f; o.burn = g * 0.9 * f; o.r = 50 * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * cdk; o.jump = 0.25 * E('fb_jump'); o.inferno = !!E('fb_inferno'); }
+          if (form === 'wall') { o.cd = 16 * cdk; o.len = 140 * (1 + 0.25 * E('fw_len')); o.dur = 6 + 1.5 * E('f_burn') + E('fw_dur'); o.burn = g * 1.6 * f; o.burnFor = 3 + E('fw_dur'); o.heat = 0.15 * E('fw_heat'); o.ring = !!E('fw_ring'); o.dmg = o.burn; }
+          if (form === 'meteor') { o.cd = Math.max(6, 22 * cdk - 2 * E('fm_cd')); o.dmg = g * 11 * f; o.r = 70; o.boss = 1 + 0.2 * E('fm_boss'); o.burn = g * 0.6 * f; o.shower = g * 1.5 * E('fm_shower') * f; o.star = !!E('fm_star'); }
+        }
+        if (el === 'ice') {
+          o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.shard = g * 2 * (1 + 0.4 * E('il_shard'));
+          if (form === 'lance') { o.dmg = g * 6; o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.sog = 0.5 * E('il_sog'); o.zero = !!E('il_zero'); }
+          if (form === 'nova') { o.dmg = g * 0.8; o.cd = 18 - E('i_cd'); o.r = 120 * (1 + 0.125 * E('in_rad')); o.dur = 2 + 0.5 * E('i_dur'); o.rime = 0.5 * E('in_rime'); o.heal = 0.004 * E('in_hull'); o.age = !!E('in_age'); }
+          if (form === 'storm') { o.dps = g * 0.6; o.dmg = o.dps; o.cd = 18 - E('i_cd'); o.r = 70; o.sdur = 6 + E('is_dur'); o.dur = 2 + 0.5 * E('i_dur'); o.drift = 15 * E('is_drift'); o.slick = 0.15 * E('is_slick'); o.vortex = !!E('is_vortex'); }
+        }
+        if (el === 'light') {
+          const lk = 1 + 0.2 * E('l_dmg');
+          o.dur = 4 + 0.5 * E('l_dur'); o.cd = 12 - 1.5 * E('l_cd');
+          if (form === 'prism') { o.dps = g * 1.5 * lk; o.ramp = 1 + 0.25 * E('lp_glow'); o.w = 7 * (1 + 0.2 * E('lp_wide')); o.blind = 0.5 * E('lp_blind'); o.fan = !!E('lp_fan'); }
+          if (form === 'lens') { o.dps = g * 3 * lk; o.hot = 0.25 * E('ll_hot'); o.after = 1.5 * E('ll_after'); o.weak = 0.075 * E('ll_weak'); o.sun = !!E('ll_sun'); o.ramp = 3; o.w = 3; }
+          if (form === 'mirror') { o.dps = g * 1.2 * lk; o.mirrors = 3 + E('lm_more'); o.refr = 0.1 * E('lm_refr'); o.lens = g * 0.3 * E('lm_lens'); o.cage = !!E('lm_cage'); o.w = 7; }
+        }
         s.el = o;
-        if (el === 'fire' && this.elemAmmo == null) this.elemAmmo = o.ammo;
+        if (el === 'fire' && form === 'ball' && this.elemAmmo == null) this.elemAmmo = o.ammo;
         if (el === 'light' && this.beamE == null) this.beamE = o.dur;
       }
       this.s = s;
@@ -1284,8 +1377,11 @@
       }
       if (e.type === 'boss' && this.s.chal && this.s.chal.boss > 1) d *= this.s.chal.boss;
       if (e === this.focus && this.s.K && this.s.K('p_mark')) d *= 1 + 0.2 * this.s.K('p_mark');
-      const fq = e.frostUntil > this.time && this.s.el && this.s.el.brit ? this.s.el.brit / (1 + this.s.el.brit) : 0; // Frostlanze: eingefroren nimmt mehr Schaden, der Mehrschaden zählt fürs Eis
+      // Eis: eingefroren nimmt mehr Schaden (verlangsamt halb so viel), der Mehrschaden zählt fürs Eis
+      const SE = this.s.el, fb = SE && SE.brit ? (e.frostUntil > this.time ? SE.brit : e.slowUntil > this.time ? SE.brit / 4 : 0) : 0, fq = fb / (1 + fb);
       if (fq) d /= 1 - fq;
+      if (SE && SE.heat && e.burnUntil > this.time) d *= 1 + SE.heat; // Hitzestau
+      if (SE && SE.weak && e.lensUntil > this.time) d *= 1 + SE.weak; // Schwachstelle unter dem Brennglas
       if (e.shieldUntil && e.shieldUntil > this.time) { d *= 0.15; if (this.fxOn && Math.random() < 0.25) { const p = this.pos(e); this.fx.push({ k: 'shieldhit', x: p.x, y: p.y, t: 0 }); } }
       if (e.type === 'bulwark' && e.guard > 0) {
         // Frontschild fängt Schaden ab, bis es bricht
@@ -1319,6 +1415,7 @@
         this.kills++;
         if (e.elemT != null && (this.time - e.elemT <= 3 || e.frostUntil > this.time)) this.elemXp(e);
         if (this.s.el && this.s.el.k === 'ice' && e.frostUntil > this.time && !e.frostBig && !this.shattering) this.shatter(e);
+        if (this.lens && this.lens.t === e) this.lensDeath(e);
         if (this.s.el && this.s.el.jump && e.elBurn != null && this.time - e.elBurn < 0.25 && this.fires.filter(f => f.el).length < 12) { const p = this.pos(e); this.fires.push({ x: p.x, y: Math.min(p.y, -10), r: 25, dps: this.s.el.burn * this.s.el.jump, until: this.time + 2, k: 'elfire', el: true, hand: e.elemHand }); }
         if (this.fxOn && this.s.mod && (this.s.mod.leech || this.s.mod.crysmod) && Math.random() < 0.5) { const p = this.pos(e); this.fx.push({ k: this.s.mod.leech ? 'leech' : 'crysfx', x: p.x, y: p.y, t: 0 }); }
                 if (this.s.K && this.s.K('b_leech') && !this.dead) this.hp = Math.min(this.s.maxHp, this.hp + this.s.maxHp * 0.003 * this.s.K('b_leech'));
@@ -1402,7 +1499,14 @@
       for (const e of this.enemies) if (e.pdps > 0 && e.hp > 0) { this.hurt(e, e.pdps * dt, false, 'dot'); e.pdps *= Math.max(0, 1 - dt / 3); }
       // Giftgeschosse: zusätzlich ein kleiner Anteil der Lebenspunkte pro Sekunde (stapelt nicht) – stark gegen zähe Gegner
       if (K('p_poison')) for (const e of this.enemies) if (e.ppUntil > this.time && e.hp > 0) this.hurt(e, e.maxHp * (e.type === 'boss' ? 0.0001 : 0.0005) * K('p_poison') * dt, false, 'dot');
-      for (const f of this.fires) for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - f.x, p.y - f.y) < f.r + e.r) { if (f.el) { e.elemT = e.elBurn = this.time; e.elemHand = f.hand; } this.hurt(e, f.dps * dt, false, f.el ? 'elem' : 'dot'); } }
+      // Feuer-Element: Glutkern verstärkt auch Brandminen und Nachbeben; Inferno: jedes weitere Brandfeld an derselben Stelle +50 %
+      const SE = s.el, glut = SE && SE.glut ? SE.glut : 1, inf = SE && SE.inferno;
+      if (inf) for (const e of this.enemies) { e.infN = 0; if (e.hp <= 0) continue; const p = this.pos(e); for (const f of this.fires) if (f.el && Math.hypot(p.x - f.x, p.y - f.y) < f.r + e.r) e.infN++; }
+      for (const f of this.fires) for (const e of this.enemies) {
+        if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - f.x, p.y - f.y) >= f.r + e.r) continue;
+        if (f.el) { e.elemT = e.elBurn = this.time; e.elemHand = f.hand; this.hurt(e, f.dps * dt * (inf && e.infN > 1 ? 1 + 0.5 * (e.infN - 1) : 1), false, 'elem'); }
+        else this.hurt(e, f.dps * dt * glut, false, 'dot');
+      }
       this.fires = this.fires.filter(f => f.until > this.time);
       if (K('p_charge')) this.chargeShotT += dt;
       const inRange = () => this.enemies.filter(e => e.hp > 0 && e.dist - e.r <= s.range && !this.cloaked(e));
@@ -1468,14 +1572,22 @@
 
     // ---------- Elementarmagie ----------
     elemTick(dt) {
-      const o = this.s.el; if (!o) { this.beam = null; return; }
-      if (o.k === 'fire') this.elemAmmo = Math.min(o.ammo, (this.elemAmmo || 0) + dt / o.cd);
-      else if (o.k === 'ice') this.elemCd = Math.max(0, this.elemCd - dt * (this.frozen ? 1 + o.sog : 1));
-      else if (o.k === 'light') this.beamTick(dt, o);
+      const o = this.s.el; if (!o) { this.beam = null; this.mirrorMode = false; return; }
+      if (o.k === 'fire' && o.form === 'ball') this.elemAmmo = Math.min(o.ammo, (this.elemAmmo || 0) + dt / o.cd);
+      else if (o.k !== 'light') this.elemCd = Math.max(0, this.elemCd - dt * (o.sog && this.frozen ? 1 + o.sog : 1));
+      if (o.k === 'light') this.beamTick(dt, o);
+      // Flammenwand: brennende Schiffe
+      for (const e of this.enemies) if (e.burnUntil > this.time && e.hp > 0) { e.elBurn = this.time; this.elHit(e, e.burnDps * dt, e.elemHand); }
+      if (this.walls.length) this.wallTick(o);
+      if (this.meteors.length) this.meteorTick(o);
+      if (this.storms.length) this.stormTick(dt, o);
+      if (this.novaSave && this.wave > this.novaSave && !this.dead) { this.novaSave = 0; this.probe('in_save'); }
     }
     elemReady() {
       const o = this.s.el; if (!o || this.dead) return false;
-      return o.k === 'fire' ? this.elemAmmo >= 1 : o.k === 'ice' ? this.elemCd <= 0 : this.beamE >= Math.min(1, o.dur);
+      if (o.k === 'fire' && o.form === 'ball') return this.elemAmmo >= 1;
+      if (o.k === 'light') return this.beamE >= Math.min(1, o.dur);
+      return this.elemCd <= 0;
     }
     // Ziel für Lanze und selbstzielenden Strahl: Markierung, sonst Boss, sonst das Schiff mit den meisten Lebenspunkten
     elemTarget() {
@@ -1484,44 +1596,101 @@
       const alive = this.enemies.filter(vis); if (!alive.length) return null;
       return alive.find(e => e.type === 'boss') || alive.find(e => e.host && e.host.hp > 0) || alive.sort((a, b) => b.hp - a.hp)[0]; // Riese: seine Arme und Teile
     }
+    // dichteste Stelle, die nicht zu nah an schon gewählten Punkten liegt (Sternenfall)
+    densest(skip) {
+      let best = null, bv = 0;
+      const alive = this.enemies.filter(e => e.hp > 0 && e.dist < FIELD_H + 20);
+      for (const c of alive) {
+        const pc = this.pos(c); if (skip.some(q => Math.hypot(q.x - pc.x, q.y - pc.y) < 90)) continue;
+        let v = 0; for (const e of alive) { const p = this.pos(e); if (Math.hypot(p.x - pc.x, p.y - pc.y) <= 70) v += 1; }
+        if (v > bv) { bv = v; best = pc; }
+      }
+      return best;
+    }
     // Treffer des Elements: merkt sich Zeitpunkt und Auslöser (Hand/Autopilot) für die Erfahrung
     elHit(e, d, hand) { e.elemT = this.time; e.elemHand = !!hand; return this.hurt(e, d, false, 'elem'); }
     elemXp(e) {
       if (this.admin || !this.s.el || e.type === 'bomb') return;
-      const v = (1 + this.wave / 50) * (e.type === 'boss' && !e.child ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[this.s.el.k];
-      const E = elemState(this.home); E.xp[this.s.el.k] = (E.xp[this.s.el.k] || 0) + v; this.elXp = (this.elXp || 0) + v;
+      const o = this.s.el, boss = e.type === 'boss' && !e.child;
+      const v = (1 + this.wave / 50) * (boss ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[o.k] * (o.form === 'lens' ? 2 : 1); // Brennglas trifft nur ein Ziel
+      const E = elemState(this.home); E.xp[o.k] = (E.xp[o.k] || 0) + v; this.elXp = (this.elXp || 0) + v;
+      this.elKills = (this.elKills || 0) + 1; this.probe(PROBE_KILL[o.form], this.elKills);
+      if (boss && this.time - e.elemT <= 1.5) {
+        if (o.form === 'meteor' ? this.time - (e.meteorT || -9) <= 1 : o.form === 'storm' ? this.time - (e.stormT || -9) <= 0.5 : o.form !== 'lens') this.probe(PROBE_BOSS[o.form]);
+      }
     }
-    // x, y leer: Feuerball automatisch in die dichteste Gruppe
-    useElem(x, y, hand) {
-      const o = this.s.el; if (!this.elemReady()) return false;
+    // Elementprobe: einmalig viel Erfahrung (nur mit der passenden Form, nur in eigenen Läufen)
+    probe(id, v) {
+      const p = PROBE_BY_ID[id], o = this.s.el; if (!p || this.admin || !o || p.form !== o.form || p.el !== o.k) return;
+      if (p.n && !(v >= p.n)) return;
+      const E = elemState(this.home); if (E.probes[id]) return;
+      E.probes[id] = 1; E.xp[p.el] = (E.xp[p.el] || 0) + PROBE_XP[p.t];
+      if (this.fxOn) this.fx.push({ k: 'probe', id, t: 0 });
+    }
+    // x, y leer: automatisch (dichteste Gruppe bzw. Ziel). Flammenwand: (x, y) → (x2, y2)
+    useElem(x, y, hand, x2, y2) {
+      const o = this.s.el; if (!o || this.dead) return false;
+      if (o.k === 'light') return o.form === 'lens' ? this.lensToggle(hand) : o.form === 'mirror' ? this.mirrorAuto(hand) : this.beamAuto(hand);
+      if (!this.elemReady()) return false;
       if (o.k === 'fire') {
+        if (o.form === 'wall') return this.castWall(x, y, x2, y2, hand);
         if (x == null) { const p = this.strikeTarget(); if (!p) return false; x = p.x; y = p.y; }
         y = Math.min(y, -20);
-        this.elemAmmo -= 1;
-        for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - x, p.y - y) <= o.r + e.r) this.elHit(e, o.dmg, hand); }
+        if (o.form === 'meteor') {
+          this.elemCd = o.cd;
+          this.meteors.push({ x, y, at: this.time + 1.5, k: 1, hand: !!hand });
+          if (o.star) { const pts = [{ x, y }]; for (let i = 0; i < 2; i++) { const q = this.densest(pts); if (!q) break; pts.push(q); this.meteors.push({ x: q.x, y: Math.min(q.y, -20), at: this.time + 2.1 + 0.4 * i, k: 0.4, hand: !!hand }); } }
+          return true;
+        }
+        this.elemAmmo -= 1; let n = 0;
+        for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - x, p.y - y) <= o.r + e.r) { n++; this.elHit(e, o.dmg, hand); } }
         this.fires.push({ x, y, r: o.r, dps: o.burn, until: this.time + o.burnT, k: 'elfire', el: true, hand: !!hand });
         if (this.fxOn) this.fx.push({ k: 'fireball', x, y, r: o.r, t: 0 });
+        this.probe('fb_hit', n);
         return true;
       }
-      if (o.k === 'ice') {
-        const t = this.elemTarget(); if (!t) return false;
-        this.elemCd = o.cd;
-        const tp = this.pos(t);
-        if (this.fxOn) this.fx.push({ k: 'lance', x1: 0, y1: -10, x2: tp.x, y2: tp.y, t: 0 });
-        const done = [t]; let from = tp;
-        for (let i = 0; i < o.chain; i++) {
-          let n = null, nd = 110;
-          for (const e of this.enemies) { if (e.hp <= 0 || done.includes(e) || e.host || e.giant || this.cloaked(e)) continue; const q = this.pos(e), d = Math.hypot(q.x - from.x, q.y - from.y); if (d < nd) { nd = d; n = e; } }
-          if (!n) break;
-          const q = this.pos(n); done.push(n);
-          if (this.fxOn) this.fx.push({ k: 'lance', x1: from.x, y1: from.y, x2: q.x, y2: q.y, t: 0 });
-          from = q;
+      if (o.form === 'nova') {
+        this.elemCd = o.cd; let n = 0, hull = 0;
+        for (const e of this.enemies) {
+          if (e.hp <= 0 || e.giant || e.dist - e.r > o.r) continue;
+          const big = e.type === 'boss' || !!e.host;
+          this.frost(e, o.dur * (!big && e.dist < WALL_R + 50 ? 1 + o.rime : 1), hand);
+          if (!big) { n++; hull++; }
+          this.elHit(e, o.dmg, hand);
         }
-        done.forEach((e, i) => { this.frost(e, i ? o.dur / 2 : o.dur, hand); this.elHit(e, i ? o.dmg / 2 : o.dmg, hand); });
+        if (o.heal && hull && !this.dead) this.hp = Math.min(this.s.maxHp, this.hp + this.s.maxHp * o.heal * hull);
+        if (this.fxOn) this.fx.push({ k: 'frostnova', r: o.r, t: 0 });
+        this.probe('in_hit', n);
+        if (this.hp < this.s.maxHp * 0.15) this.novaSave = this.wave;
         return true;
       }
-      if (o.k === 'light') return this.beamAuto(hand);
-      return false;
+      if (o.form === 'storm') {
+        if (x == null) { const p = this.strikeTarget(); if (!p) return false; x = p.x; y = p.y; }
+        this.elemCd = o.cd;
+        this.storms.push({ x, y: Math.min(y, -20), until: this.time + o.sdur, hand: !!hand, n: 0, t0: this.time });
+        return true;
+      }
+      // Frostlanze
+      const t = this.elemTarget(); if (!t) return false;
+      this.elemCd = o.cd; this.lanceN = (this.lanceN || 0) + 1;
+      const tp = this.pos(t);
+      if (this.fxOn) this.fx.push({ k: 'lance', x1: 0, y1: -10, x2: tp.x, y2: tp.y, t: 0 });
+      const done = [t]; let from = tp;
+      for (let i = 0; i < o.chain; i++) {
+        let n = null, nd = 110;
+        for (const e of this.enemies) { if (e.hp <= 0 || done.includes(e) || e.host || e.giant || this.cloaked(e)) continue; const q = this.pos(e), d = Math.hypot(q.x - from.x, q.y - from.y); if (d < nd) { nd = d; n = e; } }
+        if (!n) break;
+        const q = this.pos(n); done.push(n);
+        if (this.fxOn) this.fx.push({ k: 'lance', x1: from.x, y1: from.y, x2: q.x, y2: q.y, t: 0 });
+        from = q;
+      }
+      done.forEach((e, i) => {
+        this.frost(e, i ? o.dur / 2 : o.dur, hand);
+        if (o.zero && e.type === 'boss' && this.lanceN % 3 === 0) e.frostHard = this.time + 1; // Nullpunkt: jede 3. Lanze hält Bosse an
+        if (e.type === 'mender') this.probe('il_mend');
+        this.elHit(e, i ? o.dmg / 2 : o.dmg, hand);
+      });
+      return true;
     }
     frost(e, dur, hand) {
       if (e.hp <= 0) return;
@@ -1529,47 +1698,224 @@
       e.frostUntil = Math.max(e.frostUntil || 0, this.time + dur); e.frostBig = big; e.elemT = this.time; e.elemHand = !!hand;
       if (!big) e.stunUntil = Math.max(e.stunUntil || 0, e.frostUntil); // steht still, schießt nicht
       if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'brittle', x: p.x, y: p.y, t: 0 }); }
+      const o = this.s.el;
+      if (o && o.zero && !big && e.hp < e.maxHp * 0.12) this.elHit(e, e.hp, hand); // Nullpunkt: zerspringt sofort
     }
-    // Zersplittern: eingefrorenes Schiff stirbt und trifft die Nachbarn
+    // Zersplittern: eingefrorenes Schiff stirbt und trifft die Nachbarn (Eiszeit: friert sie 1 s ein)
     shatter(e) {
       const o = this.s.el, p = this.pos(e); this.shattering = true;
+      if (this.shatW !== this.wave) { this.shatW = this.wave; this.shatN = 0; }
+      this.probe('il_shat', ++this.shatN);
+      const near = [];
       for (const n of this.enemies) {
         if (n === e || n.hp <= 0) continue; const q = this.pos(n);
         if (Math.hypot(q.x - p.x, q.y - p.y) >= 45 + n.r) continue;
-        this.elHit(n, o.shard, e.elemHand);
+        near.push(n); this.elHit(n, o.shard, e.elemHand);
         if (n.hp > 0 && n.type !== 'boss' && !n.host) { n.slow = Math.max(n.slowUntil > this.time ? n.slow : 0, 0.3); n.slowUntil = Math.max(n.slowUntil || 0, this.time + 2); }
       }
       this.shattering = false;
+      if (o.age) for (const n of near) if (n.hp > 0) this.frost(n, 1, e.elemHand);
       if (this.fxOn) this.fx.push({ k: 'shatter', x: p.x, y: p.y, t: 0 });
     }
-    // Prismastrahl: von Hand geführt (beamStart/beamMove/beamStop) oder selbstzielend (beamAuto, halber Schaden)
-    beamStart(x, y) {
-      const o = this.s.el; if (!o || o.k !== 'light' || this.dead || !(this.beamE > 0.1)) return false;
-      this.beam = { x, y: Math.min(y, -10), hand: true, auto: false }; return true;
+    // Flammenwand: Linie (x, y) → (x2, y2), höchstens o.len lang; Feuerring bei kurzem Tipp; automatisch quer vor die dichteste Gruppe
+    castWall(x, y, x2, y2, hand) {
+      const o = this.s.el; let w;
+      if (x == null) {
+        const p = this.strikeTarget(); if (!p) return false;
+        const d = Math.hypot(p.x, p.y) || 1, nx = -p.y / d, ny = p.x / d, cx = p.x * (1 - 30 / d), cy = Math.min(-20, p.y * (1 - 30 / d)); // etwas vor der Gruppe
+        w = o.ring ? { ring: true, x: p.x, y: Math.min(-30, p.y), r: 55 } : { x1: cx - nx * o.len / 2, y1: cy - ny * o.len / 2, x2: cx + nx * o.len / 2, y2: cy + ny * o.len / 2 };
+      } else {
+        x2 = x2 == null ? x : x2; y2 = y2 == null ? y : y2;
+        const L = Math.hypot(x2 - x, y2 - y);
+        if (L < 22) { if (!o.ring) return false; w = { ring: true, x, y: Math.min(-30, y), r: 55 }; }
+        else { const k = Math.min(1, o.len / L); w = { x1: x, y1: Math.min(-8, y), x2: x + (x2 - x) * k, y2: Math.min(-8, y + (y2 - y) * k) }; }
+      }
+      this.elemCd = o.cd;
+      w.until = this.time + o.dur; w.hand = !!hand; w.ids = new Set();
+      this.walls.push(w);
+      return true;
     }
-    beamMove(x, y) { if (this.beam && !this.beam.auto) { this.beam.x = x; this.beam.y = Math.min(y, -10); } }
-    beamStop() { if (this.beam && !this.beam.auto) this.beam = null; }
+    wallTick(o) {
+      for (const w of this.walls) {
+        for (const e of this.enemies) {
+          if (e.hp <= 0 || e.giant) continue;
+          const p = this.pos(e);
+          let d;
+          if (w.ring) d = Math.abs(Math.hypot(p.x - w.x, p.y - w.y) - w.r);
+          else { const vx = w.x2 - w.x1, vy = w.y2 - w.y1, L2 = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((p.x - w.x1) * vx + (p.y - w.y1) * vy) / L2)); d = Math.hypot(p.x - w.x1 - vx * t, p.y - w.y1 - vy * t); }
+          if (d > 8 + e.r) continue;
+          w.ids.add(e.id);
+          e.burnUntil = this.time + (o.burnFor || 3); e.burnDps = o.burn; e.elemHand = w.hand; e.elemT = this.time;
+          if (e.type !== 'boss' && !e.host) { e.slow = Math.max(e.slowUntil > this.time ? e.slow : 0, 0.3); e.slowUntil = Math.max(e.slowUntil || 0, this.time + 1); }
+        }
+        this.probe('fw_hit', w.ids.size); this.probe('fw_big', w.ids.size);
+      }
+      this.walls = this.walls.filter(w => w.until > this.time);
+    }
+    meteorTick(o) {
+      for (const m of this.meteors) {
+        if (this.time < m.at) continue;
+        m.done = true; let n = 0;
+        for (const e of this.enemies) {
+          if (e.hp <= 0) continue; const p = this.pos(e);
+          if (Math.hypot(p.x - m.x, p.y - m.y) > o.r + e.r) continue;
+          n++; e.meteorT = this.time;
+          this.elHit(e, o.dmg * m.k * (e.type === 'boss' ? o.boss : 1), m.hand);
+          if (e.hp > 0 && e.type !== 'boss' && !e.host) e.stunUntil = Math.max(e.stunUntil || 0, this.time + 1);
+        }
+        this.fires.push({ x: m.x, y: m.y, r: o.r * 0.8, dps: o.burn * m.k, until: this.time + 5, k: 'elfire', el: true, hand: m.hand });
+        if (o.shower) for (let i = 0; i < 3; i++) {
+          const a = i * 2.094 + 0.5, sx = m.x + Math.cos(a) * 58, sy = Math.min(-20, m.y + Math.sin(a) * 58);
+          for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - sx, p.y - sy) <= 30 + e.r) this.elHit(e, o.shower * m.k, m.hand); }
+          if (this.fxOn) this.fx.push({ k: 'fireball', x: sx, y: sy, r: 30, t: 0 });
+        }
+        if (this.fxOn) this.fx.push({ k: 'meteor', x: m.x, y: m.y, r: o.r * (m.k < 1 ? 0.8 : 1), t: 0 });
+        if (m.k === 1) this.probe('fm_hit', n);
+      }
+      this.meteors = this.meteors.filter(m => !m.done);
+    }
+    stormTick(dt, o) {
+      const tg = o.drift && this.focus && this.focus.hp > 0 ? this.pos(this.focus) : null;
+      for (const st of this.storms) {
+        if (tg) { const dx = tg.x - st.x, dy = tg.y - st.y, d = Math.hypot(dx, dy); if (d > 2) { const v = Math.min(d, o.drift * dt); st.x += dx / d * v; st.y = Math.min(-20, st.y + dy / d * v); } }
+        for (const e of this.enemies) {
+          if (e.hp <= 0 || e.giant) continue;
+          const p = this.pos(e), dx = st.x - p.x, dy = st.y - p.y, d = Math.hypot(dx, dy);
+          if (d > o.r + e.r) continue;
+          e.stormT = this.time;
+          this.elHit(e, o.dps * dt, st.hand);
+          if (e.hp <= 0) continue;
+          const big = e.type === 'boss' || !!e.host;
+          if (o.slick && !big) { e.slow = Math.max(e.slowUntil > this.time ? e.slow : 0, o.slick); e.slowUntil = Math.max(e.slowUntil || 0, this.time + 0.3); }
+          if (!(e.frostUntil > this.time)) {
+            e.chill = this.time - (e.chillAt || -9) > 0.5 ? dt : (e.chill || 0) + dt; e.chillAt = this.time;
+            if (e.chill >= 3) { e.chill = 0; this.frost(e, o.dur, st.hand); if (!big) st.n++; }
+          }
+          if (o.vortex && !big && d > 6) { const v = Math.min(d, 28 * dt), x = p.x + dx / d * v, y = Math.min(-10, p.y + dy / d * v); e.a = Math.atan2(y, x); e.dist = Math.max(WALL_R + e.r, Math.hypot(x, y)); }
+        }
+        this.probe('is_hit', st.n);
+      }
+      this.storms = this.storms.filter(st => st.until > this.time);
+    }
+    // ---------- Licht: Prismastrahl (von Hand geführt oder selbstzielend), Brennglas, Spiegelfeld ----------
+    beamStart(x, y) {
+      const o = this.s.el; if (!o || o.k !== 'light' || o.form !== 'prism' || this.dead || !(this.beamE > 0.1)) return false;
+      this.beam = { kind: 'prism', x, y: Math.min(y, -10), hand: true, auto: false }; return true;
+    }
+    beamMove(x, y) { if (this.beam && this.beam.kind === 'prism' && !this.beam.auto) { this.beam.x = x; this.beam.y = Math.min(y, -10); } }
+    beamStop() { if (this.beam && this.beam.kind === 'prism' && !this.beam.auto) this.beam = null; }
     beamAuto(hand) {
+      const o = this.s.el; if (!o || o.form !== 'prism' || !this.elemReady() || !this.elemTarget()) return false;
+      this.beam = { kind: 'prism', auto: true, hand: !!hand }; return true;
+    }
+    lensToggle(hand) {
+      const o = this.s.el; if (!o || o.form !== 'lens') return false;
+      if (this.beam) { this.beam = null; if (this.lens) this.lens.keep = this.time + o.after; return true; }
       if (!this.elemReady() || !this.elemTarget()) return false;
-      this.beam = { auto: true, hand: !!hand }; return true;
+      this.beam = { kind: 'lens', hand: !!hand }; return true;
+    }
+    setMirrorMode(on, hand) { const o = this.s.el; if (!o || o.form !== 'mirror') return false; this.mirrorMode = !!on; this.mirrorHand = !!hand; if (!on) this.beam = null; return true; }
+    placeMirror(x, y) {
+      const o = this.s.el; if (!o || o.form !== 'mirror' || this.dead) return false;
+      this.mirrors.push({ x, y: Math.min(y, -15), until: this.time + 15 });
+      while (this.mirrors.length > o.mirrors) this.mirrors.shift();
+      return true;
+    }
+    // Autopilot fürs Spiegelfeld: fehlt ein Spiegel, einen in die dichteste Gruppe setzen, dann an
+    mirrorAuto(hand) {
+      if (!this.mirrors.length) { const p = this.strikeTarget(); if (!p) return false; this.placeMirror(p.x, p.y); }
+      return this.setMirrorMode(true, hand);
     }
     beamTick(dt, o) {
-      if (!this.beam) { this.beamE = Math.min(o.dur, (this.beamE || 0) + dt * o.dur / o.cd); return; }
-      if (this.beamE <= 0) { this.beam = null; return; }
-      let tx = this.beam.x, ty = this.beam.y, k = 1;
-      if (this.beam.auto) { const t = this.elemTarget(); if (!t) { this.beam = null; return; } const p = this.pos(t); tx = p.x; ty = p.y; k = 0.5; }
+      if (o.form === 'mirror') {
+        this.mirrors = this.mirrors.filter(m => m.until > this.time);
+        if (this.beamDry && this.beamE >= Math.min(o.dur, 2)) this.beamDry = false; // leer gelaufen: erst wieder an, wenn genug Energie da ist
+        if (this.mirrorMode && this.mirrors.length && !this.beamDry) { if (!this.beam) this.beam = { kind: 'mirror', hand: this.mirrorHand }; }
+        else this.beam = null;
+      }
+      if (this.lens && !this.beam && this.time > (this.lens.keep || 0)) this.lens = null;
+      if (!this.beam) { this.beamE = Math.min(o.dur, (this.beamE || 0) + dt * o.dur / o.cd * (this.overActive ? 2 : 1)); return; }
+      if (this.beamE <= 0) { this.beam = null; this.beamDry = true; if (this.lens) this.lens.keep = this.time + o.after; return; }
       this.beamE = Math.max(0, this.beamE - dt);
-      const L = Math.hypot(tx, ty) || 1, ux = tx / L, uy = ty / L;
-      this.beam.ex = ux * 560; this.beam.ey = uy * 560;
+      const B = this.beam, O = { x: 0, y: -10 }, segs = [];
+      if (B.kind === 'lens') {
+        let t = this.lens && this.lens.t && this.lens.t.hp > 0 && !this.cloaked(this.lens.t) ? this.lens.t : null;
+        const want = this.focus && this.focus.hp > 0 && !this.cloaked(this.focus) ? this.focus : null; // neue Markierung: Ziel wechseln
+        if (want && want !== t) t = null;
+        if (!t) { t = this.elemTarget(); if (!t) { this.beam = null; return; } this.lens = { t, ramp: this.lens && this.lens.carry != null ? this.lens.carry : o.hot }; }
+        const L = this.lens; L.ramp = Math.min(o.ramp, L.ramp + 0.5 * dt); L.keep = 0;
+        t.lensUntil = this.time + 0.2;
+        this.elHit(t, o.dps * (1 + L.ramp) * dt, B.hand);
+        if (L.ramp >= o.ramp) this.probe('ll_full');
+        const p = this.pos(t); B.segs = [{ x1: O.x, y1: O.y, x2: p.x, y2: p.y, w: o.w }];
+        return;
+      }
+      let k = 1;
+      if (B.kind === 'mirror') {
+        let a = O;
+        this.mirrors.forEach((m, i) => { segs.push({ x1: a.x, y1: a.y, x2: m.x, y2: m.y, k: 1 + o.refr * i }); a = m; });
+        const last = segs[segs.length - 1], L = Math.hypot(last.x2 - last.x1, last.y2 - last.y1) || 1;
+        segs.push({ x1: a.x, y1: a.y, x2: a.x + (last.x2 - last.x1) / L * 220, y2: Math.min(a.y + (last.y2 - last.y1) / L * 220, 0), k: 1 + o.refr * this.mirrors.length });
+        this.probe('lm_path', this.mirrors.length);
+      } else {
+        let tx = B.x, ty = B.y;
+        if (B.auto) { const t = this.elemTarget(); if (!t) { this.beam = null; return; } const p = this.pos(t); tx = p.x; ty = p.y; k = 0.5; }
+        const L = Math.hypot(tx, ty) || 1, ux = tx / L, uy = ty / L;
+        if (o.fan && !B.auto) {
+          segs.push({ x1: O.x, y1: O.y, x2: tx, y2: ty, k: 1 });
+          for (const an of [-0.32, 0, 0.32]) { const c = Math.cos(an), s_ = Math.sin(an), dx = ux * c - uy * s_, dy = ux * s_ + uy * c; segs.push({ x1: tx, y1: ty, x2: tx + dx * 320, y2: ty + dy * 320, k: 1 }); }
+        } else segs.push({ x1: O.x, y1: O.y, x2: ux * 560, y2: uy * 560, k: 1 });
+      }
+      B.segs = segs.map(q => Object.assign({ w: o.w }, q));
+      let n = 0;
       for (const e of this.enemies) {
         if (e.hp <= 0 || this.cloaked(e) || e.giant) continue;
-        const p = this.pos(e), along = p.x * ux + p.y * uy;
-        if (along < 0 || Math.abs(p.x * uy - p.y * ux) > o.w + e.r) continue;
-        if (this.time - (e.beamSeen || -9) > 0.25) e.beamT = 0; // Strahl war weg: Aufbau beginnt neu
-        e.beamSeen = this.time; e.beamT = (e.beamT || 0) + dt;
-        this.elHit(e, o.dps * (1 + Math.min(o.ramp, 0.2 * e.beamT)) * k * dt, this.beam.hand);
+        const p = this.pos(e); let best = 0;
+        for (const q of segs) {
+          const vx = q.x2 - q.x1, vy = q.y2 - q.y1, L2 = vx * vx + vy * vy || 1, t = Math.max(0, Math.min(1, ((p.x - q.x1) * vx + (p.y - q.y1) * vy) / L2));
+          if (Math.hypot(p.x - q.x1 - vx * t, p.y - q.y1 - vy * t) <= o.w + e.r) best = Math.max(best, q.k);
+        }
+        if (!best) continue;
+        n++;
+        let ramp = 0;
+        if (o.ramp) { if (this.time - (e.beamSeen || -9) > 0.25) e.beamT = 0; e.beamSeen = this.time; e.beamT = (e.beamT || 0) + dt; ramp = Math.min(o.ramp, 0.2 * e.beamT); } // Strahl war weg: Aufbau beginnt neu
+        this.elHit(e, o.dps * best * (1 + ramp) * k * dt, B.hand);
         if (o.blind && (e.type === 'shooter' || e.type === 'mender') && e.hp > 0 && !(e.blindCd > this.time)) { e.stunUntil = Math.max(e.stunUntil || 0, this.time + o.blind); e.blindCd = this.time + 3; }
       }
+      if (B.kind === 'prism') this.probe('lp_hit', n);
+      if (B.kind === 'mirror') {
+        // Linsen: jeder Spiegel feuert auf das nächste Schiff
+        B.lens = [];
+        if (o.lens) for (const m of this.mirrors) {
+          let t = null, td = 90; for (const e of this.enemies) { if (e.hp <= 0 || this.cloaked(e)) continue; const p = this.pos(e), d = Math.hypot(p.x - m.x, p.y - m.y); if (d < td) { td = d; t = e; } }
+          if (t) { this.elHit(t, o.lens * dt, B.hand); const p = this.pos(t); B.lens.push({ x1: m.x, y1: m.y, x2: p.x, y2: p.y }); }
+        }
+        // Lichtkäfig: Schiffe innerhalb der Spiegel sind gefangen
+        if (o.cage && this.mirrors.length >= 3) {
+          const M = this.mirrors; let caged = 0;
+          for (const e of this.enemies) {
+            if (e.hp <= 0 || e.type === 'boss' || e.host || e.giant) continue;
+            const p = this.pos(e); let inside = false;
+            for (let i = 0, j = M.length - 1; i < M.length; j = i++) if ((M[i].y > p.y) !== (M[j].y > p.y) && p.x < (M[j].x - M[i].x) * (p.y - M[i].y) / (M[j].y - M[i].y) + M[i].x) inside = !inside;
+            if (!inside) continue;
+            if (!(e.cageCd > this.time)) { e.stunUntil = Math.max(e.stunUntil || 0, this.time + 2); e.cageCd = this.time + 6; e.cagedUntil = this.time + 2; }
+            if (e.cagedUntil > this.time) caged++;
+          }
+          this.probe('lm_cage', caged);
+        }
+      }
+    }
+    // Brennglas-Ziel stirbt: Probe bei vollem Aufbau, Sonnenfeuer springt weiter
+    lensDeath(e) {
+      const o = this.s.el, L = this.lens; if (!L || !o || o.form !== 'lens') return;
+      const full = L.ramp >= o.ramp;
+      if (full && e.type === 'boss' && !e.child) this.probe('ll_boss');
+      if (full && o.sun) {
+        const p = this.pos(e);
+        for (const n of this.enemies) { if (n === e || n.hp <= 0) continue; const q = this.pos(n); if (Math.hypot(q.x - p.x, q.y - p.y) < 55 + n.r) this.elHit(n, o.dps * 4, this.beam ? this.beam.hand : true); }
+        if (this.fxOn) this.fx.push({ k: 'fireball', x: p.x, y: p.y, r: 55, t: 0, col: 'light' });
+        this.lens = { t: null, ramp: 0, carry: L.ramp / 2 };
+      } else this.lens = { t: null, ramp: 0, carry: null };
     }
 
     // ---------- Spieleraktionen ----------
@@ -1850,7 +2196,7 @@
         }
         const contact = WALL_R + e.r * 0.3;
         if (e.type === 'boss') {
-          const fz = e.frostUntil > this.time ? 0.5 : 1; // Frostlanze: Bosse halb so schnell, auch ihre Fähigkeiten
+          const fz = e.frostHard > this.time ? 0 : e.frostUntil > this.time ? 0.5 : 1; // Eis: Bosse halb so schnell, auch ihre Fähigkeiten (Nullpunkt: ganz angehalten)
           // Wut: je länger der Kampf dauert, desto härter schlägt der Boss zu (+100 % alle 90 s)
           e.fightT = (e.fightT || 0) + dt; if (e.dmg0 == null) e.dmg0 = e.dmg;
           e.dmg = e.dmg0 * (1 + e.fightT / P.bossWrath) * (1 + 0.3 * (e.heat || 0));
@@ -2467,6 +2813,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.31.2'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.32.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

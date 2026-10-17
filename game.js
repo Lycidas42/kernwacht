@@ -289,9 +289,15 @@
     { id: 'bulwark', when: r => r.enemies.some(e => e.type === 'bulwark'), txt: '<b>Schildträger</b><br>Der Frontschild muss erst brechen und lädt sich ohne Treffer wieder auf. Dauerfeuer hilft.' },
     { id: 'phantom', when: r => r.enemies.some(e => e.type === 'phantom'), txt: '<b>Phantom</b><br>Tarnt sich zeitweise. Das Modul Zielerfassung macht Tarnung wirkungslos.' },
     { id: 'bomb', when: r => r.enemies.some(e => e.type === 'bomb'), txt: '<b>Bombe</b><br>Fliegt direkt auf die Kanone zu. Die Kanone schießt Bomben immer zuerst.' },
-    { id: 'el_fire', when: r => r.s.el && r.s.el.k === 'fire', txt: '<b>Element Feuer</b><br>Der Knopf mit der 4 macht den Feuerball scharf, dann tippst du ins Feld. Ein zweiter Tipp auf den Knopf wirft ihn automatisch.' },
-    { id: 'el_ice', when: r => r.s.el && r.s.el.k === 'ice', txt: '<b>Element Eis</b><br>Der Knopf mit der 4 schießt die Frostlanze auf das markierte Ziel und friert es ein. Markiere vorher, was gestoppt werden soll: Heiler, Bomben oder den Boss.' },
-    { id: 'el_light', when: r => r.s.el && r.s.el.k === 'light', txt: '<b>Element Licht</b><br>Tippe den Knopf mit der 4 an, dann lege den Finger aufs Feld und ziehe: Der Strahl folgt dir. Lange drücken lässt ihn selbst zielen.' },
+    { id: 'el_fire', when: r => r.s.el && r.s.el.form === 'ball', txt: '<b>Element Feuer</b><br>Der Knopf mit der 4 macht den Feuerball scharf, dann tippst du ins Feld. Ein zweiter Tipp auf den Knopf wirft ihn automatisch.' },
+    { id: 'el_ice', when: r => r.s.el && r.s.el.form === 'lance', txt: '<b>Element Eis</b><br>Der Knopf mit der 4 schießt die Frostlanze auf das markierte Ziel und friert es ein. Markiere vorher, was gestoppt werden soll: Heiler, Bomben oder den Boss.' },
+    { id: 'el_wall', when: r => r.s.el && r.s.el.form === 'wall', txt: '<b>Flammenwand</b><br>Knopf mit der 4 antippen, dann eine Linie ins Feld ziehen, am besten quer zur Flugbahn. Ein zweiter Tipp auf den Knopf setzt sie automatisch.' },
+    { id: 'el_meteor', when: r => r.s.el && r.s.el.form === 'meteor', txt: '<b>Meteor</b><br>Knopf mit der 4 antippen, dann ins Feld tippen. Der Einschlag kommt nach 1,5 s: Ziele dorthin, wo die Schiffe dann sind.' },
+    { id: 'el_nova', when: r => r.s.el && r.s.el.form === 'nova', txt: '<b>Frostnova</b><br>Der Knopf mit der 4 friert alle Schiffe rund um die Kanone ein. Heb sie dir für Momente auf, in denen es eng wird.' },
+    { id: 'el_storm', when: r => r.s.el && r.s.el.form === 'storm', txt: '<b>Eissturm</b><br>Knopf mit der 4 antippen, dann ins Feld tippen. Schiffe, die 3 s im Sturm bleiben, frieren ein.' },
+    { id: 'el_lens', when: r => r.s.el && r.s.el.form === 'lens', txt: '<b>Brennglas</b><br>Markiere ein Ziel und tippe den Knopf mit der 4 an: Der Strahl bleibt darauf und wird immer heißer. Ideal gegen Bosse.' },
+    { id: 'el_mirror', when: r => r.s.el && r.s.el.form === 'mirror', txt: '<b>Spiegelfeld</b><br>Knopf mit der 4 schaltet das Spiegelfeld ein. Jeder Tipp ins Feld setzt einen Spiegel, der Strahl läuft über alle Spiegel.' },
+    { id: 'el_light', when: r => r.s.el && r.s.el.form === 'prism', txt: '<b>Element Licht</b><br>Tippe den Knopf mit der 4 an, dann lege den Finger aufs Feld und ziehe: Der Strahl folgt dir. Lange drücken lässt ihn selbst zielen.' },
   ];
   let tipT = 0;
   if (!meta.tips && (meta.runs || 0) > 20) meta.tips = { mark: 1, buy: 1, strike: 1, boss: 1, freeze: 1, over: 1 }; // erfahrene Spieler: Grundlagen-Tipps überspringen
@@ -591,10 +597,12 @@
     if (run.abilityReady('freeze') && run.hp < run.s.maxHp * 0.35 && run.enemies.length > 3) run.useAbility('freeze');
     if (run.abilityReady('over') && (run.bossAlive() || run.enemies.length > 12)) run.useAbility('over');
     const o = run.s.el;
-    if (o && run.elemReady() && run.enemies.some(e => e.hp > 0)) {
-      if (o.k === 'fire' && (run.enemies.length >= 4 || run.bossAlive())) run.useElem(null, null, false);
-      else if (o.k === 'ice') run.useElem(null, null, false);
-      else if (o.k === 'light' && !run.beam && run.beamE >= o.dur) run.beamAuto(false);
+    if (o && run.enemies.some(e => e.hp > 0)) {
+      if (o.form === 'mirror') { if ((!run.mirrorMode || !run.mirrors.length) && run.beamE >= o.dur) run.mirrorAuto(false); }
+      else if (o.k === 'light') { if (!run.beam && run.beamE >= o.dur) run.useElem(null, null, false); }
+      else if (!run.elemReady()) {}
+      else if (o.form === 'nova') { if (run.enemies.filter(e => e.hp > 0 && e.dist < o.r).length >= 3 || run.hp < run.s.maxHp * 0.4) run.useElem(null, null, false); }
+      else if (o.form === 'lance' || run.enemies.length >= 4 || run.bossAlive()) run.useElem(null, null, false);
     }
   }
   let toastT = 0;
@@ -778,7 +786,7 @@
     { k: 'dot', name: 'Gift & Feuer', hit: () => 0, rate: () => 'Dauer', on: s => !!(s.K && (s.K('p_poison') || s.K('a_toxin') || s.K('a_burn') || s.K('t_quake'))) },
     { k: 'skill', name: 'Kommandant', hit: () => 0, rate: () => 'Skills', on: s => !!(s.K && ['a_drones', 'a_barrage', 't_hole', 'b_reflect', 'p_charge', 'p_exec', 'x_shrap'].some(id => s.K(id))) },
     { k: 'mod', name: 'Module (direkt)', hit: () => 0, rate: () => 'passiv', on: s => Object.keys(s.mod || {}).length > 0 },
-    { k: 'elem', name: 'Element', hit: s => s.el ? s.el.dmg || s.el.dps || 0 : 0, rate: s => !s.el ? '–' : s.el.k === 'fire' ? s.el.ammo + ' Ladungen' : s.el.k === 'ice' ? 'alle ' + dec(s.el.cd, 0) + ' s' : 'Strahl', on: s => !!s.el },
+    { k: 'elem', name: 'Element', hit: s => s.el ? s.el.dmg || s.el.dps || 0 : 0, rate: s => !s.el ? '–' : s.el.form === 'ball' ? s.el.ammo + ' Ladungen' : s.el.k === 'light' ? 'Strahl' : 'alle ' + dec(s.el.cd, 0) + ' s', on: s => !!s.el },
   ];
   let statEls = null;
   // Schadensbeitrag eines Moduls: gemessene DPS (10 s) und Anteil am Gesamtschaden des Laufs
@@ -843,7 +851,7 @@
     const sm = sb.querySelector('.smode'), tap = meta.strikeMode !== 'btn';
     if (sm.textContent !== (tap ? 'Feld' : 'Knopf')) { sm.textContent = tap ? 'Feld' : 'Knopf'; sb.classList.toggle('aim', tap); }
     $('hint').hidden = !armed;
-    if (armed) $('hint').textContent = HINT[armed];
+    if (armed) $('hint').textContent = armed === 'elem' || armed === 'wall' ? ELEM_HINT[run.s.el.form] || '' : HINT[armed];
     for (const id of ['freeze', 'over']) {
       const b = $('ab-' + id), un = run.abilityUnlocked(id);
       b.hidden = !un; if (!un) continue;
@@ -857,33 +865,39 @@
     updateElemBtn();
   }
   // ---------- Element (vierter Knopf) ----------
-  // Feuer: Knopf macht scharf, Tipp ins Feld wirft; zweiter Tipp auf den Knopf wirft automatisch.
-  // Eis: ein Tipp, trifft das markierte Ziel. Licht: Knopf schaltet den Strahl bereit, dann Finger aufs Feld und ziehen;
-  // lange drücken lässt den Strahl selbst zielen (halber Schaden).
-  let elemLp = 0, elemLpDone = false, beamPtr = null;
+  // Je nach Form: Feuerball, Meteor, Eissturm: Knopf macht scharf, Tipp ins Feld setzt; zweiter Tipp auf den Knopf zielt automatisch.
+  // Flammenwand: scharf machen, dann Linie ziehen. Frostlanze, Frostnova: ein Tipp. Prismastrahl: Knopf schaltet bereit, Finger führt;
+  // lange drücken zielt selbst (halber Schaden). Brennglas: Tipp an/aus. Spiegelfeld: Tipp an/aus, Tipps ins Feld setzen Spiegel.
+  let elemLp = 0, elemLpDone = false, beamPtr = null, wallPtr = null;
+  const TAP_FORMS = { ball: 1, meteor: 1, storm: 1 };
+  const ELEM_HINT = { ball: 'Tipp ins Feld: Feuerball werfen. Knopf: automatisch', meteor: 'Tipp ins Feld: Meteor rufen, er schlägt nach 1,5 s ein. Knopf: automatisch', storm: 'Tipp ins Feld: Eissturm setzen. Knopf: automatisch', wall: 'Linie ins Feld ziehen: Flammenwand. Knopf: automatisch' };
   function updateElemBtn() {
     const b = $('ab-elem'), o = run.s.el;
-    $('stage').classList.toggle('beam', armed === 'beam');
+    if (o && o.form === 'mirror') { if (run.mirrorMode && !armed) armed = 'mirror'; if (!run.mirrorMode && armed === 'mirror') armed = null; }
+    $('stage').classList.toggle('beam', armed === 'beam' || armed === 'wall');
     b.hidden = !o; if (!o) return;
-    const E = C.ELEMENTS[o.k];
-    if (b.dataset.k !== o.k) { b.dataset.k = o.k; b.style.setProperty('--glow', E.col); b.querySelector('.ring').setAttribute('stroke', E.col); b.querySelector('.nm').textContent = E.name; b.setAttribute('aria-label', C.ELEM_FORMS[o.k].find(f => f.id === o.form).name); }
+    const E = C.ELEMENTS[o.k], key = o.k + ':' + o.form;
+    if (b.dataset.k !== key) { b.dataset.k = key; b.style.setProperty('--glow', E.col); b.querySelector('.ring').setAttribute('stroke', E.col); b.querySelector('.nm').textContent = E.name; b.setAttribute('aria-label', C.ELEM_FORMS[o.k].find(f => f.id === o.form).name); }
     let frac, txt;
-    if (o.k === 'fire') { const n = Math.floor(run.elemAmmo || 0); frac = n >= o.ammo ? 1 : (run.elemAmmo || 0) - n; txt = armed === 'elem' ? 'Ziel' : n + '/' + o.ammo; }
-    else if (o.k === 'ice') { frac = 1 - run.elemCd / o.cd; txt = run.elemCd > 0 ? Math.ceil(run.elemCd) + ' s' : 'bereit'; }
-    else { frac = (run.beamE || 0) / o.dur; txt = run.beam ? 'Strahl' : armed === 'beam' ? 'Feld' : Math.floor(frac * 100) + ' %'; }
+    if (o.form === 'ball') { const n = Math.floor(run.elemAmmo || 0); frac = n >= o.ammo ? 1 : (run.elemAmmo || 0) - n; txt = armed === 'elem' ? 'Ziel' : n + '/' + o.ammo; }
+    else if (o.k !== 'light') { frac = 1 - run.elemCd / o.cd; txt = armed === 'elem' ? 'Ziel' : armed === 'wall' ? 'Linie' : run.elemCd > 0 ? Math.ceil(run.elemCd) + ' s' : 'bereit'; }
+    else { frac = (run.beamE || 0) / o.dur; txt = run.beam ? 'Strahl' : armed === 'beam' ? 'Feld' : armed === 'mirror' ? run.mirrors.length + '/' + o.mirrors : Math.floor(frac * 100) + ' %'; }
     setRing(b, frac);
-    b.classList.toggle('ready', run.elemReady()); b.classList.toggle('armed', armed === 'elem' || armed === 'beam'); b.classList.toggle('active', !!run.beam);
+    b.classList.toggle('ready', run.elemReady()); b.classList.toggle('armed', ['elem', 'beam', 'wall', 'mirror'].includes(armed)); b.classList.toggle('active', !!run.beam);
     b.querySelector('.st').textContent = txt;
   }
   function elemPress() {
     if (!runAlive() || !run.s.el) return;
-    const k = run.s.el.k;
-    if (k === 'fire') {
-      if (armed === 'elem') { armed = null; if (!fire('elem')) toast('Kein Ziel in Sicht.', 1500); return; }
+    const o = run.s.el, f = o.form;
+    if (TAP_FORMS[f] || f === 'wall') {
+      const mode = f === 'wall' ? 'wall' : 'elem';
+      if (armed === mode) { armed = null; if (!fire('elem')) toast('Kein Ziel in Sicht.', 1500); return; }
       if (!canArm('elem')) { A.play('hurt'); return; }
-      armed = 'elem'; A.play('click'); return;
+      armed = mode; A.play('click'); return;
     }
-    if (k === 'ice') { armed = null; if (!run.useElem(null, null, true)) A.play('hurt'); return; }
+    if (o.k === 'ice') { armed = null; if (!run.useElem(null, null, true)) A.play('hurt'); return; }
+    if (f === 'lens') { armed = null; if (run.lensToggle(true)) A.play(run.beam ? 'beam' : 'click'); else A.play('hurt'); return; }
+    if (f === 'mirror') { const on = !run.mirrorMode; run.setMirrorMode(on, true); armed = on ? 'mirror' : null; A.play('click'); return; }
     if (run.beam && run.beam.auto) { run.beam = null; return; } // selbstzielender Strahl: Tipp beendet ihn
     armed = armed === 'beam' ? null : 'beam'; A.play('click');
   }
@@ -891,18 +905,18 @@
     const b = $('ab-elem');
     b.addEventListener('pointerdown', () => {
       elemLpDone = false; clearTimeout(elemLp);
-      if (run && run.s.el && run.s.el.k === 'light') elemLp = setTimeout(() => { elemLpDone = true; if (runAlive() && run.beamAuto(true)) { armed = null; A.play('beam'); } else A.play('hurt'); }, 500);
+      if (run && run.s.el && run.s.el.form === 'prism') elemLp = setTimeout(() => { elemLpDone = true; if (runAlive() && run.beamAuto(true)) { armed = null; A.play('beam'); } else A.play('hurt'); }, 500);
     });
     for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(elemLp));
     b.addEventListener('contextmenu', ev => ev.preventDefault());
     b.addEventListener('click', () => { if (elemLpDone) { elemLpDone = false; return; } elemPress(); });
   }
-  const HINT = { strike: 'Tipp ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen', elem: 'Tipp ins Feld: Feuerball werfen. Knopf: automatisch', beam: 'Finger aufs Feld legen und ziehen: Strahl führen' };
-  function canArm(id) { return runAlive() && (id === 'strike' ? run.charge >= 1 : id === 'elem' ? run.elemReady() : id === 'beam' ? !!(run.s.el && run.s.el.k === 'light') : run.abilityReady(id)); }
+  const HINT = { strike: 'Tipp ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen', beam: 'Finger aufs Feld legen und ziehen: Strahl führen', mirror: 'Tipp ins Feld: Spiegel setzen. Knopf: Spiegelfeld aus' };
+  function canArm(id) { return runAlive() && (id === 'strike' ? run.charge >= 1 : id === 'elem' || id === 'wall' ? run.elemReady() : id === 'beam' ? !!(run.s.el && run.s.el.form === 'prism') : id === 'mirror' ? !!(run.s.el && run.s.el.form === 'mirror') : run.abilityReady(id)); }
   function fire(id, w) {
     if (!runAlive()) return false;
     if (id === 'strike') { if (!w || !run.strike(w.x, w.y)) return false; A.play('strike'); return true; }
-    if (id === 'elem') return run.useElem(w ? w.x : null, w ? w.y : null, true);
+    if (id === 'elem') { const f = run.s.el && run.s.el.form; if (!run.useElem(w ? w.x : null, w ? w.y : null, true)) return false; if (f === 'wall') A.play('fireball'); if (f === 'storm') A.play('lance'); return true; }
     if (run.useAbility(id)) { A.play(id); return true; }
     return false;
   }
@@ -1268,13 +1282,14 @@
   let elSel = null;
   function elLayout(id) {
     const pos = { hub: { x: 0, y: 0 } }, K = C.ELEM_SKILLS.filter(k => k.el === id);
-    const kids = par => K.filter(k => k.par === par);
+    const kids = par => K.filter(k => k.par === par && !k.cap);
     const stem = K.find(k => !k.form && !k.par);
     if (stem) { pos[stem.id] = { x: 0, y: 72 }; kids(stem.id).forEach((k, i) => (pos[k.id] = { x: i ? 72 : -72, y: 134 })); }
     C.ELEM_FORMS[id].forEach((f, i) => {
-      const fx = (i - 1) * 112; pos['form:' + f.id] = { x: fx, y: 244 };
+      const fx = (i - 1) * 128; pos['form:' + f.id] = { x: fx, y: 244 };
       const r = K.find(k => k.form === f.id && !k.par);
-      if (r) { pos[r.id] = { x: fx, y: 316 }; kids(r.id).forEach((k, j) => (pos[k.id] = { x: fx + (j ? 38 : -38), y: 382 })); }
+      if (r) { pos[r.id] = { x: fx, y: 316 }; kids(r.id).forEach((k, j) => (pos[k.id] = { x: fx + (j ? 36 : -36), y: 382 })); }
+      const cap = K.find(k => k.form === f.id && k.cap); if (cap) pos[cap.id] = { x: fx, y: 452 };
     });
     return pos;
   }
@@ -1284,13 +1299,15 @@
     const K = C.ELEM_SKILLS.filter(k => k.el === id);
     for (const k of K) {
       const p = pos[k.id]; if (!p) continue;
+      // Schlussstein: gestrichelt von beiden Ästen der Form
+      if (k.cap) { for (const q of K.filter(x => x.par === k.par && !x.cap)) line(pos[q.id], p, C.elLv(meta, k.id) > 0, true); continue; }
       const from = k.par ? pos[k.par] : k.form ? pos['form:' + k.form] : pos.hub;
       line(from, p, C.elLv(meta, k.id) > 0, false);
     }
     // Schwelle zum Formbereich: von den Ästen des Stamms zu einer Leiste, von dort zu den Formsternen
     const sx = K.filter(k => !k.form && k.par).map(k => pos[k.id]);
     for (const q of sx) line(q, { x: q.x, y: 196 }, gate, true);
-    line({ x: -112, y: 196 }, { x: 112, y: 196 }, gate, true);
+    line({ x: -128, y: 196 }, { x: 128, y: 196 }, gate, true);
     C.ELEM_FORMS[id].forEach(f => line({ x: pos['form:' + f.id].x, y: 196 }, pos['form:' + f.id], gate && f.id === form, true));
     out.push(`<text x="0" y="188" text-anchor="middle" font-size="8.5" fill="${gate ? col : '#9fb3c8'}" letter-spacing=".5">FORM AB ${C.ELEM_FORM_AT} PUNKTEN IM STAMM</text>`);
     // Kern
@@ -1299,24 +1316,25 @@
     // Formsterne
     C.ELEM_FORMS[id].forEach(f => {
       const p = pos['form:' + f.id], on = f.id === form, rad = 20;
-      const cls = ['skn', on ? 'own' : '', f.soon || !on && !gate ? 'lock' : '', elSel === 'form:' + f.id ? 'sel' : ''].join(' ');
+      const cls = ['skn', on ? 'own' : '', !on ? 'lock' : '', elSel === 'form:' + f.id ? 'sel' : ''].join(' ');
       const hex = [0, 1, 2, 3, 4, 5].map(i => { const an = Math.PI / 3 * i + Math.PI / 6; return (Math.cos(an) * rad).toFixed(1) + ',' + (Math.sin(an) * rad).toFixed(1); }).join(' ');
-      out.push(`<g class="${cls}" data-es="form:${f.id}" transform="translate(${p.x} ${p.y})" ${on ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}><circle class="halo" r="${rad + 9}" fill="none"/><polygon class="bg" points="${hex}" stroke="${col}" ${on ? `fill="${col}" fill-opacity=".3"` : ''}/><text y="4" text-anchor="middle" font-size="12" font-weight="700" fill="${on ? '#fff' : col}">${on ? '✓' : f.soon ? '…' : ''}</text>`
+      out.push(`<g class="${cls}" data-es="form:${f.id}" transform="translate(${p.x} ${p.y})" ${on ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}><circle class="halo" r="${rad + 9}" fill="none"/><polygon class="bg" points="${hex}" stroke="${col}" ${on ? `fill="${col}" fill-opacity=".3"` : ''}/><text y="4" text-anchor="middle" font-size="12" font-weight="700" fill="${on ? '#fff' : col}">${on ? '✓' : ''}</text>`
         + `<text y="${rad + 14}" text-anchor="middle" font-size="9.5" fill="${on ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${f.name}</text></g>`);
     });
     // Knoten
     for (const k of K) {
       const p = pos[k.id]; if (!p) continue;
-      const l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= k.max, rad = 15;
+      const mx = C.elKMax(k), l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= mx, rad = k.cap ? 20 : 15;
       const todo = !full && (open || l > 0) && can;
       const cls = ['skn', l ? 'own' : '', can ? 'can' : '', todo ? 'todo' : '', full ? 'full' : '', !l && !open ? 'lock' : '', elSel === k.id ? 'sel' : ''].join(' ');
       const C2 = 2 * Math.PI * (rad + 4);
       out.push(`<g class="${cls}" data-es="${k.id}" transform="translate(${p.x} ${p.y})" ${l ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}><circle class="halo" r="${rad + 9}" fill="none"/>${todo ? `<circle class="todoring" r="${rad + 10}"/>` : ''}`
-        + `<circle r="${rad + 4}" fill="none" stroke="${col}" stroke-opacity=".2" stroke-width="2.5"/><circle r="${rad + 4}" fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="${(C2 * l / k.max).toFixed(1)} ${C2.toFixed(1)}" transform="rotate(-90)"/>`
-        + `<circle class="bg" r="${rad}" stroke="${col}" ${l ? `fill="${col}" fill-opacity=".18"` : ''}/><text y="4" text-anchor="middle" font-size="10" font-weight="700" fill="${l ? '#fff' : col}">${l}/${k.max}</text>`
+        + (k.cap ? `<polygon class="bg" points="${[0, 1, 2, 3, 4, 5].map(i => { const an = Math.PI / 3 * i; return (Math.cos(an) * rad).toFixed(1) + ',' + (Math.sin(an) * rad).toFixed(1); }).join(' ')}" stroke="${col}" ${l ? `fill="${col}" fill-opacity=".35"` : ''}/><text y="5" text-anchor="middle" font-size="13" font-weight="700" fill="${l ? '#fff' : col}">${l ? '✓' : '★'}</text>`
+          : `<circle r="${rad + 4}" fill="none" stroke="${col}" stroke-opacity=".2" stroke-width="2.5"/><circle r="${rad + 4}" fill="none" stroke="${col}" stroke-width="2.5" stroke-dasharray="${(C2 * l / mx).toFixed(1)} ${C2.toFixed(1)}" transform="rotate(-90)"/>`
+          + `<circle class="bg" r="${rad}" stroke="${col}" ${l ? `fill="${col}" fill-opacity=".18"` : ''}/><text y="4" text-anchor="middle" font-size="10" font-weight="700" fill="${l ? '#fff' : col}">${l}/${mx}</text>`)
         + `<text y="${rad + 15}" text-anchor="middle" font-size="9.5" fill="${l ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${k.name}</text></g>`);
     }
-    return `<svg class="elsvg" viewBox="-196 -40 392 466" xmlns="http://www.w3.org/2000/svg">${out.join('')}</svg>`;
+    return `<svg class="elsvg" viewBox="-212 -40 424 532" xmlns="http://www.w3.org/2000/svg">${out.join('')}</svg>`;
   }
   // Detail zum gewählten Stern: Kern (Element und Fähigkeit), Form oder Knoten
   function elDetail(id) {
@@ -1324,26 +1342,27 @@
     if (!elSel || elSel === 'hub') {
       const F = C.ELEM_FORMS[id].find(f => f.id === form);
       return `<div class="hd"><b>${X.name}: ${F.name}</b><span class="tag">Fähigkeit</span></div><small>${F.desc}</small><small class="nx"><b>Bedienung:</b> ${F.how}</small>`
-        + `<small>Tippe einen Stern an. Ein Knoten braucht seinen Vorgänger. Ab ${C.ELEM_FORM_AT} Punkten im Stamm öffnet sich die gewählte Form mit eigenen Knoten.</small>`;
+        + `<small>Tippe einen Stern an. Ein Knoten braucht seinen Vorgänger. Ab ${C.ELEM_FORM_AT} Punkten im Stamm öffnet sich die gewählte Form mit eigenen Knoten, ab ${C.ELEM_CAP_AT} Punkten in der Form ihr Schlussstein. Die Form wechselst du über ihren Sechseck-Stern.</small>`;
     }
     if (elSel.startsWith('form:')) {
       const f = C.ELEM_FORMS[id].find(x => x.id === elSel.slice(5)); if (!f) return '';
       const on = f.id === form;
-      const btn = on || f.soon ? '' : inRun ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<div class="skbtns"><button id="elForm">Form wählen</button><small>Kostenlos, die Punkte der alten Form werden frei</small></div>`;
-      return `<div class="hd"><b>${f.name}</b><span class="tag"><span>Form</span>${on ? ' · <span>gewählt</span>' : f.soon ? ' · <span>folgt bald</span>' : ''}</span></div><small>${f.desc}</small>${f.how ? `<small class="nx"><b>Bedienung:</b> ${f.how}</small>` : ''}${btn}`;
+      const btn = on ? '' : inRun ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<div class="skbtns"><button id="elForm">Form wählen</button><small>Kostenlos, die Punkte der alten Form werden frei</small></div>`;
+      return `<div class="hd"><b>${f.name}</b><span class="tag"><span>Form</span>${on ? ' · <span>gewählt</span>' : ''}</span></div><small>${f.desc}</small>${f.how ? `<small class="nx"><b>Bedienung:</b> ${f.how}</small>` : ''}${btn}`;
     }
     const k = C.ELEM_SKILLS.find(x => x.id === elSel); if (!k) return '';
-    const l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= k.max, ref = !inRun && C.elCanRefund(meta, k.id);
-    const tag = [k.form ? 'Form ' + C.ELEM_FORMS[id].find(f => f.id === k.form).name : 'Stamm', 'Stufe ' + l + '/' + k.max];
+    const mx = C.elKMax(k), l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= mx, ref = !inRun && C.elCanRefund(meta, k.id);
+    const tag = [k.form ? 'Form ' + C.ELEM_FORMS[id].find(f => f.id === k.form).name : 'Stamm', k.cap ? 'Schlussstein' : 'Stufe ' + l + '/' + mx];
     let req = '';
     if (!l && !open) {
       if (k.par && !C.elLv(meta, k.par)) req = `Braucht zuerst „${C.ELEM_SKILLS.find(x => x.id === k.par).name}“`;
       else if (k.form && k.form !== form) req = 'Gehört zu einer anderen Form';
-      else if (k.form) req = `Braucht ${C.ELEM_FORM_AT} Punkte im Stamm (jetzt ${C.elStemPts(meta, id)})`;
+      else if (k.form && C.elStemPts(meta, id) < C.ELEM_FORM_AT) req = `Braucht ${C.ELEM_FORM_AT} Punkte im Stamm (jetzt ${C.elStemPts(meta, id)})`;
+      else if (k.cap) req = `Braucht ${C.ELEM_CAP_AT} Punkte in der Form (jetzt ${C.elFormPts(meta, id, k.form)})`;
     } else if (!full && !can && pts < 1) req = 'Kein freier Elementpunkt';
     const why = l > 0 && !ref ? (inRun ? 'Zurücknehmen nach dem Lauf' : 'Andere Knoten hängen davon ab') : '';
     return `<div class="hd"><b>${k.name}</b><span class="tag">${tag.map(t => `<span>${t}</span>`).join(' · ')}</span></div><small>${k.desc(Math.max(1, l))}</small>${l && !full ? `<small class="nx">Nächste Stufe: ${k.desc(l + 1)}</small>` : ''}${req ? `<small class="req">${req}</small>` : ''}`
-      + `<div class="skbtns">${full ? '' : `<button id="elBuy" ${can ? '' : 'disabled'}>${l ? '+1 Stufe' : 'Lernen'}</button>`}${l ? `<button id="elRef" class="ref" ${ref ? '' : 'disabled'}>−1 Stufe</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
+      + `<div class="skbtns">${full ? '' : `<button id="elBuy" ${can ? '' : 'disabled'}>${k.cap ? 'Wählen' : l ? '+1 Stufe' : 'Lernen'}</button>`}${l ? `<button id="elRef" class="ref" ${ref ? '' : 'disabled'}>${k.cap ? 'Abwählen' : '−1 Stufe'}</button>` : ''}${why ? `<small>${why}</small>` : ''}</div>`;
   }
   function renderElems() {
     const act = C.elActive(meta), inRun = runAlive();
@@ -1359,6 +1378,8 @@
     h += `<div class="elrow"><span>Rang <b>${R.rank}</b></span><span>Freie Punkte: <b>${pts}</b></span></div><div class="bar"><i style="width:${Math.min(100, R.cur / R.need * 100).toFixed(1)}%"></i></div><small>${fmt(R.cur)} / ${fmt(R.need)} Erfahrung bis Rang ${R.rank + 1}</small>`;
     h += ms ? `<small>Meisterschaft: ${ms} Rang über dem vollen Baum · ×${mult(Math.pow(C.ELEM_MASTER_K, ms))} Elementschaden</small>` : `<small>Mit ${C.elTreeMax(id)} Punkten ist der Baum voll. Danach bringt jeder Rang ×1,03 Elementschaden.</small>`;
     h += `<div class="elmap">${elMapSvg(id)}</div><div class="skdet" id="elDet">${elDetail(id)}</div>`;
+    const PR = C.ELEM_PROBES.filter(p => p.el === id), done = PR.filter(p => C.elProbeDone(meta, p.id)).length;
+    h += `<h3>Elementproben · ${done}/${PR.length}</h3><small>Jede Probe gibt einmalig Erfahrung. Sie zählt nur mit der passenden Form.</small><div class="elprobes">${C.ELEM_FORMS[id].map(f => `<div class="elpf"><b>${f.name}</b>${PR.filter(p => p.form === f.id).map(p => { const ok = C.elProbeDone(meta, p.id); return `<div class="elpr${ok ? ' ok' : ''}"><i>${ok ? '✓' : ''}</i><span>${p.name}</span><em>+${fmt(C.PROBE_XP[p.t])}</em></div>`; }).join('')}</div>`).join('')}</div>`;
     h += `<button class="sec" id="elReset" ${inRun || !C.elSpent(meta, id) ? 'disabled' : ''}>Punkte von ${X.name} zurücksetzen</button>${inRun ? '<small>Zurücknehmen und Zurücksetzen gehen nach dem Lauf.</small>' : ''}</div>`;
     $('elBody').innerHTML = h;
     $('elDet').style.setProperty('--c', X.col);
@@ -1371,6 +1392,10 @@
     const fo = $('elForm'); if (fo) fo.addEventListener('click', () => { if (!runAlive() && C.elSetForm(meta, id, elSel.slice(5))) { A.play('buy'); redraw(); } });
     const rs = $('elReset'); if (rs) rs.addEventListener('click', () => { if (runAlive()) return; C.elReset(meta, id); A.play('click'); redraw(); });
   }
+  function probeToast(id) {
+    const p = C.ELEM_PROBES.find(x => x.id === id); if (!p) return;
+    toast(`<b>Elementprobe geschafft</b><br>${p.name} · +${fmt(C.PROBE_XP[p.t])} Erfahrung für ${C.ELEMENTS[p.el].name}`, 4500); save();
+  }
   // Elemente im eigenen Profil
   function elemProfile() {
     const E = meta.elem, any = E && E.xp && Object.values(E.xp).some(v => v > 0);
@@ -1378,7 +1403,7 @@
     const act = C.elActive(meta);
     return '<div class="pelem"><h3>Elemente</h3>' + Object.keys(C.ELEMENTS).map(id => {
       const X = C.ELEMENTS[id], R = C.elRank(meta, id), F = C.ELEM_FORMS[id].find(f => f.id === C.elForm(meta, id));
-      return `<div class="pel${id === act ? ' act' : ''}" style="--c:${X.col}"><span class="ei">${X.icon}</span><b>${X.name}${id === act ? '<span>aktiv</span>' : ''}</b><span class="rk">Rang ${R.rank}</span><small>${F.name} · ${C.elSpent(meta, id)} Punkte verteilt · ${fmt(R.cur)} / ${fmt(R.need)} Erfahrung</small><span></span><div class="bar"><i style="width:${Math.min(100, R.cur / R.need * 100).toFixed(1)}%"></i></div></div>`;
+      return `<div class="pel${id === act ? ' act' : ''}" style="--c:${X.col}"><span class="ei">${X.icon}</span><b>${X.name}${id === act ? '<span>aktiv</span>' : ''}</b><span class="rk">Rang ${R.rank}</span><small>${F.name} · ${C.elSpent(meta, id)} Punkte verteilt · Proben ${C.ELEM_PROBES.filter(p => p.el === id && C.elProbeDone(meta, p.id)).length}/${C.ELEM_PROBES.filter(p => p.el === id).length} · ${fmt(R.cur)} / ${fmt(R.need)} Erfahrung</small><span></span><div class="bar"><i style="width:${Math.min(100, R.cur / R.need * 100).toFixed(1)}%"></i></div></div>`;
     }).join('') + '</div>';
   }
 
@@ -2424,6 +2449,8 @@
     const w = R.toWorld(ev.clientX, ev.clientY);
     if (w.y > -4) return; // unterhalb des Horizonts (Kanone, Boden) gibt es nichts zu treffen
     if (armed === 'beam') { if (run.beamStart(w.x, w.y)) { beamPtr = ev.pointerId; try { $('cv').setPointerCapture(ev.pointerId); } catch (e) {} A.play('beam'); } else A.play('hurt'); return; }
+    if (armed === 'wall') { wallPtr = ev.pointerId; run.wallPreview = { x1: w.x, y1: w.y, x2: w.x, y2: w.y }; try { $('cv').setPointerCapture(ev.pointerId); } catch (e) {} return; }
+    if (armed === 'mirror') { if (run.placeMirror(w.x, w.y)) A.play('mark'); return; }
     if (armed) { if (armed === 'strike') run.markAt(w.x, w.y, true); if (fire(armed, w)) armed = null; }
     // Orbitalschlag geladen: Tippen ins Feld schlägt genau dort ein (außer im Modus „nur Knopf“)
     else if (meta.strikeMode !== 'btn' && canArm('strike')) { run.markAt(w.x, w.y, true); fire('strike', w); }
@@ -2431,13 +2458,25 @@
   });
 
   // Strahl führen: solange der Finger liegt, folgt der Strahl
-  $('cv').addEventListener('pointermove', ev => { if (beamPtr !== ev.pointerId || !run) return; const w = R.toWorld(ev.clientX, ev.clientY); run.beamMove(w.x, w.y); });
-  const beamEnd = ev => { if (beamPtr !== ev.pointerId) return; beamPtr = null; if (run) run.beamStop(); };
+  $('cv').addEventListener('pointermove', ev => {
+    if (!run) return;
+    if (wallPtr === ev.pointerId && run.wallPreview) { const w = R.toWorld(ev.clientX, ev.clientY); run.wallPreview.x2 = w.x; run.wallPreview.y2 = w.y; return; }
+    if (beamPtr !== ev.pointerId) return; const w = R.toWorld(ev.clientX, ev.clientY); run.beamMove(w.x, w.y);
+  });
+  const beamEnd = ev => {
+    if (wallPtr === ev.pointerId) {
+      // Flammenwand: Linie loslassen setzt die Wand (ein kurzer Tipp mit Feuerring legt den Ring)
+      wallPtr = null; const P = run && run.wallPreview; if (!run) return; run.wallPreview = null;
+      if (P && armed === 'wall') { if (run.useElem(P.x1, P.y1, true, P.x2, P.y2)) { armed = null; A.play('fireball'); } else if (Math.hypot(P.x2 - P.x1, P.y2 - P.y1) < 22) toast('Ziehe eine Linie ins Feld.', 1500); }
+      return;
+    }
+    if (beamPtr !== ev.pointerId) return; beamPtr = null; if (run) run.beamStop();
+  };
   $('cv').addEventListener('pointerup', beamEnd); $('cv').addEventListener('pointercancel', beamEnd);
 
   const MARK_NAME = { grunt: 'Jäger', runner: 'Flitzer', brute: 'Koloss', shooter: 'Kanonenboot', boss: 'Boss', mender: 'Heiler', bulwark: 'Schildträger', splitter: 'Splitter', shard: 'Splitter', phantom: 'Phantom', bomb: 'Bombe' };
   // ---------- Schleife ----------
-  const SOUND_OF = { fireball: 'fireball', lance: 'lance', shatter: 'shatter', loot: 'loot', rlaunch: 'rlaunch', cryo: 'cryo', laserhit: 'laserhit', nova: 'nova', eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
+  const SOUND_OF = { fireball: 'fireball', lance: 'lance', shatter: 'shatter', meteor: 'meteor', frostnova: 'freeze', probe: 'loot', loot: 'loot', rlaunch: 'rlaunch', cryo: 'cryo', laserhit: 'laserhit', nova: 'nova', eshot: 'eshot', bonus: 'buy', boom: 'boom', mine: 'mine', shock: 'shock', wave: 'wave', hurt: 'hurt', bossact: 'bossact' };
   let last = performance.now(), uiT = 0, saveT = 0, autoT = 0, dpsT = 0, lastShots = 0;
   function frame(now) {
     const realDt = Math.min(0.25, (now - last) / 1000); last = now;
@@ -2447,7 +2486,7 @@
       while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
       autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); elemRankCheck(); autoBuy(); if (meta.autoCall && !run.queue.length && run.canCallWave()) run.callWave(); }
       dpsT += realDt * speed; if (dpsT >= 1) { dpsT = 0; sampleDps(); }
-      for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); }
+      for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); if (f.k === 'probe') probeToast(f.id); }
       run.fx.length = 0;
       if (run.shots !== lastShots) { lastShots = run.shots; A.play('shot', { over: run.overActive }); }
       A.setIntensity(run.bossAlive() ? 1 : 0.2);

@@ -95,6 +95,7 @@
     cryo() { if (throttle('cryo', 90)) return; osc('triangle', 2400, 1200, 0.12, 0.05); noise(0.15, 0.06, 9000, 4000, 1, null, 'highpass'); },
     laserhit() { const t = ac.currentTime; osc('sawtooth', 90, 40, 0.6, 0.3, t); noise(0.5, 0.4, 3000, 100, 1, t); },
     nova() { const t = ac.currentTime; osc('sine', 400, 50, 0.7, 0.35, t); noise(0.7, 0.3, 5000, 200, 1, t); },
+    meteor() { const t = ac.currentTime; noise(1.1, 0.5, 2600, 50, 0.8, t); osc('sine', 70, 22, 1, 0.55, t); osc('sawtooth', 120, 40, 0.6, 0.12, t); },
     fireball() { const t = ac.currentTime; noise(0.55, 0.32, 1800, 120, 0.8, t); osc('sawtooth', 170, 45, 0.45, 0.14, t); },
     lance() { const t = ac.currentTime; osc('triangle', 3200, 900, 0.18, 0.07, t); noise(0.25, 0.08, 9000, 3000, 1, t, 'highpass'); [2093, 2637].forEach((f, i) => osc('triangle', f, f, 0.3, 0.04, t + 0.08 + i * 0.05)); },
     shatter() { if (throttle('shatter', 90)) return; const t = ac.currentTime; [3000, 4200, 5200].forEach((f, i) => osc('square', f, f * 0.6, 0.05, 0.025, t + i * 0.03)); },

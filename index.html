@@ -257,6 +257,13 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .elsvg { display: block; width: 100%; height: auto; max-height: 62vh; margin: 0 auto; }
 .elsvg text { font-family: inherit; pointer-events: none; }
 #elDet { min-height: 86px; }
+.elprobes { display: grid; gap: 8px; }
+.elpf { display: grid; gap: 3px; }
+.elpf > b { font-size: .8rem; color: var(--c); }
+.elpr { display: grid; grid-template-columns: 16px 1fr auto; gap: 6px; align-items: center; font-size: .78rem; color: var(--ink-dim); }
+.elpr i { width: 14px; height: 14px; border: 1px solid var(--line); border-radius: 3px; font-style: normal; font-size: .7rem; line-height: 13px; text-align: center; color: #120f2a; }
+.elpr.ok { color: var(--ink); } .elpr.ok i { background: var(--c); border-color: var(--c); }
+.elpr em { font-style: normal; font-family: var(--font-num); font-size: .72rem; color: var(--c); }
 .pelem { display: grid; gap: 6px; margin-top: 4px; }
 .pelem h3 { margin: 6px 0 0; }
 .pel { display: grid; grid-template-columns: 26px 1fr auto; gap: 2px 8px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; }

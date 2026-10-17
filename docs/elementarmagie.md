@@ -1,6 +1,6 @@
 # Vorschlag: Elementarmagie
 
-Stand: Phase 1 ist umgesetzt (Version 0.31.0). Phase 2 und 3 sind noch offen. Die defensive Ausrichtung von Eis (Frostnova) kommt mit Phase 2.
+Stand: Phase 1 (0.31.x) und Phase 2 (0.32.0) sind umgesetzt. Offen ist Phase 3: Elementtag im Tageslauf und Feinschliff mit echten Spieldaten.
 
 ## Umsetzung Phase 1 (0.31.0)
 
@@ -42,6 +42,46 @@ Messung (Rekord 160, 4 Fusionen, 6 Läufe je Variante, 14 Punkte im Baum). Der a
 Feuer ist bewusst das offensive Element (Feuerball 6× statt 4× Kanonenschaden, Brandfeld 0,9× statt 0,6× pro Sekunde). Eis zahlt sich zusätzlich über verhinderten Hüllenschaden aus. In der Simulation schützt allerdings auch Feuer stark, weil schnell zerstörte Schiffe keinen Schaden mehr machen. Die klar defensive Form soll in Phase 2 die Frostnova werden. Beim Feuer wirft der Autopilot so gut wie der Bot, weil beide in die dichteste Gruppe zielen; der Autopilot greift nur beim Nachrechnen im Hintergrund.
 
 Erfahrungsausgleich: Eis ×2, Licht ×1,6 (Feuer ×1).
+
+## Umsetzung Phase 2 (0.32.0)
+
+Alle neun Formen, neun Schlusssteine, 27 Elementproben und die Verbindungen zu bestehenden Systemen.
+
+**Baum:** Stamm (8 Punkte), gewählte Form (6 Punkte), Schlussstein (1 Punkt, ab 4 Punkten in der Form). Voller Baum: 15 Punkte. Formwechsel über den Sechseck-Stern der Form, kostenlos außerhalb des Laufs.
+
+| Form | Bedienung | Grundwerte (wie umgesetzt) | Knoten | Schlussstein |
+| --- | --- | --- | --- | --- |
+| Feuerball | scharf machen, ins Feld tippen | 6× Kanonenschaden R 50, Brandfeld 0,9×/s, 2 Ladungen à 10 s | Munitionslager → Flächenbrand, Übersprung | Inferno: jedes weitere Brandfeld an derselben Stelle +50 % |
+| Flammenwand | scharf machen, Linie ziehen | bis 140 lang, 6 s; Berührung: 3 s Brand 1,6×/s, −30 % Tempo; 16 s | Lange Wand → Nachbrennen, Hitzestau (+15 % Schaden je Stufe auf brennende Schiffe) | Feuerring: kurzer Tipp legt einen Ring (R 55) |
+| Meteor | scharf machen, ins Feld tippen | Einschlag nach 1,5 s, 11× R 70, betäubt 1 s, Krater 5 s; 22 s | Einflugschneise (−2 s je Stufe) → Kernbrecher (+20 % Boss je Stufe), Splitterschauer | Sternenfall: 2 weitere Meteore (je 40 %) |
+| Frostlanze | ein Tipp | 6×, friert 3 s, +40 % Schaden auf Gefrorene; 8 s | Eiskette → Splitterregen, Kältesog | Nullpunkt: unter 12 % LP zerspringen sofort; jede 3. Lanze hält Bosse 1 s an |
+| Frostnova | ein Tipp | um die Kanone bis 120: 0,8×, friert 2 s; 18 s | Weite Kälte → Raureif, Kalte Hülle (0,4 % Reparatur je eingefrorenem Schiff und Stufe) | Eiszeit: Zersplittern friert Nachbarn 1 s ein |
+| Eissturm | scharf machen, ins Feld tippen | R 70, 6 s, 0,6×/s; nach 3 s im Feld 2 s eingefroren; 18 s | Dauerfrost → Treibeis, Glatteis | Polarwirbel: zieht Schiffe zur Mitte |
+| Prismastrahl | Strahlmodus, Finger führt; lange drücken: selbstzielend | 1,5×/s, Aufbau bis +100 % | Glühen → Breitband, Blendung | Fächer: Strahl teilt sich hinter dem Finger in drei |
+| Brennglas | Tipp an/aus | 3×/s auf ein Ziel, Aufbau +50 %/s bis +300 % | Hitzepunkt → Nachglühen, Schwachstelle | Sonnenfeuer: Explosion bei vollem Aufbau, halber Aufbau springt weiter |
+| Spiegelfeld | Tipp an/aus, Tipps ins Feld setzen Spiegel | 1,2×/s über alle Spiegel, 3 Spiegel à 15 s | Spiegelkabinett → Brechung, Linsen | Lichtkäfig: ab 3 Spiegeln Schiffe darin 2 s gefangen |
+
+**Verbindungen:** Glutkern verstärkt Brandminen und Nachbeben. Verlangsamte Schiffe (Kryowerfer, Kältebruch, Frostwelle) bekommen ein Viertel des Frostbonus. Überladung lädt die Lichtenergie doppelt so schnell. Das Brennglas nimmt das markierte Ziel, also auch das vom Leitstrahl markierte.
+
+**Elementproben:** je Form drei (leicht 500, mittel 2000, schwer 6000 Erfahrung), insgesamt 27. Sie zählen nur mit der passenden Form, im Element-Fenster als Liste, im Profil als Zähler, im Lauf mit Meldung.
+
+**Erfahrung:** Brennglas bekommt doppelte Erfahrung je Abschuss, weil es nur ein Ziel trifft.
+
+Messung (Rekord 160, 4 Fusionen, 3 Läufe je Variante, voller Baum mit Schlussstein, `node tools/elements.js 3 15`):
+
+| Form | Anteil aktiv | Anteil Autopilot | Hüllenschaden aktiv | Erfahrung je Welle |
+| --- | --- | --- | --- | --- |
+| Feuerball | 27 % | 28 % | −31 % | 26 |
+| Flammenwand | 22 % | 23 % | −47 % | 21 |
+| Meteor | 29 % | 29 % | −50 % | 22 |
+| Frostlanze | 22 % | 14 % | −43 % | 30 |
+| Frostnova | 24 % | 24 % | −65 % | 18 |
+| Eissturm | 19 % | 20 % | −56 % | 30 |
+| Prismastrahl | 16 % | 9 % | −46 % | 23 |
+| Brennglas | 12 % | 11 % | −14 % | 22 |
+| Spiegelfeld | 19 % | 9 % | −36 % | 31 |
+
+Feuer macht den meisten Schaden, Eis schützt die Hülle am stärksten, Licht lohnt sich am meisten bei aktiver Bedienung. Das Brennglas ist auf Bosse ausgelegt; die Messung bildet Bosskämpfe nur zum kleinen Teil ab. Die Hüllenschaden-Werte schwanken zwischen Messungen um etwa 10 bis 15 Prozentpunkte.
 
 ## Problem
 
@@ -201,7 +241,7 @@ Der Kommandant wächst durch Durchhalten (überstandene Wellen). Das Element sol
 Reihenfolge:
 
 1. **Phase 1:** Wahl der Elemente; Feuer, Eis und Licht jeweils mit Stamm und Grundform (Feuerball, Frostlanze, Prismastrahl); Elementar-Erfahrung; Anzeige im Profil.
-2. **Phase 2:** die übrigen sechs Formen und alle Schlusssteine, Elementproben.
+2. **Phase 2:** die übrigen sechs Formen und alle Schlusssteine, Elementproben. (umgesetzt in 0.32.0)
 3. **Phase 3:** Elementtag im Tageslauf, Feinschliff am Balancing.
 
 ## Offene Fragen
