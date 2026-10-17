@@ -49,6 +49,7 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `tools/diag_boss.js` | Protokolliert einen Boss-Kampf bei einer Welle |
 | `tools/tune.js` | Zufallssuche über die Balancing-Parameter gegen eine Zielkurve |
 | `tools/shares.js` | Schadensanteile je Quelle in späten Läufen, mit verschiedenen Modulen |
+| `tools/echo.js` | Echo-Zyklen: Läufe ab Welle 251 mit und ohne Anomalien, Bosswand, Kristalle und Module pro Stunde |
 | `tools/challenges.js` | Herausforderungen und Tageslauf: welche Wellen ein Bot bei typischem Fortschritt schafft |
 | `tools/build-single.js` | Baut `dist/kernwacht.html` als eigenständige Einzeldatei |
 
