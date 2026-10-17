@@ -2563,14 +2563,17 @@
   if ([1, 2, 4].includes(meta.speed)) { speed = meta.speed; $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.speed === speed ? 'true' : 'false')); }
   // Vor dem ersten Boss: nur Tempo 1×, kein vorzeitiges Rufen (Knöpfe ausgeblendet)
   // Rekord zählt erst am Laufende; den ersten Boss im laufenden Lauf geschafft zu haben reicht schon
-  function tempoOk() { return C.tempoOpen(meta) || !!(runAlive() && !run.mode && run.wave > C.TEMPO_AT); }
-  let tempoWas = tempoOk();
+  const tempoOk = () => C.tempoOpen(meta) || !!(runAlive() && !run.mode && run.wave > C.TEMPO_AT);
+  const tempo4Ok = () => C.tempo4Open(meta) || !!(runAlive() && !run.mode && run.wave > C.TEMPO4_AT);
+  let tempoWas = tempoOk(), tempo4Was = tempo4Ok();
   function syncTempo() {
-    const on = tempoOk();
-    if (on && !tempoWas) toast('<b>Neu: Tempo 2× und 4×</b><br>Dazu „Welle ▸▸“: die nächste Welle sofort rufen.', 5000);
-    tempoWas = on;
+    const on = tempoOk(), on4 = tempo4Ok();
+    if (on && !tempoWas) toast('<b>Neu: Tempo 2×</b><br>Dazu „Welle ▸▸“: die nächste Welle sofort rufen.', 5000);
+    else if (on4 && !tempo4Was) toast('<b>Neu: Tempo 4×</b>', 3500);
+    tempoWas = on; tempo4Was = on4;
     $$('#ctrl [data-speed], #callBtn, .autocall').forEach(b => (b.hidden = !on));
-    if (!on && speed > 1 && speed <= 4) setSpeedUI(1);
+    $$('#ctrl [data-speed="4"]').forEach(b => (b.hidden = !on4));
+    if (speed <= 4 && speed > (on4 ? 4 : on ? 2 : 1)) setSpeedUI(on ? 2 : 1);
   }
   syncTempo();
   // Nachrechnen an/aus
@@ -2625,7 +2628,7 @@
     if (live) {
       let left = realDt * speed;
       while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
-      autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); if (!tempoWas && tempoOk()) syncTempo(); elemRankCheck(); autoBuy(); if (meta.autoCall && tempoOk() && !run.queue.length && run.canCallWave()) run.callWave(); }
+      autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); if ((!tempoWas && tempoOk()) || (!tempo4Was && tempo4Ok())) syncTempo(); elemRankCheck(); autoBuy(); if (meta.autoCall && tempoOk() && !run.queue.length && run.canCallWave()) run.callWave(); }
       dpsT += realDt * speed; if (dpsT >= 1) { dpsT = 0; sampleDps(); }
       for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); if (f.k === 'probe') probeToast(f.id); }
       run.fx.length = 0;
