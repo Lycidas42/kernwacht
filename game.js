@@ -186,11 +186,11 @@
         : `zählt als weiterer Fund für dein Modul (${R[now].name}) · jetzt ${d.copies}/10`;
       ex.push(`<div class="loot r${now}">Beute: <b>${M.name}</b> <span class="dim">(Fund ${R[d.rar].name})</span> → ${txt}</div>`);
     }
-    for (const u of C.ROADMAP) if (u.w > recBefore && u.w <= C.record(meta)) ex.unshift(`<div class="unl">Freigeschaltet: ${u.label}</div>`);
+    for (const u of newUnlocks().reverse()) ex.unshift(`<div class="unl">Freigeschaltet: <b>${u.label}</b>${u.desc ? `<small>${u.desc}</small>` : ''}</div>`);
     // Beute-Übersicht: wie viele Bosse, warum ggf. keine Module
     if (res.noLoot === 'admin') ex.push('<div>Lauf mit Admin-Eingriffen: Bosse lassen keine Module fallen.</div>');
     else if (res.bossKills && !(res.loot || []).length) ex.push(`<div>${res.bossKills} Boss${res.bossKills === 1 ? '' : 'e'} besiegt, diesmal ohne Beute. Beim nächsten steigt die Chance um ${10 * (meta.dry || 0)} Prozentpunkte.</div>`);
-    else if (!res.bossKills && C.record(meta) >= C.MODULES_AT && res.wave < 30) ex.push('<div>Module gibt es erst von Bossen ab Welle 30.</div>');
+    else if (!res.bossKills && C.modOpen(meta) && res.wave < 30) ex.push('<div>Module gibt es erst von Bossen ab Welle 30.</div>');
     if (catchNote) { ex.unshift(`<div>${catchNote}</div>`); catchNote = null; }
     ex.push(...skinNews()); syncNewBadges();
     $('oExtra').innerHTML = ex.join(''); $('oExtra').hidden = !ex.length;
@@ -854,7 +854,7 @@
       ? '<h4>Ausgerüstete Module · Beitrag zum Schaden</h4>' + eq.map(t => { const m = meta.modules[t]; return `<div class="stmod r${m.rar}">${R_.iconSvg(t, m.rar, 20)}<div><b>${C.MODULES[t].name}</b> <span class="rar">${C.RARITY[m.rar].name}${m.mast ? ' ★' + m.mast : ''}</span>${modShare(t, total)}<br><span>${C.MODULES[t].desc(C.moduleValue(m))}</span></div></div>`; }).join('')
         + '<p class="stnote">Kettenblitz, Kältebruch, Überspannung und Zielerfassung verstärken die Kanone; ihr Anteil steckt dort mit drin. Splitter, Dornenwall und Nova stehen unter „Module (direkt)“.</p>'
         + '<p class="stnote">„Kommandant“ zählt nur Skills mit eigenem Schaden: Ladeschuss, Hinrichtung, Drohnen, Bombardement, Schwarzes Loch, Reflexion und Splitterpanzer. Verstärkende Skills wie Kalibrierung oder Sprengköpfe stecken im Anteil der jeweiligen Waffe, Gift und Brand unter „Gift & Feuer“.</p>'
-      : (C.record(meta) >= C.MODULES_AT ? '<h4>Module</h4><p>Keine Module ausgerüstet. Bosse lassen sie fallen.</p>' : `<h4>Module</h4><p>Ab Rekordwelle ${C.MODULES_AT} lassen Bosse Module fallen.</p>`);
+      : (C.modOpen(meta) ? '<h4>Module</h4><p>Keine Module ausgerüstet. Bosse lassen sie fallen.</p>' : '<h4>Module</h4><p>Nach der ersten Kernfusion lassen Bosse Module fallen.</p>');
   }
 
   // ---------- Fähigkeiten ----------
@@ -1105,7 +1105,7 @@
   $('mLb').addEventListener('click', () => { lbTab = 'rec'; $$('[data-lb]').forEach(x => x.setAttribute('aria-selected', x.dataset.lb === 'rec' ? 'true' : 'false')); A.play('click'); show('board'); });
   // Bergbau auf der Startseite: Füllstand jedes Lagers, volle Lager hervorgehoben, neue Planeten
   function renderMineTeaser() {
-    const el = $('mMine'), M = C.mineTick(meta), on = C.record(meta) >= C.MINE_AT || Object.keys(M.p).length > 0;
+    const el = $('mMine'), M = C.mineTick(meta), on = C.mineOpen(meta);
     el.hidden = !on; if (!on) return;
     const built = C.PLANETS.filter(P => M.p[P.id] && M.p[P.id].d), fresh = C.PLANETS.filter(P => C.planetOpen(meta, P) && !(M.p[P.id] && M.p[P.id].d));
     let full = 0;
@@ -1247,6 +1247,13 @@
   $('pauseTitle').addEventListener('click', adminTap);
 
   // ---------- Nächste Freischaltung (Fortschritt sichtbar machen) ----------
+  // Neu freigeschaltete Einträge des Fahrplans (je einmal melden); ältere Spielstände melden Vorhandenes nicht nach
+  if (meta.unl == null) { meta.unl = {}; for (const u of C.ROADMAP) if (C.unlocked(meta, u)) meta.unl[u.id] = 1; }
+  function newUnlocks() {
+    const out = C.ROADMAP.filter(u => C.unlocked(meta, u) && !meta.unl[u.id]);
+    out.forEach(u => (meta.unl[u.id] = 1)); if (out.length) save();
+    return out;
+  }
   function renderRoadmap() {
     const nx = C.nextUnlock(meta), rec = C.record(meta);
     $$('.roadmap').forEach(el => {
@@ -1258,10 +1265,11 @@
         el.innerHTML = `<div class="rmhead"><span>Nächstes Ziel</span><b>Welle ${w}</b></div><div class="rmlabel">${B ? B.name + (B.lord ? ' (Herrscher)' : '') : 'Boss'}</div><div class="bar rmbar"><i style="width:${Math.round(k * 100)}%"></i></div><div class="rmsub">Bestwelle ${meta.best || 0} · Rekord ${rec}</div>`;
         return;
       }
-      const prev = [...C.ROADMAP].reverse().find(x => x.w <= rec), from = prev ? prev.w : 0;
-      const k = Math.max(0, Math.min(1, (rec - from) / (nx.w - from)));
+      // Welle erreicht, aber Bedingung offen (z. B. erst nach der Fusion): Leiste voll, Hinweis auf die Bedingung
+      const prev = [...C.ROADMAP].reverse().find(x => x.w <= rec && x.w < nx.w), from = prev ? prev.w : 0, waiting = rec >= nx.w;
+      const k = waiting ? 1 : Math.max(0, Math.min(1, (rec - from) / (nx.w - from)));
       el.hidden = false;
-      el.innerHTML = `<div class="rmhead"><span>Nächste Freischaltung</span><b>Welle ${nx.w}</b></div><div class="rmlabel">${nx.label}</div><div class="bar rmbar"><i style="width:${Math.round(k * 100)}%"></i></div><div class="rmsub">Rekord ${rec}</div>`;
+      el.innerHTML = `<div class="rmhead"><span>Nächste Freischaltung</span><b>${waiting ? 'Fusion' : 'Welle ' + nx.w}</b></div><div class="rmlabel">${nx.label}</div><div class="bar rmbar"><i style="width:${Math.round(k * 100)}%"></i></div><div class="rmsub">Rekord ${rec}${nx.needTxt ? ' · ' + nx.needTxt : ''}</div>`;
     });
   }
 
@@ -1434,14 +1442,14 @@
     const canFuse = C.fragmentsFor(meta) > 0;
     const showFus = C.record(meta) >= C.FUSION_AT || meta.fusions > 0;
     $$('.fus-btn').forEach(b => { b.hidden = !showFus; b.classList.toggle('ready', canFuse); });
-    const showMod = C.record(meta) >= C.MODULES_AT || Object.keys(meta.modules || {}).length > 0;
+    const showMod = C.modOpen(meta);
     $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
     $$('.boss-btn').forEach(b => { b.hidden = !Object.keys(meta.bossBeat || {}).length; });
     const rec = C.record(meta), d = dailyToday();
     if (typeof syncMineBadge === 'function') try { syncMineBadge(); syncNewBadges(); } catch (e) {}
     try { syncDots(); } catch (e) {}
-    $$('.chal-btn').forEach(b => { b.hidden = !(rec >= C.CHAL_AT || meta.chal && Object.keys(meta.chal).length); });
-    $$('.daily-btn').forEach(b => { b.hidden = rec < C.DAILY_AT; b.classList.toggle('ready', !(d && d.bonus)); });
+    $$('.chal-btn').forEach(b => { b.hidden = !(rec >= C.CHAL_AT && C.chalOpen(meta)); });
+    $$('.daily-btn').forEach(b => { b.hidden = !C.dailyOpen(meta); b.classList.toggle('ready', !(d && d.bonus)); });
     // Leere Zweierreihen ausblenden
     $$('button.sec.daily-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
     $$('button.sec.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
@@ -1496,7 +1504,8 @@
     run = null; put(RKEY, null); save(); A.play('fusion');
     renderFusion();
     $('fusNote').className = 'note'; $('fusNote').style.color = ''; $('fusNote').textContent = `Fusion abgeschlossen: +${fmt(gain)} Kernfragmente. Investiere sie unten und starte neu.`;
-    if (miles.length) toast(`<b>Fusions-Meilenstein</b><br>${miles.map(x => x.txt).join('<br>')}`, 6000);
+    const un = newUnlocks();
+    if (miles.length || un.length) toast(`<b>${un.length ? 'Freigeschaltet' : 'Fusions-Meilenstein'}</b><br>${un.map(u => u.label).concat(miles.map(x => x.txt)).join('<br>')}`, 7000);
   });
   $$('.fus-btn').forEach(b => b.addEventListener('click', () => show('fusion')));
   $('fusClose').addEventListener('click', home);
@@ -1722,7 +1731,7 @@
     { ic: '✱', col: '#ffd23f', name: 'Minenwerfer', desc: 'Wirft Minen ins Feld, die bei Kontakt oder nach kurzer Zeit zünden. Bevorzugt auf Bosse.', ok: () => C.mlv(meta, 'u_mine') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_mine}` },
     { ic: '➹', col: '#ff8a3d', name: 'Raketenwerfer', desc: 'Nebenkanone links: langsame Rakete mit großem Flächenschaden.', ok: () => C.flv(meta, 'f_rocket') > 0, how: 'Kernfusion' },
     { ic: '❆', col: '#9fe8ff', name: 'Kryowerfer', desc: 'Nebenkanone rechts: verlangsamt getroffene Schiffe.', ok: () => C.flv(meta, 'f_cryo') > 0, how: 'Kernfusion' },
-    { ic: '◈', col: '#c3a6ff', name: 'Module', desc: 'Beute der Bosse. Drei ausgerüstete Module verändern Geschosse und Fähigkeiten.', ok: () => C.record(meta) >= C.MODULES_AT, how: `ab Rekordwelle ${C.MODULES_AT}` },
+    { ic: '◈', col: '#c3a6ff', name: 'Module', desc: 'Beute der Bosse. Drei ausgerüstete Module verändern Geschosse und Fähigkeiten.', ok: () => C.modOpen(meta), how: 'nach der ersten Kernfusion' },
   ];
   let cxTab = 'enemy', cxR = null, cxRaf = 0;
   const cxVis = new Set();
@@ -2183,7 +2192,7 @@
       const R = C.RESEARCH[Q.id], l = C.researchLv(meta, Q.id), c = C.researchCost(l, Q.id), ore = M.ore[Q.id] || 0;
       return `<div class="rrow" style="--pc:${Q.col}"><div>${R.name} <b class="num">+${Math.round(R.step * 100 * l)} %</b><small>St. ${l} → +${Math.round(R.step * 100 * (l + 1))} % · Vorrat ${fmt(ore)} ${Q.ore}</small></div><span></span>
         <button data-res="${Q.id}" ${inRun || ore < c ? 'disabled' : ''}>Forschen<br>${fmt(c)} ${Q.ore}</button></div>`;
-    }).join('') || '<p class="dim" style="font-size:.8rem">Ab Rekordwelle 25.</p>';
+    }).join('') || '<p class="dim" style="font-size:.8rem">Nach einer Fusion bei Welle 100.</p>';
     $$('#research [data-res]').forEach(b => holdBuy(b, () => { if (runAlive() || !C.research(meta, b.dataset.res)) return false; A.play('buy'); const R = C.RESEARCH[b.dataset.res]; mineNote(`Forschung: ${R.name} jetzt +${Math.round(R.step * 100 * C.researchLv(meta, b.dataset.res))} %.`); if (runAlive()) run.recalc(); save(); renderMine(); return true; }));
     $$('#refinery [data-sell]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.sell, k = C.mineSell(meta, id, (C.mineState(meta).ore[id] || 0) * +b.dataset.f); if (k) { A.play('buy'); mineNote(`+${fmt(k)} Kristalle aus der Raffinerie.`); save(); renderMine(); } }));
     $$('#workshop [data-craft]').forEach(b => b.addEventListener('click', () => { const d = !runAlive() && C.modCraft(meta, +b.dataset.craft); if (d) { A.play('loot'); modReveal(d.type, d.rar, d.result, d); if (runAlive()) run.recalc(); save(); renderMine(); } }));
@@ -2230,7 +2239,7 @@
   }
   function syncMineBadge() {
     const M = C.mineTick(meta), full = C.PLANETS.some(P => { const pl = M.p[P.id]; return pl && pl.d && pl.stock >= C.mineCap(pl, P) * 0.9; });
-    const show_ = C.record(meta) >= C.MINE_AT || Object.keys(M.p).length > 0;
+    const show_ = C.mineOpen(meta);
     $$('.mine-btn').forEach(b => { b.hidden = !show_; b.classList.toggle('new', full); });
     $$('button.sec.hang-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
   }

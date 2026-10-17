@@ -366,23 +366,26 @@
   // Labor-Upgrades mit Kristallen: im laufenden Lauf erst ab dieser Rekordwelle (vorher: Lauf, Scheitern, Labor, neuer Lauf).
   // Alles andere Dauerhafte (Skills, Elemente, Fusion, Bergbau) gibt es im Lauf gar nicht.
   const BUY_RUN_AT = 150;
+  // Fahrplan: Freischaltungen nach Rekordwelle, manche zusätzlich mit Bedingung (need). Vor der ersten Fusion nur Lauf, Labor und Bosse,
+  // alles Weitere kommt mit der Fusion. desc erklärt beim Freischalten, was es ist und wo man es findet.
   const ROADMAP = [
-    { w: 10, label: 'Erster Boss' },
-    { w: 15, label: 'Stasisfeld im Labor, Tageslauf' },
-    { w: 20, label: 'Orbitklingen im Labor' },
-    { w: 25, label: 'Überladung, Sprungtor und Bergbau' },
-    { w: 30, label: 'Boss-Module: Bosse lassen Beute fallen' },
-    { w: 35, label: 'Minenwerfer im Labor' },
-    { w: 40, label: 'Herausforderungen: Läufe mit Handicap für dauerhafte Boni' },
-    { w: 50, label: 'Kernfusion' },
-    { w: 75, label: 'Kommandant: Rang und Skills (nach der ersten Fusion)' },
-    { w: 51, label: 'Sektor 2: Smaragdnebel, Eismond Kryos' },
-    { w: 101, label: 'Sektor 3: Glutgürtel, Glutwelt Ignis' },
-    { w: 150, label: 'Elementarmagie (nach einer Fusion schon ab Welle 50)' },
-    { w: 151, label: 'Sektor 4: Roter Riese, Roter Zwerg Nox' },
-    { w: 201, label: 'Sektor 5: Die Leere, Rand der Leere' },
-    { w: 251, label: 'Echo-Zyklen: die Zonen kehren wieder, alle Module wieder auffindbar' },
-  ];
+    { id: 'boss', w: 10, label: 'Erster Boss' },
+    { id: 'freeze', w: 15, label: 'Stasisfeld im Labor' },
+    { id: 'blade', w: 20, label: 'Orbitklingen im Labor' },
+    { id: 'over', w: 25, label: 'Überladung und Sprungtor im Labor' },
+    { id: 'mine', w: 35, label: 'Minenwerfer im Labor' },
+    { id: 'fusion', w: 50, label: 'Kernfusion', desc: 'Setzt Labor, Kristalle und Bestwelle zurück und gibt dafür Kernfragmente für dauerhafte Technik. Lohnt sich, wenn das Labor kaum noch weiterbringt. Im Menü unter „Kernfusion“.' },
+    { id: 'sec2', w: 51, label: 'Sektor 2: Smaragdnebel, Eismond Kryos' },
+    { id: 'mod', w: 50, label: 'Boss-Module (nach der ersten Fusion)', need: m => (m.fusions || 0) >= 1, needTxt: 'nach der ersten Fusion', desc: 'Bosse lassen jetzt Module fallen. Ausgerüstete Module verändern Geschosse und Fähigkeiten, jeder weitere Fund macht sie stärker. Im Menü unter „Module“.' },
+    { id: 'cmd', w: 75, label: 'Kommandant (nach der ersten Fusion)', need: m => cmdOpen(m), needTxt: 'nach der ersten Fusion', desc: 'Jede Welle gibt Erfahrung, jeder Rang einen Skillpunkt für die Sternkarte. Im Menü unter „Kommandant“.' },
+    { id: 'chal', w: 75, label: 'Herausforderungen und Tageslauf', need: m => cmdOpen(m), needTxt: 'nach der ersten Fusion', desc: 'Herausforderungen sind Läufe mit Handicap für dauerhafte Boni, der Tageslauf ist für alle gleich und gibt einmal am Tag eine Belohnung. Beides im Menü.' },
+    { id: 'rush', w: 100, label: 'Durchmarsch, Wellensprung und Bergbau', need: m => fusWave(m) >= 100, needTxt: 'mit einer Fusion bei Welle 100 oder höher', desc: 'Mühelose Wellen laufen gestaucht, ganze Zehnerblöcke werden übersprungen. Dazu der Bergbau: Planeten liefern Erz für Forschung und Module. Im Menü unter „Bergbau“.' },
+    { id: 'sec3', w: 101, label: 'Sektor 3: Glutgürtel, Glutwelt Ignis' },
+    { id: 'elem', w: 150, label: 'Elementarmagie', need: m => elUnlocked(m), needTxt: 'oder nach einer Fusion wieder Welle 50', desc: 'Feuer, Eis oder Licht: eine eigene Fähigkeit im Lauf mit eigenem Baum. Im Menü unter „Elemente“.' },
+    { id: 'sec4', w: 151, label: 'Sektor 4: Roter Riese, Roter Zwerg Nox' },
+    { id: 'sec5', w: 201, label: 'Sektor 5: Die Leere, Rand der Leere' },
+    { id: 'echo', w: 251, label: 'Echo-Zyklen: die Zonen kehren wieder, alle Module wieder auffindbar' },
+  ].sort((a, b) => a.w - b.w);
   const record = m => Math.max(m.bestEver || 0, m.best || 0);
   const gateOk = (m, id) => record(m) >= (GATES[id] || 0);
   const buyInRun = m => record(m) >= BUY_RUN_AT;
@@ -401,7 +404,14 @@
   const rushOpen = m => fusMile(m, 'rush');
   // Kommandant: einmal freigeschaltet, bleibt er (auch ältere Spielstände mit verteilten Punkten, siehe game.js)
   const cmdOpen = m => !!m.cmdOpen || (record(m) >= CMD_AT && (m.fusions || 0) >= 1);
-  function nextUnlock(m) { const r = record(m); return ROADMAP.find(x => x.w > r) || null; }
+  // elUnlocked hat nur eine Bedingung (Rekord ODER Fusion + Welle 50), dort zählt need allein
+  const unlocked = (m, x) => x.id === 'elem' ? x.need(m) : record(m) >= x.w && (!x.need || x.need(m));
+  function nextUnlock(m) { return ROADMAP.find(x => !unlocked(m, x)) || null; }
+  // Weitere Funktionen nach der Fusion; wer sie schon benutzt hat, behält sie
+  const modOpen = m => ((m.fusions || 0) >= 1 && record(m) >= MODULES_AT) || Object.keys(m.modules || {}).length > 0;
+  const chalOpen = m => cmdOpen(m) || Object.keys(m.chal || {}).length > 0;
+  const dailyOpen = m => cmdOpen(m) || (m.dailyCount || 0) > 0;
+  const mineOpen = m => fusWave(m) >= 100 || !!(m.mine && m.mine.p && Object.keys(m.mine.p).length);
   // Erwartete Energie aus Abschüssen einer Welle (ohne Upgrades im Lauf)
   function waveEnergy(w) {
     const p = MIX(w); let avg = 0;
@@ -1112,7 +1122,7 @@
         if (w % 10 === 0) {
           const kind = bossKind(w); if (kind) (this.home.bossBeat = this.home.bossBeat || {})[kind] = 1;
           statOf(this.home).bosses++;
-          if (Math.max(record(this.meta), w) >= MODULES_AT) {
+          if (modOpen(this.home) && Math.max(record(this.meta), w) >= MODULES_AT) {
             this.bossKills = (this.bossKills || 0) + 1;
             const ch = dropChance(w) + 0.1 * (this.meta.dry || 0);
             if (Math.random() < ch) { this.loot.push(rollModule(w, this.meta, w % 50 === 0)); this.meta.dry = 0; } else this.meta.dry = (this.meta.dry || 0) + 1;
@@ -1520,7 +1530,7 @@
         if (e.type === 'boss' && !e.child) {
           if (e.kind && !this.admin) (this.home.bossBeat = this.home.bossBeat || {})[e.kind] = 1; // für „erster Sieg“ (Tempo 1× bis dahin)
           this.crystals += P.cBoss * waveCrystals(this.wave) * this.s.crysMult;
-          const modOk = Math.max(record(this.meta), this.wave) >= MODULES_AT;
+          const modOk = modOpen(this.home) && Math.max(record(this.meta), this.wave) >= MODULES_AT;
           const first = !this.meta.modules || !Object.keys(this.meta.modules).length;
           if (modOk) this.bossKills = (this.bossKills || 0) + 1;
           if (!this.admin) statOf(this.home).bosses++;
@@ -2752,7 +2762,7 @@
   const mineCap = (pl, P_) => mineRate(pl.d, P_) * mineCapH(pl.s, P_);
   const droneRate = dr => Math.min(1, 0.2 * (dr || 0));                                              // Anteil der Förderung, der direkt ins Lager geht
   const facCost = (P_, f, l) => Math.ceil(f.cost(P_, l));
-  const planetOpen = (m, P_) => record(m) >= P_.at;
+  const planetOpen = (m, P_) => mineOpen(m) && record(m) >= P_.at;
   const plOf = (m, id) => { const M = mineState(m); return M.p[id] = M.p[id] || { d: 0, s: 0, dr: 0, sm: 0, lz: 0, stock: 0, t: Date.now() }; };
   // Lagerstand fortschreiben; Drohnen leeren das Silo laufend ins Erzlager
   function mineTick(m, now) {
@@ -2900,6 +2910,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.36.1'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, CMD_AT, cmdOpen, ELEM_REC, ELEM_AGAIN, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.37.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, CMD_AT, cmdOpen, ELEM_REC, ELEM_AGAIN, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, ROADMAP, record, gateOk, nextUnlock, unlocked, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
