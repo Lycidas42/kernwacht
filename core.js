@@ -919,6 +919,7 @@
       Object.assign(r, o);
       r.fxOn = true; r.bullets = []; r.rockets = []; r.bolts = []; r.fx = []; r.fires = []; r.hole = null; r.beam = null; r.walls = []; r.meteors = []; r.storms = []; r.mirrors = []; r.mirrorMode = false; r.lens = null; r.invulnUntil = 0; r.focus = null; r.dead = false; r.ring = null;
       r.cd = Object.assign({ freeze: 0, over: 0 }, o.cd || {});
+      if (!rushOpen(r.home)) r.rush = false; // Lauf aus einer Version vor der Sperre: Durchmarsch still beenden
       for (const e of r.enemies) if (e.hostId != null) { e.host = r.enemies.find(h => h.id === e.hostId); if (!e.host) e.hp = 0; }
       RUN_UPG.forEach(u => { if (r.lv[u.id] == null) r.lv[u.id] = 0; }); // neue Upgrades in alten Spielständen
       r.dealt = Object.assign({}, r.dealt, o.dealt || {});
@@ -1196,9 +1197,9 @@
         const keep = bossW && !easy && this.hp >= this.s.maxHp * 0.5;
         const was = this.rush; this.rush = fast && (easy || keep) && (was || this.easyRun >= 2); // einmal an, bleibt er an, solange es mühelos bleibt
         // Grund fürs Ende (für die Anzeige): Hülle unter 90 %, Schiffe blieben in Reichweite, Boss zu langsam
-        const why = this.rush || !was ? null : !hurtOk ? 'hull' : !fieldOk ? 'field' : 'slow';
+        const why = this.rush || !was || !fast ? null : !hurtOk ? 'hull' : !fieldOk ? 'field' : 'slow';
         if (why) this.rushWhyAt = { why, w: this.wave, boss: bossW ? (BOSS_KINDS[bossKind(this.wave)] || {}).name : null, dur: Math.round(dur), hp: Math.round(this.hp / this.s.maxHp * 100) };
-        if (this.rush !== was && this.fxOn) this.fx.push({ k: 'rush', t: 0, on: this.rush, why: why ? this.rushWhyAt : null });
+        if (this.rush !== was && fast && this.fxOn) this.fx.push({ k: 'rush', t: 0, on: this.rush, why: why ? this.rushWhyAt : null });
         // Wellensprung: ein ganzer mühelos geräumter Zehnerblock (mit Boss) unter dem Rekord → die nächsten 10 Wellen überspringen
         doLeap = bossW && this.easyRun >= 10 && (this.wave + 10 < record(this.home) || record(this.home) >= 260) && fast; // über dem Rekord erst, wenn alle Bosse bekannt sind
       }
@@ -2874,6 +2875,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.35.3'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.35.4'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, RUSH_AT, RUSH_FUS, rushOpen, BUY_RUN_AT, buyInRun, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
