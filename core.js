@@ -4,7 +4,7 @@
 
   // Balancing-Stellschrauben (Überschreiben per root.KW_P für Simulationen)
   const P0 = Object.assign({
-    eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eRw: 1.02, eRwLin: 0,
+    eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eDmgLate: 0.7, eDmgLateAt: 100, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
     labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
@@ -253,8 +253,8 @@
     return 'kopie';
   }
   const MODULE_SLOTS = 3;
-  // Beutechance steigt mit der Welle des Bosses: 20 % bei Welle 30 bis max. 85 %; Herrscher in Echo-Zyklen immer
-  const dropChance = w => w % 50 === 0 && cycleOf(w) > 1 ? 1 : Math.max(0, Math.min(0.85, 0.2 + (w - 30) * 0.005));
+  // Beutechance steigt mit der Welle des Bosses: 20 % bei Welle 30 bis max. 85 %; in Echo-Zyklen 50 % (Herrscher wählen dafür gezielt fehlende Module)
+  const dropChance = w => cycleOf(w) > 1 ? 0.5 : Math.max(0, Math.min(0.85, 0.2 + (w - 30) * 0.005));
 
   // Meilensteine: einmalige Kristalle für neue Bestwellen (25, 50, 75 …), je Fusionszyklus
   const milestoneReward = w => Math.round(30 * Math.pow(w / 10, 2));
@@ -295,7 +295,14 @@
 
   const P = P0;
   const hpScale = w => Math.pow(1 + P.eHpLin * (w - 1), 2) * Math.pow(P.eHp, w - 1);
-  const dmgScale = w => (1 + P.eDmgLin * (w - 1)) * Math.pow(P.eDmg, w - 1);
+  const dmgBase = w => (1 + P.eDmgLin * (w - 1)) * Math.pow(P.eDmg, w - 1);
+  // Ab P.eDmgLateAt wächst der Gegnerschaden anteilig (P.eDmgLate, 1 = ganz) so schnell wie die Gegner-LP.
+  // Sonst fällt er immer weiter hinter die Strukturpunkte zurück, die über Fusionskern und Labor im Takt mit dem Schaden wachsen,
+  // und spät reicht reiner Angriff.
+  const dmgScale = w => {
+    const A = P.eDmgLateAt; if (!P.eDmgLate || w <= A) return dmgBase(w);
+    return dmgBase(w) * Math.pow(hpScale(w) / hpScale(A) / (dmgBase(w) / dmgBase(A)), P.eDmgLate);
+  };
   // Energie pro Abschuss: wächst mit den Gegner-LP mit (rwExp), damit die Kanone im Lauf mithalten kann
   const rwScale = w => P.rw0 * (1 + P.eRwLin * (w - 1)) * Math.pow(P.eRw, w - 1) * Math.pow(hpScale(w), P.rwExp);
   // Kristalle pro abgeschlossener Welle (wächst mit, damit das Labor nie zur Mauer wird)
@@ -622,13 +629,14 @@
     { id: 'glass',  name: 'Glaskanone',      desc: 'Ein Viertel der Strukturpunkte, keine Reparatur.', block: 'glass' },
   ];
   // ---------- Anomalien der Echo-Zyklen: je Zyklus eine Eigenschaft, ab Zyklus III zwei im Wechsel (je Zone) ----------
-  // Felder wie bei TWISTS (ehp, spd, bias, loot), dazu crit (+Krit-Chance), stasis (× Dauer Stasisfeld), charge (× Ladetempo Orbitalschlag), elite (Elite-Schiffe je Welle)
+  // Felder wie bei TWISTS (bias, loot), dazu nur für Schiffe (nicht Bosse, damit die Bosswand gleich bleibt): shipHp, shipSpd, shipDmg (×),
+  // nK (× Schiffe je Welle, zusätzlich), crit (+Krit-Chance), stasis (× Dauer Stasisfeld), charge (× Ladetempo Orbitalschlag), elite (Elite-Schiffe je Welle)
   const ANOMALIES = [
-    { id: 'ion',   name: 'Ionensturm',      desc: 'Gegner 25 % zäher, dafür +10 % Krit-Chance.', ehp: 1.25, crit: 0.1 },
-    { id: 'grav',  name: 'Gravitationssog', desc: 'Schiffe 20 % schneller, das Stasisfeld hält 50 % länger.', spd: 1.2, stasis: 1.5 },
-    { id: 'swarm', name: 'Schwarmflut',     desc: 'Viele Schwarm-Wellen, +25 % Energie je Abschuss.', bias: 'swarm', loot: 1.25 },
-    { id: 'elite', name: 'Elitegarde',      desc: 'Jede Welle 1–2 Elite-Schiffe mit 4× Lebenspunkten, sie bringen Extra-Kristalle.', elite: true },
-    { id: 'solar', name: 'Sonnenwind',      desc: 'Viele Panzerverbände, der Orbitalschlag lädt 30 % schneller.', bias: 'heavy', charge: 1.3 },
+    { id: 'ion',   name: 'Ionensturm',      desc: 'Schiffe 60 % zäher, dafür +20 % Krit-Chance.', shipHp: 1.6, crit: 0.2 },
+    { id: 'grav',  name: 'Gravitationssog', desc: 'Schiffe 40 % schneller, das Stasisfeld hält doppelt so lang.', shipSpd: 1.4, stasis: 2 },
+    { id: 'swarm', name: 'Schwarmflut',     desc: '50 % mehr Schiffe je Welle und viele Schwarm-Wellen, +25 % Energie je Abschuss.', bias: 'swarm', nK: 1.5, loot: 1.25 },
+    { id: 'elite', name: 'Elitegarde',      desc: 'Jede Welle 2–3 Elite-Schiffe mit 5× Lebenspunkten und doppeltem Schaden, sie bringen Extra-Kristalle.', elite: true },
+    { id: 'solar', name: 'Sonnenwind',      desc: 'Viele Panzerverbände, Schiffe machen 50 % mehr Schaden, der Orbitalschlag lädt 60 % schneller.', bias: 'heavy', shipDmg: 1.5, charge: 1.6 },
   ];
   function anomalyOf(w) {
     const c = cycleOf(w || 1); if (c < 2) return null;
@@ -986,7 +994,7 @@
       if (this.seed != null) this.rng = mulberry32(hashStr(this.seed + ':' + w));
       const rnd = this.rng, tw = this.twist();
       if (tw !== this.anom) { this.anom = tw; this.recalc(); } // neue Anomalie (Zonenwechsel im Echo-Zyklus): Werte neu berechnen
-      this.eliteLeft = tw && tw.elite && !boss ? 1 + (rnd() < 0.5 ? 1 : 0) : 0;
+      this.eliteLeft = tw && tw.elite && !boss ? 2 + (rnd() < 0.5 ? 1 : 0) : 0;
       const wt = boss ? 'normal' : pickWaveType(w, rnd, tw && tw.bias), WT = WAVE_TYPES[wt];
       const n = Math.max(3, Math.round(shipCount(w) * WT.n));
       // Gesamt-LP und Energie der Welle bleiben gleich, verteilt auf weniger bzw. mehr Schiffe
@@ -1000,7 +1008,8 @@
       const special = [];
       const top = cycleOf(w) > 1 ? SECTORS.length : sec; // in Echo-Zyklen alle Sektor-Gegner, der Typ der Zone am häufigsten
       for (let k = 2; k <= top; k++) special.push({ t: SECTORS[k - 1].enemy, p: k === sec ? 0.14 : 0.06 });
-      for (let i = 0; i < n; i++) {
+      const nAll = Math.round(n * ((tw && tw.nK) || 1)); // Schwarmflut: zusätzliche Schiffe (nicht auf die Welle verteilt)
+      for (let i = 0; i < nAll; i++) {
         let r = rnd(), t = 'grunt';
         if (w >= 15 && r < 0.08) t = 'shooter';
         else if (w >= 6 && r < 0.22) t = 'brute';
@@ -1047,7 +1056,8 @@
         }
       }
       if (o) Object.assign(e, o);
-      if (this.eliteNext && type !== 'part') { this.eliteNext = false; e.elite = true; e.hp *= 4; e.maxHp = e.hp; e.r *= 1.3; e.rw *= 3; }
+      if (tw && type !== 'boss' && type !== 'part') { e.hp *= tw.shipHp || 1; e.maxHp = e.hp; e.spd *= tw.shipSpd || 1; e.dmg *= tw.shipDmg || 1; }
+      if (this.eliteNext && type !== 'part') { this.eliteNext = false; e.elite = true; e.hp *= 5; e.maxHp = e.hp; e.dmg *= 2; e.r *= 1.3; e.rw *= 3; }
       this.enemies.push(e);
       const BK = e.type === 'boss' && BOSS_KINDS[e.kind];
       if (BK && BK.parts) for (const q of BK.parts) this.spawnPart(e, q);
@@ -2274,6 +2284,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.32.0'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.33.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

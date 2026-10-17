@@ -748,11 +748,11 @@ window.KW_EN = {
   'Echo-Zyklen: die Zonen kehren wieder, alle Module wieder auffindbar': 'Echo cycles: the zones return, all modules can drop again',
   'ANOMALIE: {0}': 'ANOMALY: {0}', 'Anomalie: {0}': 'Anomaly: {0}',
   'Ionensturm': 'Ion Storm', 'Gravitationssog': 'Gravity Pull', 'Schwarmflut': 'Swarm Tide', 'Elitegarde': 'Elite Guard', 'Sonnenwind': 'Solar Wind',
-  'Gegner 25 % zäher, dafür +10 % Krit-Chance.': 'Enemies 25 % tougher, but +10 % crit chance.',
-  'Schiffe 20 % schneller, das Stasisfeld hält 50 % länger.': 'Ships 20 % faster, the stasis field lasts 50 % longer.',
-  'Viele Schwarm-Wellen, +25 % Energie je Abschuss.': 'Many swarm waves, +25 % energy per kill.',
-  'Jede Welle 1–2 Elite-Schiffe mit 4× Lebenspunkten, sie bringen Extra-Kristalle.': 'Every wave 1–2 elite ships with 4× health, they drop extra crystals.',
-  'Viele Panzerverbände, der Orbitalschlag lädt 30 % schneller.': 'Many armored groups, the orbital strike charges 30 % faster.',
+  'Schiffe 60 % zäher, dafür +20 % Krit-Chance.': 'Ships 60 % tougher, but +20 % crit chance.',
+  'Schiffe 40 % schneller, das Stasisfeld hält doppelt so lang.': 'Ships 40 % faster, the stasis field lasts twice as long.',
+  '50 % mehr Schiffe je Welle und viele Schwarm-Wellen, +25 % Energie je Abschuss.': '50 % more ships per wave and many swarm waves, +25 % energy per kill.',
+  'Jede Welle 2–3 Elite-Schiffe mit 5× Lebenspunkten und doppeltem Schaden, sie bringen Extra-Kristalle.': 'Every wave 2–3 elite ships with 5× health and double damage, they drop extra crystals.',
+  'Viele Panzerverbände, Schiffe machen 50 % mehr Schaden, der Orbitalschlag lädt 60 % schneller.': 'Many armored groups, ships deal 50 % more damage, the orbital strike charges 60 % faster.',
   'Randzone': 'Outer Rim', 'Smaragdnebel': 'Emerald Nebula', 'Glutgürtel': 'Ember Belt', 'Roter Riese': 'Red Giant', 'Die Leere': 'The Void',
 
   // ---------- Gegner ----------
