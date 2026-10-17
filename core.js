@@ -6,11 +6,11 @@
   const P0 = Object.assign({
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eDmgLate: 0.7, eDmgLateAt: 100, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
-    rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.7, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
+    rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.9, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
     labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, strikePart: 0.35, strikePartTo: 20, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, boss1Hp: 0.3, boss1Part: 0.45, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
-    gunK: 3, rockLv: 0.04, shockLv: 0.05, shockG: 1.1, shockPct: 0.06, bladeG: 1.15, bladeWall: 3, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 1,
+    gunK: 3, rockLv: 0.04, shockLv: 0.3, shockPct: 0, bladeLv: 0.25, bladeWall: 2, bladePart: 0.3, bladeCd: 1, bladeMax: 2, bladeStep: 8, aoeMax: 15, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 1.8,
   }, root.KW_P || {});
 
   // ---------- Upgrades im Lauf (Energie) ----------
@@ -29,8 +29,8 @@
     { id: 'regen',    tab: 'def', name: 'Reparatur',        desc: 'Mehr Regeneration pro Sekunde',    base: 8,   g: 1.15, max: 40 },
     { id: 'armor',    tab: 'def', name: 'Panzerung',        desc: 'Weniger Schaden durch Treffer',    base: 14,  g: 1.17, max: 40 },
     { id: 'knock',    tab: 'def', name: 'Rückstoß',         desc: 'Treffer stoßen Gegner zurück',     base: 20,  g: 1.2,  max: 20 },
-    { id: 'shock',    tab: 'def', name: 'Schockwelle',      desc: 'Druckring bis weit ins Feld',      base: 50,  g: 1.2,  max: 30, req: 'u_shock' },
-    { id: 'blade',    tab: 'def', name: 'Orbitklingen',     desc: 'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall', base: 70,  g: 1.2,  max: 30, req: 'u_blade' },
+    { id: 'shock',    tab: 'def', name: 'Schockwelle',      desc: 'Druckring bis weit ins Feld',      base: 50,  g: 1.2,  max: P0.aoeMax, req: 'u_shock' },
+    { id: 'blade',    tab: 'def', name: 'Orbitklingen',     desc: 'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall', base: 70,  g: 1.2,  max: P0.aoeMax, req: 'u_blade' },
     { id: 'loot',     tab: 'eco', name: 'Energieausbeute',  desc: '+5 % Energie pro Abschuss',        base: 8,   g: 1.16, max: 30 },
     { id: 'interest', tab: 'eco', name: 'Wellenprämie',     desc: 'Energiebonus am Ende jeder Welle', base: 25,  g: 1.22, max: 15 },
     { id: 'crys',     tab: 'eco', name: 'Kristallfilter',   desc: '+6 % Kristalle in diesem Lauf',    base: 40,  g: 1.25, max: 20 },
@@ -1012,12 +1012,13 @@
       const sh = L('shock');
       s.shockCd = sh ? Math.max(2.5, 6.5 - 0.13 * sh) : 0;
       s.shockR = Math.min(s.range, s.range * (0.7 + 0.01 * sh));
-      s.shockDmg = s.dmg * P.shockK * Math.pow(P.shockG, sh); // eigene Stufen multiplikativ, sonst lohnt Energie dort nie gegenüber der Kanone
+      // Eigene Stufen linear und auf P.aoeMax begrenzt: früh spürbar, spät (volle Wellen am Schutzwall) nicht übermächtig, Ziel je etwa 10 % Schaden
+      s.shockDmg = s.dmg * P.shockK * (1 + P.shockLv * sh);
       // Orbitklingen: pendeln über der Kanone, Radius folgt der Reichweite
       const bl = L('blade');
-      s.blades = bl ? Math.min(6, 1 + Math.floor(bl / 5)) : 0;
+      s.blades = bl ? Math.min(P.bladeMax, 1 + Math.floor(bl / P.bladeStep)) : 0;
       s.bladeR = Math.max(WALL_R + 28, s.range * 0.55);
-      s.bladeDmg = s.dmg * 0.5 * Math.pow(P.bladeG, bl) * P.bladeK;
+      s.bladeDmg = s.dmg * 0.5 * (1 + P.bladeLv * bl) * P.bladeK;
       s.bladeSize = 9 + Math.min(7, bl * 0.25);
       s.bladeHz = 1 / 0.35;
       // Minen
@@ -1166,8 +1167,8 @@
         case 'rocket': return side('rocket', P.rockLv / (1.6 + P.rockLv * l) + 0.016);
         case 'cryo': return side('cryo', 0.03) + 0.004;
         case 'mine': return side('mine', P.mineLv / (2 + P.mineLv * l) + 0.025);
-        case 'shock': return side('shock', P.shockG - 1 + 0.02);
-        case 'blade': return side('blade', P.bladeG - 1 + (l % 5 === 4 && s.blades < 6 ? 1 / s.blades : 0));
+        case 'shock': return side('shock', P.shockLv / (1 + P.shockLv * l) + 0.02);
+        case 'blade': return side('blade', P.bladeLv / (1 + P.bladeLv * l) + (l % P.bladeStep === P.bladeStep - 1 && s.blades < P.bladeMax ? 1 / s.blades : 0));
         case 'hp': return P.lvHp - 1;
         case 'armor': { const a0 = s.armor, a1 = Math.min(P.arCap, P.arMax * (l + 1) / (l + 1 + P.arK) + (a0 - P.arMax * l / (l + P.arK))); return Math.max(0, (1 - a0) / (1 - a1) - 1); }
         case 'regen': return l === 0 ? 0.12 : 0.6 * (((l + 1) / (l + 1 + P.rgK)) / (l / (l + P.rgK)) - 1);
@@ -1497,7 +1498,8 @@
       if (e.laser) e.laserDmg = (e.laserDmg || 0) + d;
       e.hitT = this.time; // unter Beschuss keine Reparatur
       const eff = Math.min(d, e.hp);
-      this.dealt[src || 'gun'] += eff * (1 - fq); if (fq) this.dealt.elem += eff * fq;
+      // Bomben abzuschießen ist Abwehr, kein Schaden: zählt in keinem Schadensanteil (ihre Lebenspunkte hängen am Boss und verzerren sonst die Anteile)
+      if (!e.bomb) { this.dealt[src || 'gun'] += eff * (1 - fq); if (fq) this.dealt.elem += eff * fq; }
       // Orbitalschlag lädt nur über zugefügten Schaden: gemessen an einem typischen Schiff der Welle,
       // beim Boss an seinen Lebenspunkten (ein ganzer Boss lädt mehrere Schläge)
       if (!this.s.noGun && e.type !== 'bomb' && e.maxHp > 0 && src !== 'strike' && !(this.time < this.strikeLock)) { // der Schlag selbst lädt nicht, kurz danach lädt nichts
@@ -2553,7 +2555,7 @@
           if (e.hp <= 0 || R.hit[e.id]) continue;
           if (e.dist - e.r <= R.r) {
             R.hit[e.id] = 1;
-            // Schwarmbrecher: kleine Schiffe verlieren zusätzlich einen festen Anteil ihrer Lebenspunkte und werden weiter zurückgestoßen
+            // Schwarmbrecher: kleine Schiffe werden weiter zurückgestoßen (P.shockPct: optional fester Anteil ihrer Lebenspunkte, im späten Spiel schnell übermächtig)
             const small = e.type !== 'boss' && !e.host;
             this.hurt(e, s.shockDmg + (small ? e.maxHp * P.shockPct : 0), false, 'shock');
             if (s.K('a_frost')) { e.slow = Math.max(e.slowUntil > this.time ? e.slow : 0, 0.3 * (e.type === 'boss' ? 0.4 : 1)); e.slowUntil = Math.max(e.slowUntil || 0, this.time + 2); }
@@ -2569,8 +2571,9 @@
           for (const e of this.enemies) {
             if (e.hp <= 0 || e.bladeHit > this.time) continue;
             const p = this.pos(e);
-            // Schutzring: Bomben zerfallen sofort, Schiffe kurz vor dem Schutzwall nehmen mehrfachen Schaden
-            if (Math.hypot(p.x - b.x, p.y - b.y) < e.r + s.bladeSize) { this.hurt(e, e.bomb ? e.hp : s.bladeDmg * (e.type !== 'boss' && !e.host && e.dist <= WALL_R + 45 ? P.bladeWall : 1), false, 'blade'); e.bladeHit = this.time + 0.35; }
+            // Schutzring: Bomben zerfallen sofort, Schiffe kurz vor dem Schutzwall nehmen doppelten Schaden, Boss-Anbauteile wenig;
+            // je Schiff höchstens ein Treffer pro P.bladeCd (sonst mähen die Klingen spät gestaute Wellen ab)
+            if (Math.hypot(p.x - b.x, p.y - b.y) < e.r + s.bladeSize) { this.hurt(e, e.bomb ? e.hp : s.bladeDmg * (e.host ? P.bladePart : e.type !== 'boss' && e.dist <= WALL_R + 45 ? P.bladeWall : 1), false, 'blade'); e.bladeHit = this.time + P.bladeCd; }
           }
         }
       }
@@ -2925,6 +2928,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.39.0'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.39.1'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, CMD_AT, cmdOpen, ELEM_REC, ELEM_AGAIN, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
