@@ -295,7 +295,7 @@
   const TIPS = [
     { id: 'mark', when: r => r.time > 4, txt: '<b>Tipp: Ziele markieren</b><br>Tippe ein Schiff an. Die Kanone schießt dann zuerst darauf, bis es zerstört ist.' },
     { id: 'buy', when: r => r.time > 12, txt: '<b>Tipp: Upgrades</b><br>Abschüsse bringen Energie. Unten kaufst du damit Upgrades, „AUTO“ kauft für dich.' },
-    { id: 'strike', when: r => r.charge >= 1, txt: '<b>Orbitalschlag geladen</b><br>Tippe ins Feld, um genau dort einzuschlagen, oder auf den Knopf für einen automatischen Treffer.' },
+    { id: 'strike', when: r => r.charge >= 1, txt: '<b>Orbitalschlag geladen</b><br>Tippe auf den Knopf unten rechts: Er trifft automatisch den Boss oder die dichteste Gruppe. Lange drücken, um stattdessen ins Feld zu zielen.' },
     { id: 'boss', when: r => r.enemies.some(e => e.type === 'boss'), txt: '<b>Boss!</b><br>Solange er lebt, kommt keine neue Welle. Die Leiste oben zeigt seine Lebenspunkte und seine nächste Fähigkeit.' },
     { id: 'freeze', when: r => r.abilityReady('freeze'), txt: '<b>Stasis bereit</b><br>Der Knopf rechts friert alle Gegner kurz ein. Gut, wenn die Hülle knapp wird.' },
     { id: 'over', when: r => r.abilityReady('over'), txt: '<b>Überladung bereit</b><br>Der Knopf rechts erhöht kurz die Feuerrate stark, ideal gegen Bosse.' },
@@ -868,7 +868,7 @@
     if (armed && !canArm(armed)) armed = null;
     sb.classList.toggle('ready', ch >= 1); sb.classList.toggle('armed', armed === 'strike');
     sb.querySelector('.st').textContent = armed === 'strike' ? 'Ziel' : ch >= 1 ? 'bereit' : Math.floor(ch * 100) + ' %';
-    const sm = sb.querySelector('.smode'), tap = meta.strikeMode !== 'btn';
+    const sm = sb.querySelector('.smode'), tap = meta.strikeMode === 'tap';
     if (sm.textContent !== (tap ? 'Feld' : 'Knopf')) { sm.textContent = tap ? 'Feld' : 'Knopf'; sb.classList.toggle('aim', tap); }
     $('hint').hidden = !armed;
     if (armed) $('hint').textContent = armed === 'elem' || armed === 'wall' ? ELEM_HINT[run.s.el.form] || '' : HINT[armed];
@@ -940,8 +940,8 @@
     if (run.useAbility(id)) { A.play(id); return true; }
     return false;
   }
-  // Orbitalschlag: Ist er geladen, schlägt ein Tipp ins Feld genau dort ein. Der Knopf löst sofort automatisch aus
-  // (Boss bzw. dichteste Gruppe). Lange drücken schaltet „Feld“ ab, dann markiert ein Tipp ins Feld nur Ziele.
+  // Orbitalschlag: Der Knopf löst sofort automatisch aus (Boss bzw. dichteste Gruppe); ein Tipp ins Feld markiert nur Ziele.
+  // Standard, damit Markieren nicht versehentlich den Schlag auslöst. Lange drücken schaltet „Feld“ ein: geladen schlägt ein Tipp dort ein.
   function strikeNow() {
     if (!canArm('strike')) { A.play('hurt'); return; }
     armed = null;
@@ -950,7 +950,7 @@
     fire('strike', p);
   }
   function toggleStrikeMode() {
-    meta.strikeMode = meta.strikeMode === 'btn' ? 'tap' : 'btn'; armed = null; save(); A.play('click');
+    meta.strikeMode = meta.strikeMode === 'tap' ? 'btn' : 'tap'; armed = null; save(); A.play('click');
     toast(meta.strikeMode === 'btn' ? '<b>Orbitalschlag: nur Knopf</b><br>Der Knopf trifft automatisch, Tippen ins Feld markiert nur Ziele. Lange drücken wechselt.' : '<b>Orbitalschlag: Feld</b><br>Geladen schlägt ein Tipp ins Feld dort ein, der Knopf trifft automatisch. Lange drücken wechselt.', 3500);
     updateAbilities();
   }
@@ -1733,7 +1733,7 @@
     { ic: '◉', col: '#3ef0ff', name: 'Hauptkanone', desc: 'Schießt auf das nächste Schiff in Reichweite. Schaden, Feuerrate, Reichweite und Krits kaufst du im Lauf.', ok: () => true, how: 'Von Anfang an' },
     { ic: '⋔', col: '#3ef0ff', name: 'Mehrfachschuss', desc: 'Bis zu zwei Nebenrohre mit 35 % Schaden.', ok: () => true, how: 'Lauf-Upgrade' },
     { ic: '➶', col: '#3ef0ff', name: 'Durchschlag', desc: 'Geschosse fliegen durch bis zu drei weitere Schiffe.', ok: () => true, how: 'Lauf-Upgrade' },
-    { ic: '✹', col: '#ff4fa0', name: 'Orbitalschlag', desc: 'Lädt sich durch Schaden auf. Ein Tipp ins Feld schlägt genau dort ein, gegen Bosse besonders stark.', ok: () => true, how: 'Von Anfang an' },
+    { ic: '✹', col: '#ff4fa0', name: 'Orbitalschlag', desc: 'Lädt sich durch Schaden auf. Der Knopf trifft automatisch, gegen Bosse besonders stark. Lange drücken: gezielt ins Feld.', ok: () => true, how: 'Von Anfang an' },
     { ic: '❄', col: '#9fe8ff', name: 'Stasis', desc: 'Fähigkeit: friert alle Gegner für ein paar Sekunden ein.', ok: () => C.mlv(meta, 'u_freeze') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_freeze}` },
     { ic: '◎', col: '#3ef0ff', name: 'Schockwelle', desc: 'Druckring, der weit ins Feld läuft und alles darin trifft.', ok: () => C.mlv(meta, 'u_shock') > 0, how: 'Labor' },
     { ic: '⟳', col: '#5dffb0', name: 'Orbitklingen', desc: 'Klingen kreisen auf einer Schleife: außen durchs Feld, innen am Schutzwall.', ok: () => C.mlv(meta, 'u_blade') > 0, how: `Labor · ab Rekordwelle ${C.GATES.u_blade}` },
@@ -2593,8 +2593,8 @@
     if (armed === 'wall') { wallPtr = ev.pointerId; run.wallPreview = { x1: w.x, y1: w.y, x2: w.x, y2: w.y }; try { $('cv').setPointerCapture(ev.pointerId); } catch (e) {} return; }
     if (armed === 'mirror') { if (run.placeMirror(w.x, w.y)) A.play('mark'); return; }
     if (armed) { if (armed === 'strike') run.markAt(w.x, w.y, true); if (fire(armed, w)) armed = null; }
-    // Orbitalschlag geladen: Tippen ins Feld schlägt genau dort ein (außer im Modus „nur Knopf“)
-    else if (meta.strikeMode !== 'btn' && canArm('strike')) { run.markAt(w.x, w.y, true); fire('strike', w); }
+    // Orbitalschlag geladen: Tippen ins Feld schlägt nur im Modus „Feld“ genau dort ein (Standard: nur Knopf)
+    else if (meta.strikeMode === 'tap' && canArm('strike')) { run.markAt(w.x, w.y, true); fire('strike', w); }
     else if (run.markAt(w.x, w.y)) A.play('mark');
   });
 
