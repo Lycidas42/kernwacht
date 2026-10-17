@@ -609,7 +609,7 @@
     fire: [
       { id: 'ball', name: 'Feuerball', desc: 'Explosion mit 6× Kanonenschaden, danach brennt der Boden 4 s (0,9× Kanonenschaden pro Sekunde). Zwei Ladungen, jede lädt in 10 s nach.',
         how: 'Knopf antippen, dann ins Feld tippen: Der Feuerball schlägt genau dort ein. Ein zweiter Tipp auf den Knopf wirft ihn stattdessen automatisch in die dichteste Gruppe.' },
-      { id: 'wall', name: 'Flammenwand', desc: 'Eine Wand aus Feuer, bis 140 lang, hält 6 s. Schiffe, die sie berühren, brennen 3 s (1,6× Kanonenschaden pro Sekunde) und werden 30 % langsamer. Abklingzeit 16 s.',
+      { id: 'wall', name: 'Flammenwand', desc: 'Eine Wand aus Feuer, bis 140 lang, hält 6 s. Schiffe, die sie berühren, brennen 3 s (1,2× Kanonenschaden pro Sekunde) und erleiden solange 10 % mehr Schaden aus allen Quellen. Abklingzeit 16 s.',
         how: 'Knopf antippen, dann im Feld eine Linie ziehen: Dort entsteht die Wand. Am besten quer zur Flugbahn. Ein zweiter Tipp auf den Knopf setzt sie automatisch quer vor die dichteste Gruppe.' },
       { id: 'meteor', name: 'Meteor', desc: 'Schlägt 1,5 s nach dem Tippen ein: 11× Kanonenschaden im Radius 70, betäubt 1 s, der Krater brennt 5 s. Abklingzeit 22 s.',
         how: 'Knopf antippen, dann ins Feld tippen. Der Einschlag kommt verzögert: Ziele dorthin, wo die Schiffe in 1,5 s sind. Ein zweiter Tipp auf den Knopf zielt automatisch.' },
@@ -644,7 +644,7 @@
     { id: 'fb_inferno', el: 'fire', form: 'ball', par: 'fb_ammo', cap: 1, name: 'Inferno', desc: () => 'Überlappende Brandfelder verstärken sich: jedes weitere Feld an derselben Stelle +50 % Schaden' },
     { id: 'fw_len',  el: 'fire', form: 'wall', max: 2, name: 'Lange Wand',     desc: l => `Die Wand darf ${pc(0.25 * l)} länger sein` },
     { id: 'fw_dur',  el: 'fire', form: 'wall', par: 'fw_len', max: 2, name: 'Nachbrennen', desc: l => `Die Wand hält ${l} s länger, Schiffe brennen ${l} s länger` },
-    { id: 'fw_heat', el: 'fire', form: 'wall', par: 'fw_len', max: 2, name: 'Hitzestau',   desc: l => `Brennende Schiffe erleiden ${pc(0.15 * l)} mehr Schaden aus allen Quellen` },
+    { id: 'fw_heat', el: 'fire', form: 'wall', par: 'fw_len', max: 2, name: 'Hitzestau',   desc: l => `Brennende Schiffe erleiden ${pc(0.1 + 0.1 * l)} statt 10 % mehr Schaden aus allen Quellen` },
     { id: 'fw_ring', el: 'fire', form: 'wall', par: 'fw_len', cap: 1, name: 'Feuerring', desc: () => 'Ein kurzer Tipp statt einer Linie legt einen Feuerring um die Stelle; der automatische Wurf legt ihn um die dichteste Gruppe' },
     { id: 'fm_cd',   el: 'fire', form: 'meteor', max: 2, name: 'Einflugschneise', desc: l => `−${dc(2 * l, 0)} s Abklingzeit` },
     { id: 'fm_boss', el: 'fire', form: 'meteor', par: 'fm_cd', max: 2, name: 'Kernbrecher', desc: l => `+${pc(0.2 * l)} Meteorschaden gegen Bosse` },
@@ -1028,7 +1028,7 @@
           const f = 1 + 0.2 * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
           o.glut = f; o.burnT = 4 + 1.5 * E('f_burn');
           if (form === 'ball') { o.dmg = g * 6 * f; o.burn = g * 0.9 * f; o.r = 50 * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * cdk; o.jump = 0.25 * E('fb_jump'); o.inferno = !!E('fb_inferno'); }
-          if (form === 'wall') { o.cd = 16 * cdk; o.len = 140 * (1 + 0.25 * E('fw_len')); o.dur = 6 + 1.5 * E('f_burn') + E('fw_dur'); o.burn = g * 1.6 * f; o.burnFor = 3 + E('fw_dur'); o.heat = 0.15 * E('fw_heat'); o.ring = !!E('fw_ring'); o.dmg = o.burn; }
+          if (form === 'wall') { o.cd = 16 * cdk; o.len = 140 * (1 + 0.25 * E('fw_len')); o.dur = 6 + 1.5 * E('f_burn') + E('fw_dur'); o.burn = g * 1.2 * f; o.burnFor = 3 + E('fw_dur'); o.heat = 0.1 + 0.1 * E('fw_heat'); o.ring = !!E('fw_ring'); o.dmg = o.burn; }
           if (form === 'meteor') { o.cd = Math.max(6, 22 * cdk - 2 * E('fm_cd')); o.dmg = g * 11 * f; o.r = 70; o.boss = 1 + 0.2 * E('fm_boss'); o.burn = g * 0.6 * f; o.shower = g * 1.5 * E('fm_shower') * f; o.star = !!E('fm_star'); }
         }
         if (el === 'ice') {
@@ -1430,10 +1430,10 @@
       }
       if (e.type === 'boss' && this.s.chal && this.s.chal.boss > 1) d *= this.s.chal.boss;
       if (e === this.focus && this.s.K && this.s.K('p_mark')) d *= 1 + 0.2 * this.s.K('p_mark');
-      // Eis: eingefroren nimmt mehr Schaden (verlangsamt halb so viel), der Mehrschaden zählt fürs Eis
-      const SE = this.s.el, fb = SE && SE.brit ? (e.frostUntil > this.time ? SE.brit : e.slowUntil > this.time ? SE.brit / 4 : 0) : 0, fq = fb / (1 + fb);
+      // Eis: eingefroren nimmt mehr Schaden (verlangsamt ein Viertel davon); Flammenwand: brennende Schiffe nehmen mehr Schaden (Hitzestau).
+      // Der Mehrschaden zählt fürs Element
+      const SE = this.s.el, fb = !SE ? 0 : SE.brit ? (e.frostUntil > this.time ? SE.brit : e.slowUntil > this.time ? SE.brit / 4 : 0) : SE.heat && e.burnUntil > this.time ? SE.heat : 0, fq = fb / (1 + fb);
       if (fq) d /= 1 - fq;
-      if (SE && SE.heat && e.burnUntil > this.time) d *= 1 + SE.heat; // Hitzestau
       if (SE && SE.weak && e.lensUntil > this.time) d *= 1 + SE.weak; // Schwachstelle unter dem Brennglas
       if (e.shieldUntil && e.shieldUntil > this.time) { d *= 0.15; if (this.fxOn && Math.random() < 0.25) { const p = this.pos(e); this.fx.push({ k: 'shieldhit', x: p.x, y: p.y, t: 0 }); } }
       if (e.type === 'bulwark' && e.guard > 0) {
@@ -1800,7 +1800,6 @@
           if (d > 8 + e.r) continue;
           w.ids.add(e.id);
           e.burnUntil = this.time + (o.burnFor || 3); e.burnDps = o.burn; e.elemHand = w.hand; e.elemT = this.time;
-          if (e.type !== 'boss' && !e.host) { e.slow = Math.max(e.slowUntil > this.time ? e.slow : 0, 0.3); e.slowUntil = Math.max(e.slowUntil || 0, this.time + 1); }
         }
         this.probe('fw_hit', w.ids.size); this.probe('fw_big', w.ids.size);
       }
@@ -2867,6 +2866,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.34.2'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.34.3'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

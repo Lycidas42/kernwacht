@@ -52,7 +52,7 @@ Alle neun Formen, neun Schlusssteine, 27 Elementproben und die Verbindungen zu b
 | Form | Bedienung | Grundwerte (wie umgesetzt) | Knoten | Schlussstein |
 | --- | --- | --- | --- | --- |
 | Feuerball | scharf machen, ins Feld tippen | 6× Kanonenschaden R 50, Brandfeld 0,9×/s, 2 Ladungen à 10 s | Munitionslager → Flächenbrand, Übersprung | Inferno: jedes weitere Brandfeld an derselben Stelle +50 % |
-| Flammenwand | scharf machen, Linie ziehen | bis 140 lang, 6 s; Berührung: 3 s Brand 1,6×/s, −30 % Tempo; 16 s | Lange Wand → Nachbrennen, Hitzestau (+15 % Schaden je Stufe auf brennende Schiffe) | Feuerring: kurzer Tipp legt einen Ring (R 55) |
+| Flammenwand | scharf machen, Linie ziehen | bis 140 lang, 6 s; Berührung: 3 s Brand 1,2×/s, brennende Schiffe +10 % Schaden aus allen Quellen; 16 s (keine Verlangsamung, das bleibt dem Eis) | Lange Wand → Nachbrennen, Hitzestau (+10 % je Stufe, bis +30 %) | Feuerring: kurzer Tipp legt einen Ring (R 55) |
 | Meteor | scharf machen, ins Feld tippen | Einschlag nach 1,5 s, 11× R 70, betäubt 1 s, Krater 5 s; 22 s | Einflugschneise (−2 s je Stufe) → Kernbrecher (+20 % Boss je Stufe), Splitterschauer | Sternenfall: 2 weitere Meteore (je 40 %) |
 | Frostlanze | ein Tipp | 6×, friert 3 s, +40 % Schaden auf Gefrorene; 8 s | Eiskette → Splitterregen, Kältesog | Nullpunkt: unter 12 % LP zerspringen sofort; jede 3. Lanze hält Bosse 1 s an |
 | Frostnova | ein Tipp | um die Kanone bis 120: 0,8×, friert 2 s; 18 s | Weite Kälte → Raureif, Kalte Hülle (0,4 % Reparatur je eingefrorenem Schiff und Stufe) | Eiszeit: Zersplittern friert Nachbarn 1 s ein |
@@ -80,6 +80,8 @@ Messung (Rekord 160, 4 Fusionen, 3 Läufe je Variante, voller Baum mit Schlussst
 | Prismastrahl | 16 % | 9 % | −46 % | 23 |
 | Brennglas | 12 % | 11 % | −14 % | 22 |
 | Spiegelfeld | 19 % | 9 % | −36 % | 31 |
+
+Nachtrag 0.34.3: Die Flammenwand verlangsamt nicht mehr (Verlangsamen gehört zum Eis). Dafür nehmen brennende Schiffe +10 % Schaden aus allen Quellen (Hitzestau, mit Knoten bis +30 %), der Mehrschaden zählt als Elementschaden. Nach dem Balancing von main (0.33.0) enden die Messläufe bei Welle 150; dort liegen Feuerball, Flammenwand und Meteor bei je etwa 32 % Anteil, die Frostnova bei 24 %.
 
 Feuer macht den meisten Schaden, Eis schützt die Hülle am stärksten, Licht lohnt sich am meisten bei aktiver Bedienung. Das Brennglas ist auf Bosse ausgelegt; die Messung bildet Bosskämpfe nur zum kleinen Teil ab. Die Hüllenschaden-Werte schwanken zwischen Messungen um etwa 10 bis 15 Prozentpunkte.
 
