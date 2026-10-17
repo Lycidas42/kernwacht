@@ -553,11 +553,12 @@
   function checkAch(silent) {
     const seen = meta.achSeen = meta.achSeen || {}, news = [];
     for (const a of C.ACH) { const t = C.achTier(meta, a); if (t > (seen[a.id] || 0)) { if (seen[a.id] != null || silent === false) news.push({ a, t }); seen[a.id] = t; } }
+    if (C.beginner(meta)) news.length = 0; // Anfänger: Erfolge zählen still mit, gemeldet wird erst nach der ersten Fusion
     if (news.length === 1) toast(`<b>Erfolg: ${news[0].a.name} · Stufe ${news[0].t}</b><br>${achBonusTxt(news[0].a, news[0].t)}`, 4000);
     else if (news.length > 1) toast(`<b>${news.length} neue Erfolgsstufen</b><br>${news.map(x => x.a.name + ' ' + x.t).join(' · ')}`, 5000);
     if (news.length) { A.play('loot'); submitScore(); }
   }
-  if (!meta.achSeen) { checkAch(true); const n = C.achPoints(meta); if (n) setTimeout(() => toast(`<b>Neu: Erfolge</b><br>Du hast schon ${n} Erfolgsstufen. Im Menü unter „Erfolge“.`, 6000), 1500); }
+  if (!meta.achSeen) { checkAch(true); const n = C.achPoints(meta); if (n && !C.beginner(meta)) setTimeout(() => toast(`<b>Neu: Erfolge</b><br>Du hast schon ${n} Erfolgsstufen. Im Menü unter „Erfolge“.`, 6000), 1500); }
   setInterval(() => checkAch(), 2500);
   $('chalClose').addEventListener('click', home);
 
@@ -1006,6 +1007,7 @@
       ['Kristallantenne', 'Kristalle', M('m_crys')], ['Fusionsringe', 'Fusionskern', F('f_core')],
       ['Raketenwerfer', 'Fusion', F('f_rocket') ? 'aktiv' : 0], ['Kryowerfer', 'Fusion', F('f_cryo') ? 'aktiv' : 0],
     ];
+    if (C.beginner(meta)) rows.splice(-3); // Fusionsteile erst, wenn es die Fusion gibt
     $('cvLegend').innerHTML = rows.map(([part, src, l]) => `<div class="${l ? '' : 'off'}" title="${src}"><span>${part}</span><b>${l ? (typeof l === 'number' ? 'St. ' + l : l) : '–'}</b></div>`).join('');
   }
   function renderLab() {
@@ -1123,7 +1125,7 @@
     $('mBest').textContent = meta.best; $('mRuns').textContent = meta.runs; $('mK').textContent = fmt(meta.crystals);
     const max = C.maxStartWave(meta);
     renderJump();
-    renderRoadmap();
+    renderRoadmap(); renderLater();
     const fl = $('fragLine');
     fl.hidden = true; // steht jetzt in den Kennzahlen oben
     if (!fl.hidden) fl.innerHTML = `Kernfragmente <b>${fmt(meta.frag)}</b> · Fusionen <b>${meta.fusions || 0}</b> · Rekord <b>${meta.bestEver || 0}</b>`;
@@ -1135,7 +1137,7 @@
   const PAGE_INFO = {
     cannon: '<b>Kanone</b><br>Hier machst du die Kanone dauerhaft stärker: Labor, Kommandant, Elemente, Module und Kernfusion.',
     modes: '<b>Modi</b><br>Besondere Läufe: der Tageslauf mit gleichen Wellen für alle, Challenges mit Handicap und Bosskämpfe.',
-    world: '<b>Welt</b><br>Bergbau auf den Planeten und der Hangar für das Aussehen deiner Kanone.',
+    world: '<b>Welt</b><br>Das Kompendium mit Gegnern, Bossen und Waffen. Später kommen Hangar und Bergbau dazu.',
   };
   function setPage(pg) {
     mPage = pg;
@@ -1154,7 +1156,7 @@
   function renderMe() {
     const R = C.rankOf(meta), el = $('mMe');
     el.classList.toggle('noname', !meta.name);
-    el.innerHTML = `${avatarSvg(meta.avatar, meta.color, 34)}<span class="who"><b>${esc(meta.name || 'Name fehlt')}</b><small>Rang ${R.rank}</small></span>`;
+    el.innerHTML = `${avatarSvg(meta.avatar, meta.color, 34)}<span class="who"><b>${esc(meta.name || 'Name fehlt')}</b>${C.cmdOpen(meta) ? `<small>Rang ${R.rank}</small>` : ''}</span>`;
   }
   $('mMe').addEventListener('click', e => { e.stopPropagation(); A.play('click'); $('mMeMenu').hidden = !$('mMeMenu').hidden; });
   $('mMeProf').addEventListener('click', () => { $('mMeMenu').hidden = true; pDraft = null; show('profile'); });
@@ -1253,6 +1255,13 @@
     const out = C.ROADMAP.filter(u => C.unlocked(meta, u) && !meta.unl[u.id]);
     out.forEach(u => (meta.unl[u.id] = 1)); if (out.length) save();
     return out;
+  }
+  // Ausblick: was später noch freigeschaltet wird (gesperrt, antippen erklärt es); das nächste Ziel steht schon im Fahrplan
+  function renderLater() {
+    const nx = C.nextUnlock(meta), L = C.ROADMAP.filter(u => u.desc && u !== nx && !C.unlocked(meta, u)).slice(0, 4), el = $('mLater');
+    el.hidden = !L.length; if (!L.length) return;
+    el.innerHTML = '<h4>Später freischaltbar</h4>' + L.map(u => `<button data-later="${u.id}"><span class="lk">🔒</span><b>${u.label.replace(/ \(nach der ersten Fusion\)$/, '')}</b><small>ab Welle ${u.w}${u.needTxt ? ', ' + u.needTxt : ''}</small></button>`).join('');
+    $$('#mLater [data-later]').forEach(b => b.addEventListener('click', () => { const u = C.ROADMAP.find(x => x.id === b.dataset.later); A.play('click'); toast(`<b>${u.label}</b><br>${u.desc}`, 6000); }));
   }
   function renderRoadmap() {
     const nx = C.nextUnlock(meta), rec = C.record(meta);
@@ -1444,7 +1453,8 @@
     $$('.fus-btn').forEach(b => { b.hidden = !showFus; b.classList.toggle('ready', canFuse); });
     const showMod = C.modOpen(meta);
     $$('.mod-btn').forEach(b => { b.hidden = !showMod; });
-    $$('.boss-btn').forEach(b => { b.hidden = !Object.keys(meta.bossBeat || {}).length; });
+    $$('.boss-btn').forEach(b => { b.hidden = C.beginner(meta) || !Object.keys(meta.bossBeat || {}).length; });
+    $$('.ach-btn').forEach(b => { b.hidden = C.beginner(meta); });
     const rec = C.record(meta), d = dailyToday();
     if (typeof syncMineBadge === 'function') try { syncMineBadge(); syncNewBadges(); } catch (e) {}
     try { syncDots(); } catch (e) {}
@@ -1457,7 +1467,7 @@
     $('cmdBtn').hidden = !C.cmdOpen(meta);
     { const on = C.elUnlocked(meta), b = $('elemBtn');
       b.hidden = !on; b.classList.remove('locked'); b.setAttribute('aria-disabled', 'false'); }
-    $('hangBtn').hidden = C.record(meta) < 20 && !(meta.skinSeen || []).length;
+    $('hangBtn').hidden = C.beginner(meta);
     try { if (!$('menu').hidden) renderHub(); } catch (e) {}
   }
   const F_FX = {
@@ -2105,6 +2115,7 @@
   function skinNews() {
     const told = meta.skinTold || meta.skinSeen || [], fresh = C.skinUnlocked(meta).filter(x => !told.includes(x));
     meta.skinTold = told.concat(fresh);
+    if (C.beginner(meta)) return []; // Hangar kommt erst nach der ersten Fusion
     return fresh.map(k => { const [cat, id] = k.split(':'); const p = C.SKIN[cat].find(x => x.id === id); return `<div class="unl">Neu im Hangar: ${p.name}</div>`; });
   }
   $$('.hang-btn').forEach(b => b.addEventListener('click', () => show('hangar')));

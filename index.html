@@ -810,6 +810,12 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 .hero .jumpbox h3 { margin: 0 0 6px; }
 .hero .cta { height: 54px; font-size: 1rem; }
 .todo { display: grid; gap: 8px; }
+.later { display: grid; gap: 4px; }
+.later h4 { margin: 4px 0 2px; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+.later button { display: grid; grid-template-columns: 22px 1fr; column-gap: 8px; align-items: center; text-align: left; border: 1px dashed var(--line); border-radius: 4px; padding: 7px 10px; opacity: .75; }
+.later .lk { grid-row: span 2; font-size: .85rem; filter: grayscale(1); }
+.later b { font-size: .84rem; font-weight: 600; }
+.later small { font-size: .72rem; color: var(--ink-dim); }
 .todo button { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: .84rem; text-align: left; color: var(--ink); background: color-mix(in srgb, var(--ink) 3%, transparent); }
 .todo button i { width: 8px; height: 8px; border-radius: 50%; background: var(--hostile); box-shadow: 0 0 8px var(--hostile); flex: 0 0 auto; }
 .todo button span { margin-left: auto; color: var(--ink-dim); font-size: .76rem; white-space: nowrap; }
@@ -965,6 +971,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <button class="monline" id="mOnline" hidden></button>
         <div class="roadmap" hidden></div>
         <div class="todo" id="mTodo"></div>
+        <div class="later" id="mLater" hidden></div>
       </section>
       <section class="mpage" data-page="cannon" hidden>
         <h2>Kanone</h2><p class="mdesc">Alles, was deine Kanone dauerhaft stärker macht.</p>
