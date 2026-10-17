@@ -1,4 +1,4 @@
-// Elementarmagie: Schadensanteil und Erfahrung je Element, mit einem aktiven Bot (zielt wie ein Spieler) und dem Autopiloten
+// Elementarmagie: Schadensanteil, Erfahrung und erlittener Hüllenschaden (gegenüber ohne Element) je Element, mit einem aktiven Bot (zielt wie ein Spieler) und dem Autopiloten
 // Aufruf: node tools/elements.js [Läufe je Variante] [Punkte im Baum]   (nutzt den Fortschritt aus tools/shares.js, falls vorhanden)
 globalThis.KW_P = process.env.KW_P ? JSON.parse(process.env.KW_P) : undefined;
 require('../core.js');
@@ -28,6 +28,11 @@ function elemBot(r, active) {
     else if (r.beamE >= o.dur) { const p = r.strikeTarget(); if (p) r.beamStart(p.x, p.y); }
     return;
   }
+  if (o.k === 'ice' && active && r.elemReady()) {
+    // wie ein Spieler: die nächste Gefahr einfrieren (Bomben und Schiffe nah an der Mauer), sonst den Boss
+    const near = r.enemies.filter(e => e.hp > 0 && !e.host && !e.giant && e.type !== 'boss' && !(e.frostUntil > r.time) && e.dist < 160).sort((a, b) => a.dist - b.dist)[0];
+    const keep = r.focus; if (near) r.focus = near; r.useElem(null, null, true); r.focus = keep; return;
+  }
   if (r.elemReady() && (o.k === 'ice' || active || r.enemies.length >= 4 || r.bossAlive())) r.useElem(null, null, active);
 }
 function play(m, el, active) {
@@ -35,10 +40,12 @@ function play(m, el, active) {
   while (!r.dead && r.time < 7000) {
     r.update(0.1);
     if (el) elemBot(r, active);
+    if (r.takenMid == null && r.wave >= C.record(m) - 15) { r.takenMid = r.taken || 0; r.timeMid = r.time; } // Hüllenschaden bis kurz vor dem Ende
     if (r.time - lb > 1) { lb = r.time; botBuy(r, RUN_UPG); if (r.charge >= 1 && r.enemies.length) { const t = r.enemies.find(e => e.type === 'boss') || r.enemies[0]; const p = r.pos(t); r.strike(p.x, p.y); } }
   }
   return r;
 }
+let base = 0;
 console.log(`Stand: Rekord ${C.record(meta)}, Fusionen ${meta.fusions || 0}, ${PTS} Punkte im Elementbaum`);
 for (const el of [null, 'fire', 'ice', 'light']) for (const active of el ? [true, false] : [false]) {
   const m = JSON.parse(JSON.stringify(meta));
@@ -51,5 +58,6 @@ for (const el of [null, 'fire', 'ice', 'light']) for (const active of el ? [true
   const tot = r => Object.values(r.dealt).reduce((a, b) => a + b, 0);
   const share = runs.reduce((a, r) => a + (r.dealt.elem || 0) / tot(r), 0) / RUNS;
   const xp = runs.reduce((a, r) => a + (r.elXp || 0), 0) / RUNS, waves = runs.reduce((a, r) => a + r.wave - r.startWave + 1, 0) / RUNS;
-  console.log(`${(el ? C.ELEMENTS[el].name : 'ohne').padEnd(6)} ${el ? (active ? 'aktiv' : 'auto ') : '     '}  Wellen ${runs.map(r => r.wave).join('/').padEnd(14)} Anteil ${(share * 100).toFixed(1).padStart(5)} %  Erfahrung/Lauf ${Math.round(xp)} (${(xp / Math.max(1, waves)).toFixed(1)} je Welle)`);
+  const taken = runs.reduce((a, r) => a + (r.takenMid != null ? r.takenMid / Math.max(1, r.timeMid) : (r.taken || 0) / Math.max(1, r.time)), 0) / RUNS; if (!el) base = taken; // Hüllenschaden pro Sekunde
+  console.log(`${(el ? C.ELEMENTS[el].name : 'ohne').padEnd(6)} ${el ? (active ? 'aktiv' : 'auto ') : '     '}  Wellen ${runs.map(r => r.wave).join('/').padEnd(14)} Anteil ${(share * 100).toFixed(1).padStart(5)} %  Erfahrung/Lauf ${Math.round(xp)} (${(xp / Math.max(1, waves)).toFixed(1)} je Welle)  Hüllenschaden ${base ? (taken / base * 100 - 100).toFixed(0).padStart(4) + ' %' : '–'}`);
 }

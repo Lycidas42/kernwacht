@@ -17,29 +17,24 @@ Umgesetzt:
 
 Abweichungen vom Entwurf, nach Messung mit `tools/elements.js`:
 
+- **Feuerball** offensiver: 6× statt 4× Kanonenschaden, Brandfeld 0,9× statt 0,6× pro Sekunde (0.31.1).
+
 - **Frostlanze** stärker als geplant: 6× statt 3× Kanonenschaden, 8 s statt 12 s Abklingzeit, eingefrorene Ziele +40 % statt +30 % Schaden, Splitter 2× statt 1,5×. Der Mehrschaden auf eingefrorene Ziele zählt als Elementschaden.
 - **Feuerball:** Statt „Dritte Ladung“ (1 Stufe) gibt es „Munitionslager“ mit 2 Stufen (+1 Ladung je Stufe).
-- **Erfahrung:** Eis und Licht treffen weniger Schiffe und bekommen deshalb einen Ausgleich (Eis ×3,5, Licht ×1,6). Rangkurve `300 × 1,2^r`. Gegenüber dem Entwurf: 14 Punkte für einen vollen Baum statt 20, kein Reservepool.
+- **Erfahrung:** Eis und Licht treffen weniger Schiffe und bekommen deshalb einen Ausgleich (Eis ×2, Licht ×1,6). Rangkurve `300 × 1,2^r`. Gegenüber dem Entwurf: 14 Punkte für einen vollen Baum statt 20, kein Reservepool.
 - **Licht, Bedienung:** Statt Knopf halten und mit einem zweiten Finger führen: Knopf antippen schaltet den Strahlmodus ein, dann mit einem Finger im Feld führen. Das geht auf dem Handy mit einer Hand. Lange auf den Knopf drücken startet den selbstzielenden Strahl.
 
-Messung (Rekord 160, 4 Fusionen, Bot zielt wie ein Spieler bzw. Autopilot, Anteil am Gesamtschaden):
+Messung (Rekord 160, 4 Fusionen, 6 Läufe je Variante, 14 Punkte im Baum). Der aktive Bot zielt wie ein Spieler: Feuerball in die dichteste Gruppe, Frostlanze auf die nächste Gefahr nahe der Mauer (sonst Boss), Strahl auf die dichteste Gruppe. Hüllenschaden ist der erlittene Schaden pro Sekunde bis kurz vor dem Ende, verglichen mit einem Lauf ohne Element.
 
-| Element | 4 Punkte aktiv | 14 Punkte aktiv | 14 Punkte Autopilot |
-| --- | --- | --- | --- |
-| Feuer | 10 % | 17 % | 18 % |
-| Eis | 3 % | 8 % | 8 % |
-| Licht | 9 % | 13 % | 7 % |
+| Element | Anteil aktiv | Anteil Autopilot | Hüllenschaden aktiv | Erfahrung je Welle aktiv |
+| --- | --- | --- | --- | --- |
+| Feuer | 25 % | 25 % | −45 % | 26 |
+| Eis | 12 % | 8 % | −36 % | 28 |
+| Licht | 16 % | 7 % | −15 % | 22 |
 
-Eis bleibt beim reinen Schaden zurück. Sein Wert liegt in der Kontrolle (Schiffe, Bomben und Heiler stoppen, Bosse bremsen), die der Bot nicht abbildet. Beim Feuer wirft der Autopilot genauso gut wie der Bot, weil beide in die dichteste Gruppe zielen; ein Spieler, der vorausplant, kann mehr herausholen. Ob der Abstand zwischen Hand und Autopilot beim Feuer reicht, sollte mit echten Läufen geprüft werden.
+Feuer ist bewusst das offensive Element (Feuerball 6× statt 4× Kanonenschaden, Brandfeld 0,9× statt 0,6× pro Sekunde). Eis zahlt sich zusätzlich über verhinderten Hüllenschaden aus. In der Simulation schützt allerdings auch Feuer stark, weil schnell zerstörte Schiffe keinen Schaden mehr machen. Die klar defensive Form soll in Phase 2 die Frostnova werden. Beim Feuer wirft der Autopilot so gut wie der Bot, weil beide in die dichteste Gruppe zielen; der Autopilot greift nur beim Nachrechnen im Hintergrund.
 
-Entschieden:
-
-- Freischaltung ab **Rekordwelle 50**.
-- Drei Elemente: **Feuer, Eis, Licht**. Blitz entfällt, weil sich der Kettenblitz mit dem Modul überschneidet.
-- **Elementar-Erfahrung durch Wirkung**, nicht durch überstandene Wellen wie beim Kommandanten.
-- **Elementproben** geben einmalig viel Elementar-Erfahrung und schalten nichts frei.
-- **Element und Form** lassen sich jederzeit außerhalb eines Laufs kostenlos wechseln.
-- Elementrang und Form werden im **Profil** angezeigt.
+Erfahrungsausgleich: Eis ×2, Licht ×1,6 (Feuer ×1).
 
 ## Problem
 

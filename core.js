@@ -579,7 +579,7 @@
   // Formen verwandeln die Fähigkeit; vorerst gibt es je Element die Grundform, die übrigen folgen
   const ELEM_FORMS = {
     fire: [
-      { id: 'ball', name: 'Feuerball', desc: 'Explosion mit 4× Kanonenschaden, danach brennt der Boden 4 s (0,6× Kanonenschaden pro Sekunde). Zwei Ladungen, jede lädt in 10 s nach.',
+      { id: 'ball', name: 'Feuerball', desc: 'Explosion mit 6× Kanonenschaden, danach brennt der Boden 4 s (0,9× Kanonenschaden pro Sekunde). Zwei Ladungen, jede lädt in 10 s nach.',
         how: 'Knopf antippen, dann ins Feld tippen: Der Feuerball schlägt genau dort ein. Ein zweiter Tipp auf den Knopf wirft ihn stattdessen automatisch in die dichteste Gruppe.' },
       { id: 'wall', name: 'Flammenwand', soon: true, desc: 'Eine Linie aus Feuer, die du ins Feld ziehst. Schiffe, die sie durchfliegen, brennen und werden langsamer.' },
       { id: 'meteor', name: 'Meteor', soon: true, desc: 'Ein schwerer Einschlag nach 1,5 s mit großem Radius. Du musst vorhalten, wo die Schiffe dann sind.' },
@@ -620,7 +620,7 @@
   ];
   const EL_BY_ID = {}; ELEM_SKILLS.forEach(k => (EL_BY_ID[k.id] = k));
   // Einzelziel-Elemente kommen auf weniger Abschüsse: ausgleichen, damit alle etwa gleich schnell aufsteigen
-  const ELEM_XP_K = { fire: 1, ice: 3.5, light: 1.6 };
+  const ELEM_XP_K = { fire: 1, ice: 2, light: 1.6 };
   const ELEM_MASTER_K = 1.03; // je Rang über dem vollen Baum ×1,03 Elementschaden
   function elemState(m) {
     if (!m.elem || typeof m.elem !== 'object') m.elem = { act: null };
@@ -901,7 +901,7 @@
       if (el) {
         const E = id => elLv(this.meta, id), g = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el));
         const o = { k: el, form: elForm(this.meta, el) };
-        if (el === 'fire') { const f = 1 + 0.2 * E('f_dmg'); o.dmg = g * 4 * f; o.burn = g * 0.6 * f; o.burnT = 4 + 1.5 * E('f_burn'); o.r = 50 * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * (1 - 0.08 * E('f_cd')); o.jump = 0.25 * E('fb_jump'); }
+        if (el === 'fire') { const f = 1 + 0.2 * E('f_dmg'); o.dmg = g * 6 * f; o.burn = g * 0.9 * f; o.burnT = 4 + 1.5 * E('f_burn'); o.r = 50 * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * (1 - 0.08 * E('f_cd')); o.jump = 0.25 * E('fb_jump'); }
         if (el === 'ice') { o.dmg = g * 6; o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.shard = g * 2 * (1 + 0.4 * E('il_shard')); o.sog = 0.5 * E('il_sog'); }
         if (el === 'light') { o.dps = g * 1.5 * (1 + 0.2 * E('l_dmg')); o.dur = 4 + 0.5 * E('l_dur'); o.cd = 12 - 1.5 * E('l_cd'); o.ramp = 1 + 0.25 * E('lp_glow'); o.w = 7 * (1 + 0.2 * E('lp_wide')); o.blind = 0.5 * E('lp_blind'); }
         s.el = o;
@@ -2465,6 +2465,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.31.0'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.31.1'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_AT, ELEM_FORM_AT, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
