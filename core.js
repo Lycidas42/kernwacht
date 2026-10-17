@@ -1716,6 +1716,8 @@
       if (o.k === 'fire' && o.form === 'ball') this.elemAmmo = Math.min(o.ammo, (this.elemAmmo || 0) + dt / o.cd);
       else if (o.k !== 'light') this.elemCd = Math.max(0, this.elemCd - dt * (o.sog && this.frozen ? 1 + o.sog : 1));
       if (o.k === 'light') this.beamTick(dt, o);
+      const on = !!this.beam; if (on && !this.elBeamOn) this.elUse(this.beam.hand); this.elBeamOn = on;
+      this.elUseTick();
       // Flammenwand: brennende Schiffe
       for (const e of this.enemies) if (e.burnUntil > this.time && e.hp > 0) { e.elBurn = this.time; this.elHit(e, e.burnDps * dt, e.elemHand); }
       if (this.walls.length) this.wallTick(o);
@@ -1762,11 +1764,15 @@
       const m = this.s.mod && this.s.mod.cryoammo; if (m && e.slowUntil > this.time) d *= 1 + m;
       return this.hurt(e, d, false, 'elem');
     }
+    // Element-Erfahrung: k Abschüsse, skaliert mit Welle; Brennglas trifft nur ein Ziel; Fusionsglut vervielfacht
+    elXpAdd(k) {
+      const o = this.s.el, v = k * (1 + this.wave / 50) * ELEM_XP_K[o.k] * (o.form === 'lens' ? 2 : 1) * (this.glow || 1) * (this.s.chal.elxp || 1);
+      const E = elemState(this.home); E.xp[o.k] = (E.xp[o.k] || 0) + v; this.elXp = (this.elXp || 0) + v;
+    }
     elemXp(e) {
       if (this.admin || !this.s.el || e.type === 'bomb') return;
       const o = this.s.el, boss = e.type === 'boss' && !e.child;
-      const v = (1 + this.wave / 50) * (boss ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5) * ELEM_XP_K[o.k] * (o.form === 'lens' ? 2 : 1) * (this.glow || 1) * (this.s.chal.elxp || 1); // Brennglas trifft nur ein Ziel; Fusionsglut vervielfacht
-      const E = elemState(this.home); E.xp[o.k] = (E.xp[o.k] || 0) + v; this.elXp = (this.elXp || 0) + v;
+      this.elXpAdd((boss ? 20 : e.host ? 0.5 : 1) * (e.elemHand ? 1 : 0.5));
       this.elKills = (this.elKills || 0) + 1; const st = statOf(this.home); st.elKills = (st.elKills || 0) + 1; this.probe(PROBE_KILL[o.form], this.elKills);
       if (boss && this.time - e.elemT <= 1.5) {
         if (o.form === 'meteor' ? this.time - (e.meteorT || -9) <= 1 : o.form === 'storm' ? this.time - (e.stormT || -9) <= 0.5 : o.form !== 'lens') this.probe(PROBE_BOSS[o.form]);
@@ -1782,6 +1788,18 @@
     }
     // x, y leer: automatisch (dichteste Gruppe bzw. Ziel). Flammenwand: (x, y) → (x2, y2)
     useElem(x, y, hand, x2, y2) {
+      const ok = this.useElemDo(x, y, hand, x2, y2);
+      if (ok && this.s.el.k !== 'light') this.elUse(hand); // Licht: zählt beim Einschalten des Strahls (elemTick)
+      return ok;
+    }
+    // Mini-Erfahrung für die Benutzung: bringt ein Einsatz binnen 4 s keine Erfahrung (kein Abschuss), gibt es einen halben Abschuss.
+    // Nur ein Einsatz zugleich wartet, Dauerklicken bringt also höchstens alle 4 s etwas.
+    elUse(hand) { if (!this.admin && this.s.el && !this.elUseP) this.elUseP = { t: this.time, xp: this.elXp || 0, hand: !!hand }; }
+    elUseTick() {
+      const u = this.elUseP; if (!u || this.time - u.t < 4) return;
+      this.elUseP = null; if ((this.elXp || 0) === u.xp) this.elXpAdd(0.5 * (u.hand ? 1 : 0.5));
+    }
+    useElemDo(x, y, hand, x2, y2) {
       const o = this.s.el; if (!o || this.dead) return false;
       if (o.k === 'light') return o.form === 'lens' ? this.lensToggle(hand) : o.form === 'mirror' ? this.mirrorAuto(hand) : this.beamAuto(hand);
       if (!this.elemReady()) return false;
@@ -2975,6 +2993,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.47.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.47.2'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
