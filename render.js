@@ -999,6 +999,10 @@
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(facing); ctx.scale(1.5, 1.5);
         if (cloak) ctx.globalAlpha = 0.18 + 0.12 * Math.sin(t * 0.01 + e.seed);
         drawShip(e, t, frozen || e.slowUntil > run.time); ctx.restore(); ctx.globalAlpha = 1;
+        if (e.elite && !cloak) { // Elitegarde: goldener, kreisender Ring
+          ctx.setLineDash([6, 5]); ctx.lineDashOffset = -t * 0.02; ctx.lineWidth = 2; ctx.strokeStyle = '#ffd166';
+          ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 2.1, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+        }
         if (e.slowUntil > run.time && !frozen) {
           ctx.beginPath(); ctx.arc(p.x, p.y, e.r * 1.7, 0, 7); ctx.fillStyle = 'rgba(159,232,255,0.18)'; ctx.fill();
           ctx.save(); ctx.translate(p.x, p.y - e.r * 1.9); ctx.rotate(t * 0.002);
@@ -1271,6 +1275,7 @@
           ctx.fillText(f.boss ? (f.bossName || 'Boss').toUpperCase() : 'WELLE ' + f.w, W / 2, H * 0.4 - k * 10);
           if (f.kind && !f.sector) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`; ctx.fillStyle = f.kind === 'Schwarm' ? '#ffb066' : f.kind === 'Panzerverband' ? '#ff8a8a' : '#e0ff6b'; ctx.fillText(f.kind.toUpperCase(), W / 2, H * 0.4 + Math.min(W, H) * 0.06 - k * 10); }
           if (f.sector) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.04)}px ${FONT_UI()}`; ctx.fillStyle = BIOME[f.sector.n - 1].star; ctx.fillText('SEKTOR ' + f.sector.n + ' · ' + f.sector.name.toUpperCase() + (f.cycle > 1 ? ' · ZYKLUS ' + C.cycleName(f.cycle) : ''), W / 2, H * 0.4 + Math.min(W, H) * 0.06 - k * 10); }
+          if (f.sector && f.anom) { ctx.font = `600 ${Math.round(Math.min(W, H) * 0.032)}px ${FONT_UI()}`; ctx.fillStyle = '#b9a6ff'; ctx.fillText('ANOMALIE: ' + f.anom.toUpperCase(), W / 2, H * 0.4 + Math.min(W, H) * 0.11 - k * 10); }
           ctx.globalAlpha = 1;
         }
       }

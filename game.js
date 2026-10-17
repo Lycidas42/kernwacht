@@ -2259,6 +2259,7 @@
         else { const d = dailyToday(), b = d ? d.best : 0; txt = 'Tageslauf' + (b ? ' · heute ' + b : ''); hit = b > 0 && run.wave > b; }
         $('bestNo').textContent = txt; $('bestNo').classList.toggle('rec', !!hit);
       } else {
+        if (run.anom !== window.__anom) { window.__anom = run.anom; if (run.anom) toast(`<b>Anomalie: ${run.anom.name}</b><br>${run.anom.desc}`, 6000); } // Echo-Zyklus: neue Anomalie ankündigen
         const rec = run.wave > meta.best && meta.best > 0;
         const allRec = C.record(meta);
         $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : run.rush ? 'Durchmarsch' : run.rushWhyAt && run.wave - run.rushWhyAt.w <= 3 ? (run.rushWhyAt.why === 'hull' ? 'Durchmarsch aus: Schaden' : run.rushWhyAt.why === 'field' ? 'Durchmarsch aus: Feld voll' : 'Durchmarsch aus: Boss zäh') : run.catchUp() ? 'Aufholen ×2' : rec ? 'Neue Bestwelle' : 'Rekord ' + allRec;

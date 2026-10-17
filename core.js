@@ -621,6 +621,21 @@
     { id: 'nodef',  name: 'Ohne Abwehr',     desc: 'Keine Abwehr-Upgrades im Lauf.', block: 'nodef' },
     { id: 'glass',  name: 'Glaskanone',      desc: 'Ein Viertel der Strukturpunkte, keine Reparatur.', block: 'glass' },
   ];
+  // ---------- Anomalien der Echo-Zyklen: je Zyklus eine Eigenschaft, ab Zyklus III zwei im Wechsel (je Zone) ----------
+  // Felder wie bei TWISTS (ehp, spd, bias, loot), dazu crit (+Krit-Chance), stasis (× Dauer Stasisfeld), charge (× Ladetempo Orbitalschlag), elite (Elite-Schiffe je Welle)
+  const ANOMALIES = [
+    { id: 'ion',   name: 'Ionensturm',      desc: 'Gegner 25 % zäher, dafür +10 % Krit-Chance.', ehp: 1.25, crit: 0.1 },
+    { id: 'grav',  name: 'Gravitationssog', desc: 'Schiffe 20 % schneller, das Stasisfeld hält 50 % länger.', spd: 1.2, stasis: 1.5 },
+    { id: 'swarm', name: 'Schwarmflut',     desc: 'Viele Schwarm-Wellen, +25 % Energie je Abschuss.', bias: 'swarm', loot: 1.25 },
+    { id: 'elite', name: 'Elitegarde',      desc: 'Jede Welle 1–2 Elite-Schiffe mit 4× Lebenspunkten, sie bringen Extra-Kristalle.', elite: true },
+    { id: 'solar', name: 'Sonnenwind',      desc: 'Viele Panzerverbände, der Orbitalschlag lädt 30 % schneller.', bias: 'heavy', charge: 1.3 },
+  ];
+  function anomalyOf(w) {
+    const c = cycleOf(w || 1); if (c < 2) return null;
+    const a = ANOMALIES[(c - 2) % ANOMALIES.length];
+    if (c === 2) return a;
+    return Math.floor((w - 1) / 50) % 2 ? ANOMALIES[c % ANOMALIES.length] : a;
+  }
   function hashStr(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   // Tag nach deutscher Zeit, damit alle zur selben Mitternacht wechseln
@@ -709,7 +724,8 @@
       return r;
     }
 
-    twist() { return this.mode && this.mode.kind === 'daily' ? TWISTS.find(t => t.id === dailyOf(this.mode.day).twist) : null; }
+    // Tageslauf: Besonderheit des Tages; normaler Lauf: Anomalie des Echo-Zyklus (gleiche Felder)
+    twist() { return this.mode && this.mode.kind === 'daily' ? TWISTS.find(t => t.id === dailyOf(this.mode.day).twist) : this.mode ? null : anomalyOf(this.wave); }
     isBlocked(u) { return !!(this.block && u && this.block(u)); }
     // Freigeschaltete Zusatzwaffen beginnen auf Stufe 1
     L(id) {
@@ -744,6 +760,7 @@
       s.knock = L('knock') ? 1.5 + 0.35 * L('knock') : 0;
       const tw = this.twist();
       s.loot = (1 + P.lootK * L('loot')) * (1 + 0.08 * M('m_loot')) * cb.loot * (this.rule === 'poor' ? (this.isChal ? P.chalPoor : 0.5) : 1) * ((tw && tw.loot) || 1);
+      if (tw && tw.crit) s.crit += tw.crit;
       // Wellenprämie: Anteil der Abschuss-Energie einer typischen Welle, als fester Bonus pro überstandener Welle
       s.waveBonus = P.bonusK * L('interest');
       s.crysMult = (1 + 0.06 * L('crys')) * (1 + 0.1 * M('m_crys')) * (1 + P.fCrys * F('f_crys')) * cb.crys;
@@ -801,7 +818,7 @@
       if (s.blades) s.blades += K('a_blades');
       s.maxHp *= 1 + 0.05 * K('b_plate'); s.regen *= (1 + 0.05 * K('b_plate')) * (1 + 0.25 * K('b_regen'));
       s.loot *= 1 + 0.05 * K('t_fund');
-      s.chargeK = (1 + 0.15 * K('t_charge')) * (K('t_loop') ? 1.25 : 1);
+      s.chargeK = (1 + 0.15 * K('t_charge')) * (K('t_loop') ? 1.25 : 1) * ((tw && tw.charge) || 1);
       if (s.noGun) { s.rocketCd = 0; s.cryoCd = 0; s.shockCd = 0; s.blades = 0; }
       // Obergrenze gegen Zahlenüberlauf (über 1e308 wird es „unendlich“)
       const CAP = 1e290; for (const k of ['dmg', 'gunDmg', 'shockDmg', 'bladeDmg', 'mineDmg', 'rocketDmg', 'cryoDmg', 'strikeDmg', 'maxHp', 'regen']) if (s[k] > CAP) s[k] = CAP;
@@ -968,6 +985,8 @@
       // Tageslauf: jede Welle aus eigenem Startwert, damit alle dieselben Wellen bekommen
       if (this.seed != null) this.rng = mulberry32(hashStr(this.seed + ':' + w));
       const rnd = this.rng, tw = this.twist();
+      if (tw !== this.anom) { this.anom = tw; this.recalc(); } // neue Anomalie (Zonenwechsel im Echo-Zyklus): Werte neu berechnen
+      this.eliteLeft = tw && tw.elite && !boss ? 1 + (rnd() < 0.5 ? 1 : 0) : 0;
       const wt = boss ? 'normal' : pickWaveType(w, rnd, tw && tw.bias), WT = WAVE_TYPES[wt];
       const n = Math.max(3, Math.round(shipCount(w) * WT.n));
       // Gesamt-LP und Energie der Welle bleiben gleich, verteilt auf weniger bzw. mehr Schiffe
@@ -997,7 +1016,7 @@
       this.queue = list;
       this.spawnGap = boss ? (this.rush ? 0.3 : 1) : this.rush ? Math.min(P.rushGap, SPAWN_LEN / list.length) : SPAWN_LEN / list.length;
       this.spawnT = 0;
-      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Boss' }).name : null, kind: WT.name, rush: this.rush, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null, cycle: cycleOf(w) });
+      if (this.fxOn) this.fx.push({ k: 'wave', t: 0, w, boss, bossName: boss ? (BOSS_KINDS[bossKind(w)] || { name: 'Boss' }).name : null, kind: WT.name, rush: this.rush, sector: (w - 1) % 50 === 0 && w > 1 ? sectorOf(w) : null, cycle: cycleOf(w), anom: tw && !this.mode ? tw.name : null });
     }
 
     // Neues Schiff an Weltposition (x, y) erzeugen
@@ -1028,6 +1047,7 @@
         }
       }
       if (o) Object.assign(e, o);
+      if (this.eliteNext && type !== 'part') { this.eliteNext = false; e.elite = true; e.hp *= 4; e.maxHp = e.hp; e.r *= 1.3; e.rw *= 3; }
       this.enemies.push(e);
       const BK = e.type === 'boss' && BOSS_KINDS[e.kind];
       if (BK && BK.parts) for (const q of BK.parts) this.spawnPart(e, q);
@@ -1045,6 +1065,8 @@
       return pt;
     }
     spawn(type) {
+      // Elitegarde: einzelne Schiffe der Welle werden zu Elite-Schiffen
+      if (this.eliteLeft > 0 && type !== 'boss' && this.rng() < this.eliteLeft / (this.queue.length + 1)) { this.eliteLeft--; this.eliteNext = true; }
       // Durchmarsch: Schiffe springen direkt an den Rand der Reichweite, statt erst heranzufliegen
       if (this.rush && type !== 'boss') { const R = Math.min(FIELD_H, this.s.range * 0.85), a = -Math.PI / 2 + (this.rng() * 2 - 1) * 0.9; this.spawnAt(type, Math.cos(a) * R, Math.sin(a) * R - this.rng() * 15); return; }
       this.spawnAt(type, (this.rng() * 2 - 1) * FIELD_W, -FIELD_H - this.rng() * 30);
@@ -1212,6 +1234,7 @@
       if (e.hp <= 0) {
         this.energy += e.rw * this.s.loot;
         this.kills++;
+        if (e.elite) { const c = 0.5 * waveCrystals(this.wave) * this.s.crysMult; this.crystals += c; if (this.fxOn) { const p = this.pos(e); this.fx.push({ k: 'crysfx', x: p.x, y: p.y, t: 0 }); } }
         if (this.fxOn && this.s.mod && (this.s.mod.leech || this.s.mod.crysmod) && Math.random() < 0.5) { const p = this.pos(e); this.fx.push({ k: this.s.mod.leech ? 'leech' : 'crysfx', x: p.x, y: p.y, t: 0 }); }
                 if (this.s.K && this.s.K('b_leech') && !this.dead) this.hp = Math.min(this.s.maxHp, this.hp + this.s.maxHp * 0.003 * this.s.K('b_leech'));
         if (this.s.mod.splinter && src !== 'mod') {
@@ -1411,7 +1434,7 @@
       const A = ABIL[id], l = this.abilityLv(id);
       this.cd[id] = A.cd(l) * (1 - Math.min(0.6, (this.s.mod && this.s.mod.echo) || 0)) * (this.s.K && this.s.K('t_loop') ? 0.6 : 1);
       const ext = 1 + 0.5 * ((this.s.mod && this.s.mod.echo) || 0); // Echo verlängert auch die Wirkdauer
-      if (id === 'freeze') this.freezeUntil = this.time + (A.dur(l) + ((this.s.K && this.s.K('t_stasis')) || 0)) * ext;
+      if (id === 'freeze') this.freezeUntil = this.time + (A.dur(l) + ((this.s.K && this.s.K('t_stasis')) || 0)) * ext * ((this.twist() || {}).stasis || 1);
       if (id === 'over') this.overUntil = this.time + A.dur(l) * ext;
       if (this.fxOn) this.fx.push({ k: id, t: 0 });
       if (this.fxOn && this.s.mod && this.s.mod.echo) this.fx.push({ k: 'echo', t: 0 });
@@ -2251,6 +2274,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.31.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.32.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, ROADMAP, record, gateOk, nextUnlock, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

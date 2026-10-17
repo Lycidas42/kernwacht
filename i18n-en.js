@@ -746,6 +746,13 @@ window.KW_EN = {
   'Minenwerfer im Labor': 'Mine layer in the lab', 'Herausforderungen: Läufe mit Handicap für dauerhafte Boni': 'Challenges: handicapped runs for permanent bonuses',
   'Sektor {0}: {1}, {2}': 'Sector {0}: {1}, {2}', 'Nächster Sektor': 'Next sector', 'Herausforderungen, Tageslauf, Bergbau': 'Challenges, daily run, mining',
   'Echo-Zyklen: die Zonen kehren wieder, alle Module wieder auffindbar': 'Echo cycles: the zones return, all modules can drop again',
+  'ANOMALIE: {0}': 'ANOMALY: {0}', 'Anomalie: {0}': 'Anomaly: {0}',
+  'Ionensturm': 'Ion Storm', 'Gravitationssog': 'Gravity Pull', 'Schwarmflut': 'Swarm Tide', 'Elitegarde': 'Elite Guard', 'Sonnenwind': 'Solar Wind',
+  'Gegner 25 % zäher, dafür +10 % Krit-Chance.': 'Enemies 25 % tougher, but +10 % crit chance.',
+  'Schiffe 20 % schneller, das Stasisfeld hält 50 % länger.': 'Ships 20 % faster, the stasis field lasts 50 % longer.',
+  'Viele Schwarm-Wellen, +25 % Energie je Abschuss.': 'Many swarm waves, +25 % energy per kill.',
+  'Jede Welle 1–2 Elite-Schiffe mit 4× Lebenspunkten, sie bringen Extra-Kristalle.': 'Every wave 1–2 elite ships with 4× health, they drop extra crystals.',
+  'Viele Panzerverbände, der Orbitalschlag lädt 30 % schneller.': 'Many armored groups, the orbital strike charges 30 % faster.',
   'Randzone': 'Outer Rim', 'Smaragdnebel': 'Emerald Nebula', 'Glutgürtel': 'Ember Belt', 'Roter Riese': 'Red Giant', 'Die Leere': 'The Void',
 
   // ---------- Gegner ----------
