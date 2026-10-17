@@ -7,7 +7,7 @@
     eHp: 1.13, eHpLin: 0.12, eDmg: 1.1, eDmgLin: 0.06, eDmgLate: 0.7, eDmgLateAt: 100, eRw: 1.02, eRwLin: 0,
     cBase: 2.5, cGrow: 1.01, cLate: 0.04, cBoss: 10, pDmg: 7, pHp: 80, lvDmg: 1.1, lvHp: 1.1, rw0: 1.3,
     rgMax: 0.05, rgK: 15, arMax: 0.65, arK: 15, arCap: 0.75, kamikaze: 3, multiDmg: 0.35, shockK: 0.9, mineK: 0.7, lootK: 0.05, nGrow: 1.2, bonusK: 0.025,
-    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragEarly: 1.5, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, strikePart: 0.35, strikePartTo: 20, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, boss1Hp: 0.3, boss1Part: 0.45, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
+    labG: 1.2, fCore: 1.25, fCrys: 0.5, fragK: 1, fCoreG: 1.25, fCorePoly: 1.6, fCorePB: 5.2, fCoreLate: 1.028, resK: 2000, resCap: 1000, fragLate: 1.01, fragEarly: 1.5, fragLateAt: 150, mend: 0.03, mendBoss: 0.002, mendSelf: 0.01, mendOthers: 0.15, mendCalm: 1.5, gunFocusPct: 0.012, strikeDmg: 1.4, strikeBoss: 5, strikeBossT: 30, pierceK: 0.6, fragExp: 2.3, rwExp: 0, strikePct: 0.12, strikePart: 0.35, fbK: 6, fbR: 60, fmK: 11, fwK: 1.8, elBossPct: 0.012, elPartPct: 0.05, fDmgLv: 0.1, strikePartTo: 20, waveTypes: 1, shipCap: 14, aliveCap: 26, mendMax: 2, rushHit: 0.1, rushBossT: 15, rushLordT: 45, rushGap: 0.18, wmDmg: 0.8, bossWrath: 90, gunBossPct: 0.0004, xpLowAt: 0.5, jumpRec: 0.5, catchAt: 0.5, catchSpeed: 2, catchCrys: 2, bossHp: 2.5, bossHpEarly: 1.2, boss1Hp: 0.3, boss1Part: 0.45, bossHpLate: 150, bossDpsCheck: 0.04, miniScale: 1.3, bossBurst: 0.05, xpLow: 0.1,
     modK: { cryo: 0.3, thorn: 0.7, leech: 0.12, nova: 1 },
     chalHp: 1.5, chalFastWave: 1.5, chalPoor: 1 / 3, chalMine: 0.7, // Verschärfung nur in Challenges (nicht im Tageslauf)
     gunK: 3, rockLv: 0.04, shockLv: 0.3, shockRLow: 0.7, shockPct: 0, bladeLv: 0.25, bladeWall: 2, bladeRHi: 0.8, bladePart: 0.3, bladeCd: 1, bladeMax: 2, bladeStep: 8, aoeMax: 15, mineLv: 0.06, splK: 1, bladeV: 120, bladeK: 1.8,
@@ -692,7 +692,7 @@
   // (ab ELEM_FORM_AT Punkten im Stamm) mit eigenem Wurzelknoten, zwei Ästen und einem Schlussstein (cap, ab ELEM_CAP_AT Punkten in der Form).
   // par: Elternknoten
   const ELEM_SKILLS = [
-    { id: 'f_dmg',   el: 'fire', max: 3, name: 'Glutkern',       desc: l => `+${pc(0.2 * l)} Feuerschaden, auch für Brandminen und Nachbeben` },
+    { id: 'f_dmg',   el: 'fire', max: 3, name: 'Glutkern',       desc: l => `+${pc(P0.fDmgLv * l)} Feuerschaden, auch für Brandminen und Nachbeben` },
     { id: 'f_cd',    el: 'fire', par: 'f_dmg', max: 3, name: 'Schnellzündung', desc: l => `Feuer lädt ${pc(0.08 * l)} schneller nach` },
     { id: 'f_burn',  el: 'fire', par: 'f_dmg', max: 2, name: 'Zunder',         desc: l => `Brandfelder und Flammenwände halten ${dc(1.5 * l, 1)} s länger` },
     { id: 'fb_ammo', el: 'fire', form: 'ball', max: 2, name: 'Munitionslager', desc: l => `+${l} Ladung${l > 1 ? 'en' : ''}` },
@@ -1090,11 +1090,11 @@
         const E = id => elLv(this.meta, id), g = s.gunDmg * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)), form = elForm(this.meta, el);
         const o = { k: el, form, cap: ELEM_SKILLS.some(k => k.el === el && k.form === form && k.cap && E(k.id)) };
         if (el === 'fire') {
-          const f = 1 + 0.2 * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
+          const f = 1 + P.fDmgLv * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
           o.glut = f; o.burnT = 4 + 1.5 * E('f_burn');
-          if (form === 'ball') { o.dmg = g * 6 * f; o.burn = g * 0.9 * f; o.r = 50 * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * cdk; o.jump = 0.25 * E('fb_jump'); o.inferno = !!E('fb_inferno'); }
-          if (form === 'wall') { o.cd = 16 * cdk; o.len = 140 * (1 + 0.25 * E('fw_len')); o.dur = 6 + 1.5 * E('f_burn') + E('fw_dur'); o.burn = g * 1.2 * f; o.burnFor = 3 + E('fw_dur'); o.heat = 0.1 + 0.1 * E('fw_heat'); o.ring = !!E('fw_ring'); o.dmg = o.burn; }
-          if (form === 'meteor') { o.cd = Math.max(6, 22 * cdk - 2 * E('fm_cd')); o.dmg = g * 11 * f; o.r = 70; o.boss = 1 + 0.2 * E('fm_boss'); o.burn = g * 0.6 * f; o.shower = g * 1.5 * E('fm_shower') * f; o.star = !!E('fm_star'); }
+          if (form === 'ball') { o.dmg = g * P.fbK * f; o.burn = g * 0.9 * f; o.r = P.fbR * (1 + 0.15 * E('fb_rad')); o.ammo = 2 + E('fb_ammo'); o.cd = 10 * cdk; o.jump = 0.25 * E('fb_jump'); o.inferno = !!E('fb_inferno'); }
+          if (form === 'wall') { o.cd = 16 * cdk; o.len = 140 * (1 + 0.25 * E('fw_len')); o.dur = 6 + 1.5 * E('f_burn') + E('fw_dur'); o.burn = g * P.fwK * f; o.burnFor = 3 + E('fw_dur'); o.heat = 0.1 + 0.1 * E('fw_heat'); o.ring = !!E('fw_ring'); o.dmg = o.burn; }
+          if (form === 'meteor') { o.cd = Math.max(6, 22 * cdk - 2 * E('fm_cd')); o.dmg = g * P.fmK * f; o.r = 70; o.boss = 1 + 0.2 * E('fm_boss'); o.burn = g * 0.6 * f; o.shower = g * 1.5 * E('fm_shower') * f; o.star = !!E('fm_star'); }
         }
         if (el === 'ice') {
           o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.shard = g * 2 * (1 + 0.4 * E('il_shard'));
@@ -1736,6 +1736,8 @@
       }
       return best;
     }
+    // Feuerball und Meteor treffen große Ziele spürbar: Anteil der maximalen Lebenspunkte von Bossen und Anbauteilen
+    elBig(e) { return e.type === 'boss' && !e.child ? e.maxHp * P.elBossPct : e.host ? e.maxHp * P.elPartPct : 0; }
     // Treffer des Elements: merkt sich Zeitpunkt und Auslöser (Hand/Autopilot) für die Erfahrung
     elHit(e, d, hand) { e.elemT = this.time; e.elemHand = !!hand; return this.hurt(e, d, false, 'elem'); }
     elemXp(e) {
@@ -1772,7 +1774,7 @@
           return true;
         }
         this.elemAmmo -= 1; let n = 0;
-        for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - x, p.y - y) <= o.r + e.r) { n++; this.elHit(e, o.dmg, hand); } }
+        for (const e of this.enemies) { if (e.hp <= 0) continue; const p = this.pos(e); if (Math.hypot(p.x - x, p.y - y) <= o.r + e.r) { n++; this.elHit(e, o.dmg + this.elBig(e), hand); } }
         this.fires.push({ x, y, r: o.r, dps: o.burn, until: this.time + o.burnT, k: 'elfire', el: true, hand: !!hand });
         if (this.fxOn) this.fx.push({ k: 'fireball', x, y, r: o.r, t: 0 });
         this.probe('fb_hit', n);
@@ -1888,7 +1890,7 @@
           if (e.hp <= 0) continue; const p = this.pos(e);
           if (Math.hypot(p.x - m.x, p.y - m.y) > o.r + e.r) continue;
           n++; e.meteorT = this.time;
-          this.elHit(e, o.dmg * m.k * (e.type === 'boss' ? o.boss : 1), m.hand);
+          this.elHit(e, (o.dmg + this.elBig(e)) * m.k * (e.type === 'boss' ? o.boss : 1), m.hand);
           if (e.hp > 0 && e.type !== 'boss' && !e.host) e.stunUntil = Math.max(e.stunUntil || 0, this.time + 1);
         }
         this.fires.push({ x: m.x, y: m.y, r: o.r * 0.8, dps: o.burn * m.k, until: this.time + 5, k: 'elfire', el: true, hand: m.hand });
@@ -2949,6 +2951,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.42.1'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.43.0'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

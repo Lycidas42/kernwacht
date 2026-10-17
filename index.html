@@ -1599,7 +1599,8 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
   // Neueste Version direkt vom Server lesen (an der Konstante VERSION in sw.js)
   async function remoteVersion() {
     const r = await fetch('sw.js?v=' + Date.now(), { cache: 'no-store' });
-    const m = (await r.text()).match(/VERSION = '([^']+)'/);
+    // nur eine echte Versionsnummer gilt (bei Netzfehlern liefert der Service Worker sonst index.html, dort steht dieser Ausdruck selbst)
+    const m = r.ok && (await r.text()).match(/const VERSION = '(\d+\.\d+\.\d+)'/);
     return m ? m[1] : null;
   }
   function pendingRetry() {

@@ -2,7 +2,7 @@
 // Strategie: eigene Dateien "network first" (online immer die neueste Version),
 // offline aus dem Cache. Schriften "cache first".
 // Bei jeder Veröffentlichung VERSION erhöhen (Schema 0.x.y), damit alte Caches verschwinden.
-const VERSION = '0.42.1';
+const VERSION = '0.43.0';
 const CACHE = 'kw-' + VERSION;
 const APP = [
   './',
@@ -54,6 +54,8 @@ self.addEventListener('fetch', e => {
 
   // Online-Dienst und Bibliotheken nie aus dem Cache bedienen
   if (url.origin !== location.origin) return;
+  // Versionsabfrage (sw.js?v=…) nie über den Cache: kein Rückfall auf index.html, keine Cache-Einträge je Abfrage
+  if (url.pathname.endsWith('/sw.js')) return;
   // config.js immer frisch, damit neue Zugangsdaten sofort greifen
   if (url.pathname.endsWith('/config.js')) { e.respondWith(fetch(req, { cache: 'no-store' }).catch(() => caches.match(req))); return; }
 
