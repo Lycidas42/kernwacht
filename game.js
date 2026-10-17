@@ -123,7 +123,7 @@
     run = new C.Run(meta, { startWave: C.startWaveFor(meta), mode });
     A.nextRandom(); syncModeFrame(true);
     R.clear(); armed = null; dpsHist.length = 0;
-    setPaused(false); show(null); buildList(); save();
+    setPaused(false); show(null); buildList(); save(); syncTempo();
     $('pollPop').hidden = true; // Umfrage-Einblendung nicht in den Lauf mitnehmen
     if (run.glow) toast(`<b>Fusionsglut</b><br>×${run.glow} Erfahrung in diesem Lauf, auch unter deinem Rekord.`, 5000);
   }
@@ -2544,7 +2544,7 @@
   });
   $('pauseBtn').addEventListener('click', () => { if (runAlive()) setPaused(!paused); });
   // Nächste Welle vorzeitig rufen (mit Energie-Bonus für die gesparte Zeit)
-  function callWave() { if (!runAlive() || paused || current || !run.canCallWave()) { A.play('hurt'); return; } run.callWave(); }
+  function callWave() { if (!runAlive() || paused || current || !tempoOk() || !run.canCallWave()) { A.play('hurt'); return; } run.callWave(); }
   // Automatisch rufen: sobald die aktuelle Welle komplett gestartet ist (kein Boss)
   function syncAutoCall() { const on = !!meta.autoCall; $$('.autocall').forEach(b => { b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (!b.classList.contains('sw')) b.textContent = on ? 'Wellen automatisch rufen: an' : 'Wellen automatisch rufen: aus'; }); $('callBtn').classList.toggle('auto', on); }
   $$('.autocall').forEach(b => b.addEventListener('click', () => { meta.autoCall = !meta.autoCall; save(); syncAutoCall(); A.play('click'); }));
@@ -2561,6 +2561,18 @@
   }));
   // Tempo vom letzten Mal übernehmen
   if ([1, 2, 4].includes(meta.speed)) { speed = meta.speed; $$('#ctrl [data-speed]').forEach(x => x.setAttribute('aria-pressed', +x.dataset.speed === speed ? 'true' : 'false')); }
+  // Vor dem ersten Boss: nur Tempo 1×, kein vorzeitiges Rufen (Knöpfe ausgeblendet)
+  // Rekord zählt erst am Laufende; den ersten Boss im laufenden Lauf geschafft zu haben reicht schon
+  function tempoOk() { return C.tempoOpen(meta) || !!(runAlive() && !run.mode && run.wave > C.TEMPO_AT); }
+  let tempoWas = tempoOk();
+  function syncTempo() {
+    const on = tempoOk();
+    if (on && !tempoWas) toast('<b>Neu: Tempo 2× und 4×</b><br>Dazu „Welle ▸▸“: die nächste Welle sofort rufen.', 5000);
+    tempoWas = on;
+    $$('#ctrl [data-speed], #callBtn, .autocall').forEach(b => (b.hidden = !on));
+    if (!on && speed > 1 && speed <= 4) setSpeedUI(1);
+  }
+  syncTempo();
   // Nachrechnen an/aus
   function syncCatchBtn() { const on = meta.catchup !== false; $('catchBtn').setAttribute('aria-pressed', on ? 'true' : 'false'); }
   $('catchBtn').addEventListener('click', () => { meta.catchup = meta.catchup === false; save(); syncCatchBtn(); A.play('click'); });
@@ -2613,7 +2625,7 @@
     if (live) {
       let left = realDt * speed;
       while (left > 0) { const d = Math.min(1 / 30, left); run.update(d); left -= d; if (run.dead) break; }
-      autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); elemRankCheck(); autoBuy(); if (meta.autoCall && !run.queue.length && run.canCallWave()) run.callWave(); }
+      autoT += realDt; if (autoT > 0.3) { autoT = 0; if (run.payCrystals()) syncPauseLab(); if (!tempoWas && tempoOk()) syncTempo(); elemRankCheck(); autoBuy(); if (meta.autoCall && tempoOk() && !run.queue.length && run.canCallWave()) run.callWave(); }
       dpsT += realDt * speed; if (dpsT >= 1) { dpsT = 0; sampleDps(); }
       for (const f of run.fx) { R.pushFx(f); const snd = SOUND_OF[f.k]; if (snd) A.play(snd, f); if (f.k === 'dmg' && f.crit) A.play('crit'); if (f.k === 'probe') probeToast(f.id); }
       run.fx.length = 0;
