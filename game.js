@@ -1282,7 +1282,7 @@
   function renderLater() {
     const nx = C.nextUnlock(meta), L = C.ROADMAP.filter(u => u.desc && u !== nx && !C.unlocked(meta, u)).slice(0, 4), el = $('mLater');
     el.hidden = !L.length; if (!L.length) return;
-    el.innerHTML = '<h4>Später freischaltbar</h4>' + L.map(u => `<button data-later="${u.id}"><span class="lk">🔒</span><b>${u.label.replace(/ \(nach der ersten Fusion\)$/, '')}</b><small>ab Welle ${u.w}${u.needTxt ? ', ' + u.needTxt : ''}</small></button>`).join('');
+    el.innerHTML = '<h4>Später freischaltbar</h4>' + L.map(u => `<button data-later="${u.id}"><span class="lk">🔒</span><b>${u.label.replace(/ \(nach der ersten Fusion\)$/, '')}</b><small>${/^mit einer Fusion/.test(u.needTxt || '') ? u.needTxt.replace(/^m/, 'M') : 'ab Welle ' + u.w + (u.needTxt ? ', ' + u.needTxt : '')}</small></button>`).join('');
     $$('#mLater [data-later]').forEach(b => b.addEventListener('click', () => { const u = C.ROADMAP.find(x => x.id === b.dataset.later); A.play('click'); toast(`<b>${u.label}</b><br>${u.desc}`, 6000); }));
   }
   function renderRoadmap() {
