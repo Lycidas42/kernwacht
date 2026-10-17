@@ -2596,7 +2596,7 @@
         $('bestNo').textContent = run.preBoss ? 'Boss naht · Feld räumen' : run.wave > allRec ? 'NEUER REKORD' : run.rush ? 'Durchmarsch' : run.rushWhyAt && run.wave - run.rushWhyAt.w <= 3 ? (run.rushWhyAt.why === 'hull' ? 'Durchmarsch aus: Schaden' : run.rushWhyAt.why === 'field' ? 'Durchmarsch aus: Feld voll' : 'Durchmarsch aus: Boss zäh') : run.catchUp() ? 'Aufholen ×2' : rec ? 'Neue Bestwelle' : 'Rekord ' + allRec;
         $('bestNo').classList.toggle('rec', rec);
       }
-      { const k = $('runK'), c = C.cheapest(meta); k.textContent = fmt(Math.floor(meta.crystals)); k.classList.toggle('dot', !!(c && meta.crystals >= c.cost)); } // sofort im Labor verfügbar
+      { const k = $('runK'), c = C.cheapest(meta); k.textContent = fmt(Math.floor(meta.crystals)); k.classList.toggle('dot', !buyLocked() && !!(c && meta.crystals >= c.cost)); } // Punkt nur, wenn im Lauf gekauft werden darf
       { const mp = $('markPill'), f = run.focus && run.focus.hp > 0 ? run.focus : null; mp.hidden = !f; if (f) { const PKN = { arm: 'Tentakel', tentacle: 'Tentakel', eye: 'Auge', turret: 'Geschütz', gate: 'Hangartor', vent: 'Schlot', gwing: 'Schwinge', head: 'Kopf', core: 'Kern', segment: 'Wurmglied', wing: 'Schwinge', armor: 'Panzerplatte', lance: 'Lanze', rack: 'Minenschacht', seal: 'Siegel', prism: 'Prisma' };
         const nm = f.type === 'part' ? (PKN[f.pk] || 'Bauteil') : f.type === 'boss' && f.kind ? C.BOSS_KINDS[f.kind].name : (MARK_NAME[f.type] || 'Ziel'); const tx = '◎ ' + nm; if (mp.textContent !== tx) mp.textContent = tx; } }
       $('myDmg').textContent = fmt(run.s.gunDmg);
