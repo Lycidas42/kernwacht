@@ -1,14 +1,15 @@
 # Vorschlag: Elementarmagie
 
-Stand: Entwurf, Runde 2. Noch nichts umgesetzt.
+Stand: Entwurf, Runde 3, Entscheidungen stehen fest. Noch nichts umgesetzt.
 
-Änderungen gegenüber Runde 1:
+Entschieden:
 
 - Freischaltung ab **Rekordwelle 50**.
-- **Elementar-Erfahrung** kommt anders als beim Kommandanten nicht aus überstandenen Wellen, sondern aus dem, was das Element selbst bewirkt.
+- Drei Elemente: **Feuer, Eis, Licht**. Blitz entfällt, weil sich der Kettenblitz mit dem Modul überschneidet.
+- **Elementar-Erfahrung durch Wirkung**, nicht durch überstandene Wellen wie beim Kommandanten.
+- **Elementproben** geben einmalig viel Elementar-Erfahrung und schalten nichts frei.
+- **Element und Form** lassen sich jederzeit außerhalb eines Laufs kostenlos wechseln.
 - Elementrang und Form werden im **Profil** angezeigt.
-- Die Bäume bekommen **Formen**: Ab einer bestimmten Stelle im Baum verändert sich die Fähigkeit grundlegend, nicht nur ihre Zahlen.
-- **Blitz ist raus**, weil sich der Kettenblitz mit dem Modul überschneidet. Kandidaten für das dritte Element stehen weiter unten.
 
 ## Problem
 
@@ -16,7 +17,7 @@ Ab der mittleren Phase bleibt im Lauf wenig zu tun: Ziel markieren, Orbitalschla
 
 ## Idee
 
-Ab Rekordwelle 50 wählt der Spieler ein Element. Jedes Element bringt genau eine neue manuelle Fähigkeit und hat einen eigenen Baum. Aktiv ist immer nur ein Element. Gewechselt wird kostenlos außerhalb eines Laufs; der Fortschritt jedes Elements bleibt erhalten, wächst aber nur, solange es aktiv ist.
+Ab Rekordwelle 50 wählt der Spieler ein Element. Jedes Element bringt genau eine neue manuelle Fähigkeit und hat einen eigenen Baum. Aktiv ist immer nur ein Element. Element und Form lassen sich jederzeit außerhalb eines Laufs kostenlos wechseln; der Fortschritt jedes Elements bleibt erhalten, wächst aber nur, solange es aktiv ist.
 
 Jedes Element stellt eine andere Frage:
 
@@ -24,7 +25,7 @@ Jedes Element stellt eine andere Frage:
 | --- | --- | --- |
 | Feuer | **Wo?** Platzieren auf dem Feld | Flächenschaden gegen Gruppen |
 | Eis | **Wen?** Zielwahl, nutzt die Markierung | Kontrolle und Einzelziele, Bosse |
-| drittes Element | siehe Kandidaten | eine dritte Rolle, z. B. Verteidigung oder Dauerbedienung |
+| Licht | **Wohin?** Strahl mit dem Finger führen | Dauerbedienung, Durchschlag und Bosse |
 
 Der Schaden ist immer ein Vielfaches des Kanonenschadens (`s.gunDmg`) und wächst so automatisch mit.
 
@@ -36,7 +37,7 @@ Jeder Baum hat drei Ebenen:
 2. **Form** (ab 4 Punkten im Stamm, genau eine wählbar): **verwandelt die Fähigkeit**, oft mit anderer Bedienung. Jede Form hat 3 eigene Knoten (6 Punkte).
 3. **Schlussstein** der gewählten Form (ab 12 Punkten im Baum): eine starke Besonderheit.
 
-Formwechsel ist außerhalb eines Laufs kostenlos; die Punkte in den Formknoten werden dabei zurückerstattet. So kann man ausprobieren, ohne etwas zu verlieren.
+Formwechsel ist jederzeit außerhalb eines Laufs kostenlos; die Punkte in den Formknoten werden dabei zurückerstattet. So kann man ausprobieren, ohne etwas zu verlieren.
 
 Bei 3 Formen je Element gibt es also 9 deutlich unterschiedliche Fähigkeiten, nicht 3.
 
@@ -80,49 +81,34 @@ Bei 3 Formen je Element gibt es also 9 deutlich unterschiedliche Fähigkeiten, n
 
 **Verbindung zu bestehenden Systemen:** Vom Kryowerfer oder vom Modul Kältebruch verlangsamte Schiffe zählen für *Sprödigkeit* zur Hälfte als gefroren.
 
-## Drittes Element: Kandidaten
+## Licht
 
-Der Kettenblitz entfällt. Für das dritte Element sollte eine **Rolle** her, die Feuer und Eis nicht abdecken, und die Überschneidungen mit Modulen und Kommandant (Kettenblitz, Nova, Schwarzes Loch, Gift, Drohnen) vermeiden.
+*Frage: Wohin führe ich den Strahl?* Die einzige Fähigkeit mit **Dauerbedienung**.
 
-### A) Licht: Prismastrahl (Empfehlung)
+**Grundmechanik**
 
-*Frage: Wohin führe ich den Strahl?* Die einzige Fähigkeit mit **Dauerbedienung**. Sie zielt damit direkt auf das Problem, dass es im Lauf zu wenig zu tun gibt.
+- Den Knopf gedrückt halten und mit dem Finger im Feld den Strahl führen. Der Strahl geht von der Kanone zum Finger. Am Desktop geht das mit gedrückter Maus.
+- **Energie-Leiste:** Der Strahl hält 4 s und lädt in 12 s wieder voll. Er lässt sich jederzeit loslassen, auch für kurze, gezielte Stöße. Der Rest bleibt erhalten.
+- Ohne Finger (Knopf antippen oder Autopilot) richtet sich der Strahl selbst auf das markierte Ziel, ohne Markierung auf den Boss oder das stärkste Schiff. Dann wirkt er mit halbem Schaden.
+- Der Strahl ist hell und gut sichtbar, verdeckt aber keine Bomben und keine Bossangriffe (Darstellung halbtransparent).
 
-- Knopf gedrückt halten, dann mit dem Finger im Feld **den Strahl führen**. Er schießt von der Kanone zum Finger.
-- Der Strahl macht 1,5× Kanonenschaden pro Sekunde, und zwar an **allen** Schiffen auf seiner Linie. Bleibt er auf demselben Schiff, steigt der Schaden alle 0,5 s um 10 % (bis +100 %).
-- **Energie-Leiste:** Der Strahl hält 4 s und lädt in 12 s wieder voll. Man kann ihn auch kurz und gezielt einsetzen.
-- Ohne Finger (Knopf antippen oder Autopilot) richtet er sich selbst auf das markierte Ziel, aber mit halbem Schaden.
-- Formen:
-  - **Prismastrahl** (Grundform, wie oben).
-  - **Brennglas**: fester Fokus auf das markierte Ziel, der Schaden steigt viel stärker (bis +300 %). Für Bosse.
-  - **Spiegelfeld**: Man tippt bis zu drei Spiegel ins Feld; der Strahl wird über sie gelenkt und kann so Umwege durch Gruppen nehmen.
+**Stamm**
 
-### B) Erde: Kristallsäule
+| Knoten | Stufen | Wirkung |
+| --- | --- | --- |
+| Bündelung | 3 | +20 % Lichtschaden je Stufe |
+| Lichtspeicher | 3 | +0,5 s Strahldauer je Stufe |
+| Sonnenzelle | 2 | −1,5 s Ladezeit je Stufe |
 
-*Frage: Wo blocke ich?* Die **defensive** Rolle, die bisher nur passiv im Bollwerk-Ast existiert.
+**Formen**
 
-- Tipp ins Feld setzt eine Säule. Schiffe, die auf sie treffen, bleiben stehen und schießen auf sie (wie am Schutzwall). Die Säule hat 20 % der Hülle als Lebenspunkte und hält 10 s.
-- Formen:
-  - **Bollwerk-Säule**: blockt wie oben.
-  - **Dornensäule**: wirft Schaden zurück.
-  - **Geysir**: stößt Schiffe nach oben zurück (Rückstoß).
-- Eingriff in die Bewegung der Gegner: etwas aufwendiger umzusetzen, aber spielerisch sehr eigenständig.
+| Form | Bedienung | Wirkung | Knoten (je 2 Stufen) | Schlussstein |
+| --- | --- | --- | --- | --- |
+| **Prismastrahl** (Grundform) | halten und führen | 1,5× Kanonenschaden pro Sekunde an **allen** Schiffen auf der Linie. Bleibt der Strahl auf demselben Schiff, steigt der Schaden alle 0,5 s um 10 % (bis +100 %) | Glühen (+50 % höchster Aufbau) · Breitband (+40 % Strahlbreite) · Blendung (getroffene Schützen und Heiler setzen 1 s aus) | **Fächer:** der Strahl teilt sich am Ende in 3 Strahlen |
+| **Brennglas** | ein Tipp, hält dann **selbst** auf das markierte Ziel | ein dünner Strahl, nur ein Ziel. Der Schaden steigt alle 0,5 s um 25 % (bis +300 %). Wechselt man die Markierung, beginnt der Aufbau neu. Gegen Bosse | Hitzepunkt (Aufbau beginnt bei +50 %) · Nachglühen (Aufbau bleibt nach dem Ende 3 s erhalten) · Schwachstelle (das Ziel nimmt während des Strahls +15 % Schaden aus allen Quellen) | **Sonnenfeuer:** bei vollem Aufbau explodiert das Ziel beim Tod und überträgt halben Aufbau aufs nächste |
+| **Spiegelfeld** | bis zu 3 Spiegel ins Feld tippen, dann halten | der Strahl läuft von der Kanone über die Spiegel. So nimmt er Umwege durch Gruppen. 1,2× Kanonenschaden pro Sekunde, Spiegel halten 15 s | +1 Spiegel · Brechung (+20 % Schaden je Spiegel, über den der Strahl läuft) · Linsen (Spiegel schießen selbst einen kurzen Strahl aufs nächste Schiff, 0,3× pro Sekunde) | **Lichtkäfig:** schließt der Strahl einen Kreis über die Spiegel, sind Schiffe darin 2 s gefangen |
 
-### C) Wind: Sturmbö
-
-*Frage: In welche Richtung?* **Wischen** als neue Geste.
-
-- Wischen im Feld schiebt alle Schiffe in einem Streifen in Wischrichtung, mit wenig Schaden.
-- Zurückschieben verschafft Zeit; seitlich zusammenschieben gruppiert Gegner für Orbitalschlag, Minen und Bombardement.
-- Stark als Begleiter der übrigen Waffen, schwach allein. Für Spieler, die gern kombinieren.
-
-### D) Zeit: Chronoriss
-
-*Frage: Wann?* Ein Riss, in dem die Zeit rückwärts läuft: Schiffe darin werden 3 s zurückgespult, also auf ihre Position von vor 3 s gesetzt, und erleiden den in dieser Zeit erlittenen Schaden noch einmal.
-
-- Einzigartig, aber nah an Stasis und am Modul Echo. Eher als spätes viertes Element denkbar.
-
-**Empfehlung:** **Licht** als drittes Element. Es fügt die einzige neue Eingabeform mit Dauerbedienung hinzu, löst das Ausgangsproblem am direktesten und lässt sich ohne Eingriff in die Gegnerbewegung bauen. **Erde** käme später als viertes Element, wenn das System läuft.
+**Verbindung zu bestehenden Systemen:** Während Überladung lädt die Energie-Leiste doppelt so schnell. Ein vom Leitstrahl (Kommandant) markiertes Ziel übernimmt das Brennglas sofort.
 
 ## Fortschritt: Elementar-Erfahrung (anders als beim Kommandanten)
 
@@ -130,9 +116,11 @@ Der Kommandant wächst durch Durchhalten (überstandene Wellen). Das Element sol
 
 - **Erfahrung durch Wirkung:** Jedes Schiff, das durch die Elementfähigkeit zerstört wird oder in den 3 s davor von ihr getroffen wurde, gibt Erfahrung (`1 + Welle / 50`, Bosse ×20). Wer das Element nicht einsetzt, bekommt nichts.
 - **Von Hand zählt doppelt:** Was der Autopilot auslöst, bringt nur die Hälfte.
-- **Elementproben:** Je Element etwa 8 einmalige Aufgaben mit großem Erfahrungsbonus. Sie zeigen nebenbei, was die Formen können, zum Beispiel:
+- **Elementproben:** Je Element etwa 9 einmalige Aufgaben, drei je Form. Jede gibt einmalig **viel Elementar-Erfahrung**, etwa einen bis drei Ränge auf der jeweiligen Höhe, und schaltet sonst nichts frei. Sie zeigen nebenbei, was die Formen können, zum Beispiel:
   - Feuer: „12 Schiffe mit einem Feuerball“, „Boss mit einem Meteor erledigt“, „30 Schiffe durch eine Flammenwand“.
   - Eis: „20 Schiffe zersplittert in einer Welle“, „Heiler eingefroren, bevor er heilt“, „Frostnova rettet die Hülle unter 10 %“.
+  - Licht: „8 Schiffe mit einem Strahl getroffen“, „Brennglas auf vollem Aufbau gegen einen Boss“, „Lichtkäfig mit 10 Schiffen“.
+- Belohnung der Proben: fester Betrag nach Stufe der Probe (leicht/mittel/schwer: 500 / 2000 / 6000 Erfahrung). So können neue Spieler eines Elements schnell aufholen.
 - Rangkurve: `300 × 1,2^r`. Ein Rang gibt einen Punkt, mit 20 Punkten ist der Baum voll (8 Stamm, 6 Form, 1 Schlussstein, dazu 5 Reserve, damit man bei einem Formwechsel nicht bei null anfängt).
 - Danach eine **Meisterschaft**: je weiterem Rang +3 % Elementschaden, ohne Obergrenze.
 - Ränge und Bäume überdauern die Fusion.
@@ -161,7 +149,8 @@ Der Kommandant wächst durch Durchhalten (überstandene Wellen). Das Element sol
 ## Balancing-Ziel
 
 - Aktiv gespielt sollte das Element **15–20 % des Gesamtschadens** liefern, mit dem Autopilot **8–10 %**.
-- Die Formen sollen etwa gleich stark sein, aber verschieden glänzen: Feuerball und Eissturm gegen Schwärme, Meteor und Frostlanze gegen Bosse, Flammenwand und Frostnova bei Druck auf die Mauer.
+- Die Formen sollen etwa gleich stark sein, aber verschieden glänzen: Feuerball, Eissturm und Prismastrahl gegen Schwärme, Meteor, Frostlanze und Brennglas gegen Bosse, Flammenwand, Frostnova und Spiegelfeld bei Druck auf die Mauer.
+- Licht wird mit dem Finger geführt, also bekommt der Autopilot nur den halben Schaden. Aktiv sollte Licht etwa gleich stark sein wie Feuer und Eis aktiv.
 - Messen mit `tools/shares.js` (je Form ein Durchlauf, dazu ein „aktiver“ Bot) und `tools/check.js`.
 
 ## Umsetzung (grob)
@@ -179,12 +168,10 @@ Der Kommandant wächst durch Durchhalten (überstandene Wellen). Das Element sol
 
 Reihenfolge:
 
-1. **Phase 1:** Wahl, Feuer und Eis jeweils mit Stamm und Grundform (Feuerball, Frostlanze), Elementar-Erfahrung, Anzeige im Profil.
-2. **Phase 2:** die übrigen Formen und Schlusssteine von Feuer und Eis, Elementproben.
-3. **Phase 3:** drittes Element (Licht), Elementtag im Tageslauf.
+1. **Phase 1:** Wahl der Elemente; Feuer, Eis und Licht jeweils mit Stamm und Grundform (Feuerball, Frostlanze, Prismastrahl); Elementar-Erfahrung; Anzeige im Profil.
+2. **Phase 2:** die übrigen sechs Formen und alle Schlusssteine, Elementproben.
+3. **Phase 3:** Elementtag im Tageslauf, Feinschliff am Balancing.
 
 ## Offene Fragen
 
-1. **Drittes Element:** Licht (Empfehlung), Erde, Wind oder Zeit?
-2. **Formwechsel:** jederzeit außerhalb eines Laufs kostenlos, oder einmal pro Tag kostenlos, damit die Wahl mehr Gewicht hat?
-3. **Elementproben:** Reichen sie als Zusatz zur Erfahrung, oder sollen sie zusätzlich etwas freischalten, zum Beispiel die Schlusssteine?
+Keine grundsätzlichen. Genaue Zahlen (Schaden, Ladezeiten, Erfahrungskurve) werden bei der Umsetzung mit `tools/shares.js` und `tools/check.js` eingestellt.
