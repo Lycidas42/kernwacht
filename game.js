@@ -2529,6 +2529,10 @@
       { const R = C.rankOf(meta), xl = $('xpLine'), rt = 'Rang ' + R.rank, tx = fmt(R.cur) + ' / ' + fmt(R.need);
         if (xl._t !== rt + tx) { xl._t = rt + tx; $('xpRank').textContent = rt; $('xpTxt').textContent = tx; $('xpbar').firstElementChild.style.width = Math.min(100, R.cur / R.need * 100) + '%'; }
         xl.classList.toggle('low', run.wave < C.record(meta) * C.P.xpLowAt); }
+      // Element: Rang und Erfahrung bis zum nächsten Rang (nur mit aktivem Element)
+      { const o = run.s.el, el = $('elLine'); el.hidden = !o || run.home !== meta;
+        if (!el.hidden) { const X = C.ELEMENTS[o.k], R = C.elRank(meta, o.k), rt = X.name + ' ' + R.rank, tx = fmt(R.cur) + ' / ' + fmt(R.need);
+          if (el._t !== o.k + rt + tx) { el._t = o.k + rt + tx; el.style.setProperty('--c', X.col); $('elIc').textContent = X.icon; $('elRank').textContent = rt; $('elTxt').textContent = tx; $('elbar').firstElementChild.style.width = Math.min(100, R.cur / R.need * 100) + '%'; } } }
       $('hpbar').firstElementChild.style.width = Math.max(0, run.hp / run.s.maxHp * 100) + '%';
       $('hpDock').classList.toggle('low', run.hp < run.s.maxHp * 0.3);
       $('wavebar').firstElementChild.style.width = (run.waveT / C.WAVE_LEN * 100) + '%';

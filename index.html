@@ -107,6 +107,14 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 #bossInfo { display: grid; gap: 3px; text-shadow: 0 0 6px #000, 0 0 2px #000; }
 #bossInfo .bosschk span { background: rgba(10,8,30,.55); }
 #status #xpLine .stl { color: #ffd23f; width: auto; }
+/* Elementrang: gleiche Leiste wie der Kommandant, in der Farbe des Elements */
+#elLine { margin-top: -2px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--c, #ffe9a8); }
+#elLine[hidden] { display: none; }
+#elLine .stl { color: var(--c, #ffe9a8); width: auto; }
+#elLine .elic { width: 20px; justify-content: center; font-size: 13px; line-height: 1; }
+#elLine .bar { flex: 1; height: 3px; background: rgba(255,255,255,.06); }
+#elLine .bar i { background: var(--c, #ffe9a8); box-shadow: 0 0 6px var(--c, #ffe9a8); transition: width .3s; }
+#elLine .num { color: var(--ink-dim); font-size: 10px; text-transform: none; }
 #status .xpav { display: inline-flex; flex: 0 0 auto; }
 #status .xpav svg { display: block; }
 #bossBar .bossline { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #ffb3ea; margin-bottom: 4px; }
@@ -875,6 +883,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
     <!-- Statusleiste: Kanone, Rang, Kennzahlen und Boss-Details (oben im Feld bleibt Platz für den Boss) -->
     <div id="status">
       <div class="xpline" id="xpLine"><span id="xpAv" class="xpav"></span><span id="xpRank" class="stl">Rang 0</span><div class="bar" id="xpbar"><i></i></div><span class="num" id="xpTxt"></span></div>
+      <div class="xpline elline" id="elLine" hidden><span class="xpav elic" id="elIc"></span><span id="elRank" class="stl"></span><div class="bar" id="elbar"><i></i></div><span class="num" id="elTxt"></span></div>
       <div class="hudrow stpills">
         <div class="pill num e en" id="energyTotal" title="Energie für Upgrades">0</div>
         <div class="pill num mine"><span>Schaden</span><b id="myDmg">0</b></div>

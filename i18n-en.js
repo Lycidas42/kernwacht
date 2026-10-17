@@ -897,4 +897,5 @@ window.KW_EN = {
   'Ab Rekordwelle {0} wählst du Feuer, Eis oder Licht: eine eigene Fähigkeit im Lauf mit eigenem Baum. Dein Rekord: Welle {1}.': 'From record wave {0} you choose fire, ice or light: an ability of its own in runs with its own tree. Your record: wave {1}.',
   'Gesperrt · ab Rekordwelle {0}: Feuer, Eis oder Licht mit eigener Fähigkeit und eigenem Baum': 'Locked · from record wave {0}: fire, ice or light with an ability and a tree of its own',
   'Rekord {0}/{1}': 'Record {0}/{1}',
+  'Feuer {0}': 'Fire {0}', 'Eis {0}': 'Ice {0}', 'Licht {0}': 'Light {0}',
 };
