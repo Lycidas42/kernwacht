@@ -797,6 +797,9 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
 .tile .ic { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, transparent); }
 .tile .tx b { display: block; font-size: .96rem; }
 .tile .tx small { display: block; font-size: .76rem; color: var(--ink-dim); margin-top: 2px; line-height: 1.3; }
+.tile.locked { opacity: .55; border-style: dashed; }
+.tile.locked .ic { filter: grayscale(1); position: relative; }
+.tile.locked .ic::after { content: '🔒'; position: absolute; right: -4px; bottom: -4px; font-size: .7rem; filter: none; }
 .tile .st { margin-left: auto; font-family: var(--font-num); font-size: .76rem; color: #ffd23f; text-align: right; white-space: nowrap; padding-left: 6px; }
 .tile.dot::before { content: ""; position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--hostile); box-shadow: 0 0 6px var(--hostile); }
 .tile.ready { border-color: color-mix(in srgb, var(--tc) 55%, var(--line)); box-shadow: 0 0 12px color-mix(in srgb, var(--tc) 22%, transparent); }
@@ -945,7 +948,7 @@ button.sec.dot::before { content: ""; position: absolute; top: 5px; right: 5px; 
         <h2>Kanone</h2><p class="mdesc">Alles, was deine Kanone dauerhaft stärker macht.</p>
         <button class="tile lab-btn" id="labBtn" style="--tc:var(--core)"><span class="ic">⚗</span><span class="tx"><b>Labor</b><small>Dauerhafte Upgrades mit Kristallen</small></span><span class="st" id="st-labBtn"></span></button>
         <button class="tile cmd-btn" id="cmdBtn" style="--tc:#ffd23f"><span class="ic">★</span><span class="tx"><b>Kommandant</b><small>Skill-Sternkarte, Punkte aus deinem Rang</small></span><span class="st" id="st-cmdBtn"></span></button>
-        <button class="tile elem-btn" id="elemBtn" style="--tc:#ffe9a8" hidden><span class="ic">✦</span><span class="tx"><b>Elemente</b><small>Feuer, Eis oder Licht: eine eigene Fähigkeit mit eigenem Baum</small></span><span class="st" id="st-elemBtn"></span></button>
+        <button class="tile elem-btn locked" id="elemBtn" style="--tc:#ffe9a8" aria-disabled="true"><span class="ic">✦</span><span class="tx"><b>Elemente</b><small>Feuer, Eis oder Licht: eine eigene Fähigkeit mit eigenem Baum</small></span><span class="st" id="st-elemBtn"></span></button>
         <button class="tile mod-btn" id="modBtn" style="--tc:#c3a6ff"><span class="ic">◈</span><span class="tx"><b>Module</b><small>Beute der Bosse, drei ausrüstbar</small></span><span class="st" id="st-modBtn"></span></button>
         <button class="tile fus-btn" id="fusBtn" style="--tc:var(--heat)"><span class="ic">✺</span><span class="tx"><b>Kernfusion</b><small>Neustart für Kernfragmente und starke Upgrades</small></span><span class="st" id="st-fusBtn"></span></button>
       </section>

@@ -894,4 +894,7 @@ window.KW_EN = {
   '6 Schiffe gleichzeitig im Strahl': '6 ships in the beam at once', '150 Abschüsse mit dem Prismastrahl in einem Lauf': '150 kills with the prism beam in one run', 'Einen Boss mit dem Prismastrahl erledigen': 'Finish a boss with the prism beam',
   'Das Brennglas auf vollen Aufbau bringen': 'Bring the burning glass to full build-up', '150 Abschüsse mit dem Brennglas in einem Lauf': '150 kills with the burning glass in one run', 'Einen Boss mit vollem Brennglas-Aufbau erledigen': 'Finish a boss at full burning-glass build-up',
   'Den Strahl über 3 Spiegel lenken': 'Guide the beam over 3 mirrors', '150 Abschüsse mit dem Spiegelfeld in einem Lauf': '150 kills with the mirror field in one run', '6 Schiffe gleichzeitig im Lichtkäfig fangen': 'Trap 6 ships in the light cage at once',
+  'Ab Rekordwelle {0} wählst du Feuer, Eis oder Licht: eine eigene Fähigkeit im Lauf mit eigenem Baum. Dein Rekord: Welle {1}.': 'From record wave {0} you choose fire, ice or light: an ability of its own in runs with its own tree. Your record: wave {1}.',
+  'Gesperrt · ab Rekordwelle {0}: Feuer, Eis oder Licht mit eigener Fähigkeit und eigenem Baum': 'Locked · from record wave {0}: fire, ice or light with an ability and a tree of its own',
+  'Rekord {0}/{1}': 'Record {0}/{1}',
 };

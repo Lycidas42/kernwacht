@@ -467,7 +467,11 @@
   })();
   $('skReset').addEventListener('click', () => { if (runAlive()) return; C.skReset(meta); A.play('click'); save(); renderSkills(); });
   $('cmdBtn').addEventListener('click', () => show('skills'));
-  $('elemBtn').addEventListener('click', () => show('elems'));
+  $('elemBtn').addEventListener('click', () => {
+    // gesperrt: nur erklären, ab wann es die Elemente gibt
+    if (!C.elUnlocked(meta)) { A.play('click'); toast(`<b>Elemente</b><br>Ab Rekordwelle ${C.ELEM_AT} wählst du Feuer, Eis oder Licht: eine eigene Fähigkeit im Lauf mit eigenem Baum. Dein Rekord: Welle ${C.record(meta)}.`, 4500); return; }
+    show('elems');
+  });
   $('elClose').addEventListener('click', home);
   $('skClose').addEventListener('click', home);
   // Rangaufstieg melden
@@ -1150,7 +1154,7 @@
     const lab = C.cheapest(meta), ms = C.skMastery(meta), sk = C.skPoints(meta) - ms, gain = C.fragmentsFor(meta), d = dailyToday();
     st('labBtn', lab && meta.crystals >= lab.cost ? 'kaufbar' : '');
     st('cmdBtn', sk > 0 ? sk + ' frei' : ms ? 'Meisterschaft ' + ms : 'Rang ' + R.rank);
-    { const ea = C.elActive(meta), ep = ea ? C.elPoints(meta, ea) : 0; st('elemBtn', !ea ? 'wählen' : ep > 0 && elCanAny(ea) ? ep + ' frei' : C.ELEMENTS[ea].name + ' · Rang ' + C.elRank(meta, ea).rank); }
+    { const ea = C.elActive(meta), ep = ea ? C.elPoints(meta, ea) : 0; st('elemBtn', !C.elUnlocked(meta) ? 'Rekord ' + C.record(meta) + '/' + C.ELEM_AT : !ea ? 'wählen' : ep > 0 && elCanAny(ea) ? ep + ' frei' : C.ELEMENTS[ea].name + ' · Rang ' + C.elRank(meta, ea).rank); }
     st('modBtn', (meta.equip || []).filter(t => meta.modules && meta.modules[t]).length + '/3');
     st('fusBtn', gain > 0 ? '+' + fmt(gain) : '');
     st('dailyBtn', d && d.bonus ? (d.best ? 'heute ' + d.best : '') : 'Bonus offen');
@@ -1161,7 +1165,7 @@
     st('achBtn', C.achPoints(meta) + ' Stufen');
     { const n = cxCount(); st('codexBtn', n + '/34'); $('codexBtn').classList.toggle('dot', meta.cxSeen == null || n > meta.cxSeen); }
     // Bereiche: nur zeigen, was freigeschaltet ist; Punkt, wenn darin etwas wartet
-    const vis = pg => [...document.querySelectorAll(`#menu .mpage[data-page="${pg}"] .tile`)].filter(t => !t.hidden);
+    const vis = pg => [...document.querySelectorAll(`#menu .mpage[data-page="${pg}"] .tile`)].filter(t => !t.hidden && !t.classList.contains('locked')); // gesperrte Kacheln zählen nicht
     const beginner = vis('cannon').length <= 1;
     for (const b of $$('#mNav [data-go]')) {
       const pg = b.dataset.go, v = pg === 'start' || pg === 'more' ? null : vis(pg);
@@ -1178,7 +1182,7 @@
     add(fbUnread > 0, fbUnread === 1 ? 'Neue Antwort auf dein Feedback' : `${fbUnread} neue Antworten auf dein Feedback`, 'Feedback', 'fbBtn');
     add(!meta.name && (meta.runs || 0) >= 1, 'Gib dir einen Namen, damit du in den Highscores erscheinst', 'Profil', 'mMeProf');
     add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kommandant', 'cmdBtn');
-    { const ea = C.elActive(meta); add(!$('elemBtn').hidden && !ea, 'Wähle ein Element: Feuer, Eis oder Licht', 'Elemente', 'elemBtn'); add(!!ea && $('elemBtn').classList.contains('dot'), 'Elementpunkt frei', 'Elemente', 'elemBtn'); }
+    { const ea = C.elActive(meta); add(C.elUnlocked(meta) && !ea, 'Wähle ein Element: Feuer, Eis oder Licht', 'Elemente', 'elemBtn'); add(!!ea && $('elemBtn').classList.contains('dot'), 'Elementpunkt frei', 'Elemente', 'elemBtn'); }
     add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kernfusion', 'fusBtn');
     add(!$('dailyBtn').hidden && !(d && d.bonus), 'Tageslauf-Bonus wartet', 'Tageslauf', 'dailyBtn');
     add($('labBtn').classList.contains('dot'), 'Im Labor gibt es etwas zu kaufen', 'Labor', 'labBtn');
@@ -1424,7 +1428,9 @@
     $$('button.sec.daily-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
     $$('button.sec.mod-btn').forEach(b => { const row = b.parentElement; row.hidden = row.querySelectorAll('button:not([hidden])').length === 0; });
     $('cmdBtn').hidden = !C.rankOf(meta).rank && !C.skSpent(meta);
-    $('elemBtn').hidden = !C.elUnlocked(meta);
+    { const on = C.elUnlocked(meta), b = $('elemBtn');
+      b.classList.toggle('locked', !on); b.setAttribute('aria-disabled', on ? 'false' : 'true');
+      b.querySelector('small').textContent = on ? 'Feuer, Eis oder Licht: eine eigene Fähigkeit mit eigenem Baum' : `Gesperrt · ab Rekordwelle ${C.ELEM_AT}: Feuer, Eis oder Licht mit eigener Fähigkeit und eigenem Baum`; }
     $('hangBtn').hidden = C.record(meta) < 20 && !(meta.skinSeen || []).length;
     try { if (!$('menu').hidden) renderHub(); } catch (e) {}
   }
