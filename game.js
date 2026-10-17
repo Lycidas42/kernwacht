@@ -1975,16 +1975,16 @@
     } catch (e) { slotNote('Wechseln fehlgeschlagen: ' + e.message, true); }
     finally { slotBusy = false; if (current === 'profile' && !frozenSave) renderSlots(); }
   }
+  // Einstellungen mitnehmen, alles andere beginnt neu (Willkommen mit Namenswahl erscheint beim Start)
+  function freshMeta() { const m = C.newMeta(); m.sfx = meta.sfx; m.music = meta.music; m.cloudAuto = meta.cloudAuto; m.settings = meta.settings; return m; }
   $('slotNew').addEventListener('click', async () => {
     if (slotBusy) return;
     if (slotArmed !== 'new') { slotArmed = 'new'; slotNote('Du beginnst ganz von vorn mit neuem Namen. Der aktuelle Spielstand wird in der Cloud gesichert, du kannst jederzeit hierher zurückwechseln. Zum Bestätigen nochmal tippen.'); renderSlots(); return; }
     slotArmed = ''; slotBusy = true;
     try {
       if (!(await slotPrepare())) return;
-      // Einstellungen mitnehmen, alles andere beginnt neu (Willkommen mit Namenswahl erscheint beim Start)
-      const m = C.newMeta(); m.sfx = meta.sfx; m.music = meta.music; m.cloudAuto = meta.cloudAuto;
       O.adopt(O.newCode());
-      applyImport({ v: 1, meta: m }, 'slotnew');
+      applyImport({ v: 1, meta: freshMeta() }, 'slotnew');
     } catch (e) { slotNote('Neuer Spielstand fehlgeschlagen: ' + e.message, true); }
     finally { slotBusy = false; if (current === 'profile' && !frozenSave) renderSlots(); }
   });
@@ -2403,7 +2403,7 @@
     });
     setInterval(fetchPolls, 5 * 60e3);
   }
-  try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'pair' ? 'Gerät verbunden: Spielstand vom anderen Gerät übernommen.' : how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : how === 'slot' ? 'Spielstand gewechselt.' : how === 'slotnew' ? 'Neuer Spielstand begonnen. Dein bisheriger liegt sicher in der Cloud.' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
+  try { const how = sessionStorage.getItem('kw.imported'); if (how) { sessionStorage.removeItem('kw.imported'); setTimeout(() => { $('offlineNote').hidden = false; $('offlineNote').textContent = how === 'pair' ? 'Gerät verbunden: Spielstand vom anderen Gerät übernommen.' : how === 'cloud' ? 'Spielstand aus der Cloud geladen.' : how === 'slot' ? 'Spielstand gewechselt.' : how === 'slotnew' || how === 'reset' ? 'Neuer Spielstand begonnen. Dein bisheriger liegt sicher in der Cloud und ist im Profil unter „Spielstände“ wählbar.' : how === 'resetfile' ? 'Neuer Spielstand begonnen. Dein bisheriger wurde als Datei gespeichert (Profil → Importieren).' : 'Spielstand importiert.'; }, 50); } } catch (e) {}
 
   // ---------- Admin ----------
   async function sha(text) {
@@ -2517,13 +2517,18 @@
   let labFromRun = false;
   $('labClose').addEventListener('click', () => { if (labFromRun && runAlive()) { labFromRun = false; show(null); setPaused(false); buildList(); } else home(); });
   $('runK').addEventListener('click', () => { if (!runAlive() || current) return; labFromRun = true; setPaused(true); A.play('click'); show('lab'); });
-  // Spielstand auf diesem Gerät löschen (Cloud-Spielstand bleibt erhalten)
+  // Neu beginnen: wie „Neuen Spielstand beginnen“ – neuer Spielercode, der bisherige Stand bleibt in der Cloud und in der Liste
+  // der Spielstände. Früher wurde nur lokal gelöscht; die automatische Sicherung hätte dann den Cloud-Stand überschrieben.
+  // Ohne Cloud wird der bisherige Stand vorher als Datei gespeichert.
   let resetArmed = 0;
-  $('resetBtn').addEventListener('click', () => {
+  $('resetBtn').addEventListener('click', async () => {
     const b = $('resetBtn');
-    if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = 0; b.textContent = 'Löschen'; }, 4000); b.textContent = 'Wirklich? Nochmal tippen'; return; }
-    clearTimeout(resetArmed); frozenSave = true; run = null;
-    put(KEY, null); put(RKEY, null); location.reload();
+    if (!resetArmed) { resetArmed = setTimeout(() => { resetArmed = 0; b.textContent = 'Neu beginnen'; }, 4000); b.textContent = 'Wirklich? Nochmal tippen'; return; }
+    clearTimeout(resetArmed); resetArmed = 0; b.disabled = true; b.textContent = 'Wird gesichert …';
+    const saved = O.configured && await cloudSave(true);
+    if (!saved) $('xFile').click();
+    if (O.configured) { slotRemember(); O.adopt(O.newCode()); }
+    setTimeout(() => applyImport({ v: 1, meta: freshMeta() }, saved ? 'reset' : 'resetfile'), saved ? 0 : 800); // Datei-Download erst anstoßen lassen
   });
   $('lbBtn').addEventListener('click', () => show('board'));
   $('lbBtn2').addEventListener('click', () => show('board'));
