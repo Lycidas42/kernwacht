@@ -251,14 +251,15 @@
   $$('.chal-btn').forEach(b => b.addEventListener('click', () => show('chal')));
 
   // ---------- Einstellungen ----------
-  const SET_DEF = { rush: 'on', fx: 'clear', numFmt: 'short', dmgNums: 'on', tips: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
+  const SET_DEF = { rush: 'on', fx: 'clear', numFmt: 'short', dmgNums: 'on', tips: 'on', pushFull: 'on', pushTap: 'on', lang: (window.KWI18n && KWI18n.lang) || 'de' };
   const setting = k => k === 'lang' ? ((window.KWI18n && KWI18n.lang) || 'de') : (meta.settings && meta.settings[k]) || SET_DEF[k];
   function applySettings() { R_.setNumFmt(setting('numFmt')); R.setDmgNums(setting('dmgNums') === 'on'); R.setFxMode(setting('fx')); }
   function renderSettings() {
-    $$('#settings .seg').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === setting(seg.dataset.set))));
+    $$('#settings .seg[data-set]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === setting(seg.dataset.set))));
     $('numEx').textContent = 'Beispiel: ' + fmt(27.9e12) + ' · ' + fmt(4.2e18);
+    renderPush();
   }
-  $$('#settings .seg button').forEach(b => b.addEventListener('click', () => {
+  $$('#settings .seg[data-set] button').forEach(b => b.addEventListener('click', () => {
     const k = b.parentElement.dataset.set;
     meta.settings = meta.settings || {}; meta.settings[k] = b.dataset.v;
     A.play('click'); applySettings(); save(); renderSettings(); refresh && refresh();
@@ -267,6 +268,41 @@
     if (k === 'lang' && window.KWI18n && KWI18n.lang !== b.dataset.v) { KWI18n.setLang(b.dataset.v); save(); setTimeout(() => location.reload(), 150); }
   }));
   $$('.set-btn').forEach(b => b.addEventListener('click', () => show('settings')));
+
+  // ---------- Push-Benachrichtigungen ----------
+  // Beim Verlassen der App melden, wann das nächste Silo voll und die Bohrkraft aufgeladen ist; beim Zurückkehren löschen
+  const PUSH_INFO = {
+    none: 'Dieser Browser unterstützt keine Push-Benachrichtigungen.',
+    install: 'Auf iPhone und iPad erst über Teilen → „Zum Home-Bildschirm“ installieren und Kernwacht von dort öffnen.',
+    denied: 'Blockiert. In den Einstellungen des Browsers bzw. des Geräts für Kernwacht erlauben.',
+    off: 'Meldet sich, wenn im Bergbau ein Lager voll oder die Bohrkraft aufgeladen ist, auch bei geschlossener App.',
+  };
+  let pushBusy = false;
+  async function renderPush() {
+    const st = await O.pushState();
+    if (meta.push && st !== 'on' && !pushBusy) { meta.push = false; save(); } // Erlaubnis entzogen oder Abo weg
+    const on = st === 'on' && !!meta.push;
+    const k = st === 'on' ? 'off' : st;
+    $('pushInfo').textContent = PUSH_INFO[k] + (k === 'off' && C.record(meta) < C.MINE_AT ? ' Bergbau ab Rekordwelle ' + C.MINE_AT + '.' : '');
+    $$('#pushSeg button').forEach(b => { b.classList.toggle('on', (b.dataset.v === 'on') === on); b.disabled = pushBusy || st === 'none' || st === 'install' || st === 'denied'; });
+    $$('#settings .pushopt').forEach(r => (r.hidden = !on));
+  }
+  $$('#pushSeg button').forEach(b => b.addEventListener('click', async () => {
+    const want = b.dataset.v === 'on'; if (pushBusy || want === !!meta.push) return;
+    A.play('click'); pushBusy = true; renderPush();
+    try {
+      if (want) { await O.pushOn(); meta.push = true; toast('<b>Benachrichtigungen an</b><br>Kernwacht meldet sich, wenn ein Lager voll oder die Bohrkraft aufgeladen ist.'); }
+      else { await O.pushOff(); meta.push = false; O.pushPlan([]); }
+    } catch (e) { meta.push = false; toast('<b>Benachrichtigungen</b><br>' + (e && e.message === 'offline' ? 'Keine Verbindung zum Online-Dienst.' : e && e.kw ? e.message : 'Hat nicht geklappt.' + (e && e.message ? ' <small>(' + e.message + ')</small>' : ''))); }
+    pushBusy = false; save(); renderPush();
+  }));
+  function pushPlanNow() {
+    if (!meta.push || !O.configured) return;
+    const al = C.mineAlerts(meta), ev = [], T = s => (window.KWI18n ? KWI18n.T(s) : s);
+    if (setting('pushFull') === 'on') for (const f of al.full) ev.push({ k: 'full', at: Math.round(f.at), n: T(C.PLANETS.find(p => p.id === f.id).name) });
+    if (setting('pushTap') === 'on' && al.tap) ev.push({ k: 'tap', at: Math.round(al.tap) });
+    O.pushPlan(ev, setting('lang'));
+  }
   $('guideBtn').addEventListener('click', () => show('guide'));
   // Installation als App: Browser-Angebot merken und in der Anleitung als Knopf anbieten
   let installEvt = null;
@@ -2044,7 +2080,7 @@
   $('pqClose').addEventListener('click', () => { if (pollFromRun && runAlive()) { pollFromRun = false; show(null); setPaused(false); } else home(); });
 
   if (O.configured) {
-    O.start(meta.name).then(ok => { if (ok) { submitScore(); fetchPolls(); fetchMyFeedback(); O.seen(0, C.record(meta)).catch(() => {}); if (current === 'menu') renderLbTeaser(true); } });
+    O.start(meta.name).then(ok => { if (ok) { if (meta.push) O.pushSync(); submitScore(); fetchPolls(); fetchMyFeedback(); O.seen(0, C.record(meta)).catch(() => {}); if (current === 'menu') renderLbTeaser(true); } });
     O.onCount(n => {
       $('onlinePill').hidden = false; $('onlinePill').textContent = n + ' online';
       for (const m of [$('mOnline'), $('pOnline')]) { m.hidden = false; m.textContent = n === 1 ? 'Nur du bist gerade online' : n + ' Spieler gerade online'; }
@@ -2210,8 +2246,8 @@
   $('catchBtn').addEventListener('click', () => { meta.catchup = meta.catchup === false; save(); syncCatchBtn(); A.play('click'); });
   syncCatchBtn();
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { save(); A.suspend(); cloudAuto(); }
-    else { A.resume(); welcomeBack(false); }
+    if (document.hidden) { pushPlanNow(); save(); A.suspend(); cloudAuto(); }
+    else { A.resume(); welcomeBack(false); if (meta.push) O.pushPlan([]); }
   });
   window.addEventListener('pagehide', save);
   window.addEventListener('resize', R.resize);

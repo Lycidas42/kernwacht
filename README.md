@@ -37,9 +37,9 @@ Danach startet Kernwacht wie eine App im Vollbild und läuft auch offline. Der S
 | `audio.js` | Soundeffekte und Musik, komplett per WebAudio erzeugt |
 | `online.js`, `config.js` | Online: Anzeige, Profil, Highscores, Cloud-Spielstand, Feedback, Umfragen (optional, siehe unten) |
 | `admin.html` | Verwaltungsseite: Feedback, Umfragen, Spieler |
-| `supabase/` | Supabase-Projekt: `config.toml` und Datenbank-Migrationen (GitHub-Integration) |
+| `supabase/` | Supabase-Projekt: `config.toml`, Datenbank-Migrationen (GitHub-Integration) und Edge Function `push` |
 | `vendor/` | `supabase-js`, die offizielle Client-Bibliothek |
-| `sw.js` | Service Worker: online immer neueste Version, offline aus dem Cache |
+| `sw.js` | Service Worker: online immer neueste Version, offline aus dem Cache; zeigt Push-Benachrichtigungen |
 | `manifest.webmanifest`, `icons/` | PWA-Metadaten und App-Icons |
 | `tools/sim.js` | Simuliert Läufe mit einem Kauf-Bot und gibt die erreichten Wellen aus |
 | `tools/check.js` | Fortschritt über viele Läufe, dazu Sprungtor, Boss und Schaden pro Quelle |
@@ -94,6 +94,21 @@ Der Publishable Key ist für den Browser gedacht und darf öffentlich sein; gesc
 - **Verwaltung:** `admin.html` (Link auch im Admin-Modus des Spiels) zeigt Feedback, Umfragen und Spieler. Zugang mit dem Verwaltungsschlüssel; in der Migration steht nur sein Hash. Neuen Schlüssel setzen: im SQL Editor
   `insert into admin_keys values (encode(sha256(convert_to('kernwacht-admin:' || 'NEUER-SCHLÜSSEL', 'UTF8')), 'hex'));` und den alten Eintrag löschen.
 - **Lokal sichern:** Profil → Export als Text oder Datei, Import auf einem anderen Gerät, ganz ohne Online-Dienst.
+
+### Push-Benachrichtigungen
+
+Optionen → Benachrichtigungen: „Lager voll“ (ein Silo im Bergbau ist voll) und „Bohrkraft aufgeladen“ (Lasermeißel auf allen Planeten voll). Funktioniert auf Android und am Desktop im Browser, auf iPhone/iPad (ab iOS 16.4) nur in der installierten App vom Home-Bildschirm.
+
+Ablauf: Beim Verlassen der App meldet das Spiel, wann das nächste Silo voll und wann die Bohrkraft aufgeladen ist (`kw_push_plan`), beim Zurückkehren löscht es den Plan. Ein `pg_cron`-Job sucht jede Minute die fälligen Einträge und gibt sie per `pg_net` an die Edge Function `supabase/functions/push`, die sie verschlüsselt an die Push-Dienste (Google, Apple, Mozilla, Microsoft) schickt. Nach einer „Lager voll“-Meldung kommt keine weitere, bis die App wieder geöffnet wurde.
+
+Einmalig einrichten:
+
+1. VAPID-Schlüsselpaar erzeugen: `npx web-push generate-vapid-keys`. Den öffentlichen Schlüssel in `config.js` bei `vapidKey` eintragen. Neue Schlüssel machen alle bestehenden Abos ungültig.
+2. **Edge Functions → Secrets**: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (z. B. `mailto:du@example.com`, Kontakt für die Push-Dienste) und `PUSH_SECRET` (langes Zufallspasswort).
+3. Dasselbe Passwort im **SQL Editor** in den Vault legen: `select vault.create_secret('PUSH-SECRET', 'push_secret');`
+4. Function deployen: `supabase functions deploy push` (übernimmt `verify_jwt = false` aus `config.toml`). Alternativ im Dashboard unter **Edge Functions** eine Function `push` anlegen, `index.ts` und `webpush.ts` einfügen und „Verify JWT“ ausschalten.
+
+`pg_cron` und `pg_net` aktiviert die Migration. Ohne den Vault-Eintrag bleibt der Versand aus. Fehler des Versands stehen unter **Edge Functions → push → Logs**, die Aufrufe der Datenbank in `net._http_response`.
 
 ## Admin-Modus
 

@@ -186,7 +186,62 @@
   const vote = (id, choice) => rpc('kw_vote', { p_poll: id, p_choice: choice });
   const pollResults = id => rpc('kw_poll_results', { p_poll: id });
 
+  // ---------- Push-Benachrichtigungen ----------
+  // iPhone/iPad: Web-Push gibt es nur in der installierten App (Home-Bildschirm), nicht im Safari-Tab
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => (root.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const pushCan = () => configured && !!cfg.vapidKey && 'serviceWorker' in navigator && 'PushManager' in root && 'Notification' in root;
+  const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+  async function pushSub() {
+    if (!pushCan()) return null;
+    try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; }
+  }
+  // 'on' | 'off' | 'denied' | 'install' (iOS im Browser-Tab) | 'none' (Browser kann es nicht oder Online aus)
+  async function pushState() {
+    if (!pushCan()) return ios && configured && !standalone() ? 'install' : 'none';
+    if (Notification.permission === 'denied') return 'denied';
+    return Notification.permission === 'granted' && (await pushSub()) ? 'on' : 'off';
+  }
+  // Muss direkt aus einem Tipp heraus aufgerufen werden (sonst fragt iOS nicht nach)
+  async function pushOn() {
+    if (!pushCan()) throw Object.assign(new Error('Push wird hier nicht unterstützt.'), { kw: true });
+    if ((await Notification.requestPermission()) !== 'granted') throw Object.assign(new Error('Benachrichtigungen wurden nicht erlaubt.'), { kw: true });
+    const reg = await navigator.serviceWorker.ready, key = unb64u(cfg.vapidKey);
+    let sub;
+    try { sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }); }
+    catch (e) { // altes Abo mit anderem Schlüssel: ersetzen
+      const old = await reg.pushManager.getSubscription(); if (!old) throw e;
+      await old.unsubscribe(); sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    }
+    const j = sub.toJSON();
+    await rpc('kw_push_sub', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+  }
+  // Beim Start: Abo erneut melden (Push-Dienste tauschen die Adresse gelegentlich aus)
+  async function pushSync() {
+    const sub = pushCan() && Notification.permission === 'granted' && await pushSub(); if (!sub) return;
+    const j = sub.toJSON();
+    rpc('kw_push_sub', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth }).catch(() => {});
+  }
+  async function pushOff() {
+    const sub = await pushSub(); if (!sub) return;
+    await rpc('kw_push_unsub', { p_endpoint: sub.endpoint }).catch(() => {});
+    await sub.unsubscribe();
+  }
+  // Plan melden: [{k: 'full', at, n}, {k: 'tap', at}]; leer = alles löschen.
+  // Direkt per fetch mit keepalive, damit der Aufruf auch beim Wegwischen der App noch ankommt.
+  function pushPlan(events, lang) {
+    if (!configured || !getStored(ID_KEY)) return;
+    try {
+      fetch(cfg.supabaseUrl + '/rest/v1/rpc/kw_push_plan', {
+        method: 'POST', keepalive: true,
+        headers: { apikey: cfg.supabaseKey, Authorization: 'Bearer ' + cfg.supabaseKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code(), p_events: events || [], p_lang: lang || 'de' }),
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
   root.KWOnline = {
+    pushCan, pushState, pushOn, pushOff, pushSync, pushPlan,
     configured, start, setStatus, code, newCode, normCode, validCode, adopt, myId: () => getStored(ID_KEY),
     profile, stats, seen, player, place, daily, board, dailyBoard, save, load, pairCreate, pairRedeem, feedback, myFeedback, feedbackReply, feedbackSeen, publicFeedback, polls, vote, pollResults,
     who, onCount: f => listeners.push(f), get count() { return count; },
