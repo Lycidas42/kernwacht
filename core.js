@@ -2800,11 +2800,16 @@
     u_blade: { w: 1.3,  why: 'Orbitklingen schützen den Nahbereich.' },
     u_over:  { w: 1.3,  why: 'Überladung verdoppelt kurz die Feuerrate, ideal gegen Bosse.' },
     u_mine:  { w: 1.1,  why: 'Minen räumen Gruppen auf ihrem Weg zur Kanone ab.' },
+    // Resonanz: je Stufe ×(1 + Rekord/2000) statt ×1,08, also so viel wert wie ln(Faktor)/ln(1,08) Stufen Kalibrierte Läufe bzw. Verbundhülle
+    m_rdmg:  { w: m => resW(m), why: m => `Wächst mit deinem Rekord: je Stufe ×${resF(m).toFixed(2).replace('.', ',')} Schaden, so viel wie ${resW(m).toFixed(1).replace('.', ',')} Stufen Kalibrierte Läufe.` },
+    m_rhp:   { w: m => resW(m), why: m => `Wächst mit deinem Rekord: je Stufe ×${resF(m).toFixed(2).replace('.', ',')} Strukturpunkte, so viel wie ${resW(m).toFixed(1).replace('.', ',')} Stufen Verbundhülle.` },
   };
+  const resF = m => 1 + Math.min(record(m), P.resCap) / P.resK;
+  const resW = m => Math.log(resF(m)) / Math.log(1.08);
   function labOptions(meta) {
     return META_UPG.filter(u => gateOk(meta, u.id) && (!u.req || mlv(meta, u.req)) && (u.max == null || mlv(meta, u.id) < u.max)).map(u => {
       const r = REC[u.id] || { w: 0.3, why: '' }, w = typeof r.w === 'function' ? r.w(meta) : r.w, c = metaCost(u, mlv(meta, u.id));
-      return { u, cost: c, score: w / c, why: r.why };
+      return { u, cost: c, score: w / c, why: typeof r.why === 'function' ? r.why(meta) : r.why };
     });
   }
   function recommend(meta) { const o = labOptions(meta); return o.length ? o.reduce((a, b) => (b.score > a.score ? b : a)) : null; }
@@ -2999,6 +3004,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.47.3'; // gleich halten mit VERSION in sw.js
+  const VERSION = '0.47.4'; // gleich halten mit VERSION in sw.js
   root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);

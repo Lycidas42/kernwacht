@@ -308,6 +308,8 @@ window.KW_EN = {
   'Spare für': 'Save for', 'aktuell → nächste Stufe': 'current → next level', 'Noch gesperrt:': 'Still locked:',
   'Erreichbar ab Rekordwelle {0}. {1}': 'Available from record wave {0}. {1}',
   'Kristalle und Labor': 'Crystals and lab', 'Fähigkeiten laden': 'Charge abilities',
+  'Wächst mit deinem Rekord: je Stufe ×{0} Schaden, so viel wie {1} Stufen Kalibrierte Läufe.': 'Grows with your record: ×{0} damage per level, worth {1} levels of Calibrated barrels.',
+  'Wächst mit deinem Rekord: je Stufe ×{0} Strukturpunkte, so viel wie {1} Stufen Verbundhülle.': 'Grows with your record: ×{0} hull points per level, worth {1} levels of Composite hull.',
   'Schaden ist die Basis: mehr Schaden heißt weniger Treffer, die durchkommen.': 'Damage is the foundation: more damage means fewer enemies get through.',
   'Strukturpunkte halten Beschuss und Abfangjäger aus. Gleich wichtig wie Schaden.': 'Hull points absorb fire and interceptors. Just as important as damage.',
   'Mehr Feuerrate wirkt wie mehr Schaden und füllt den Orbitalschlag schneller.': 'More fire rate works like more damage and charges the orbital strike faster.',
@@ -602,7 +604,7 @@ window.KW_EN = {
   'St. {0} → +{1} % · Vorrat {2}': 'Lv. {0} → +{1} % · stock {2}', 'Vorrat {0}': 'stock {0}',
   '{0} Eisenerz': '{0} iron ore', '{0} Kryokristall': '{0} cryo crystal', '{0} Plasmaerz': '{0} plasma ore', '{0} Sternenstaub': '{0} stardust', '{0} Dunkelmaterie': '{0} dark matter',
   '{0}:': '{0}:', '{0} →': '{0} →', 'Bestwelle {0}': 'Best wave {0}', 'Nächste Stufe': 'Next tier', '· Fusionen': '· Fusions', '· Rekord': '· Record',
-  '({0} Kristalle)': '({0} crystals)', '({0} Kristalle). {1}': '({0} crystals). {1}', 'Bonus: {0}. Start bei Welle {1}.': 'Bonus: {0}. Start at wave {1}.',
+  '({0} Kristalle)': '({0} crystals)', '({0} Kristalle). {1}': '({0} crystals). {1}', '{0} Spare noch {1} Kristalle.': '{0} Save {1} more crystals.', 'Bonus: {0}. Start bei Welle {1}.': 'Bonus: {0}. Start at wave {1}.',
   '. Das erste Boss ab Welle {0} bringt immer ein Modul. Jeder Boss ohne Beute erhöht die Chance beim nächsten um {1} Prozentpunkte. Läufe mit Admin-Eingriffen, Herausforderungen und Tagesläufe bringen keine Module.': '. The first boss from wave {0} always drops a module. Every boss without loot raises the chance for the next one by {1} percentage points. Runs with admin changes, challenges and daily runs drop no modules.',
   'Keine Besonderheit, reines Können. Standard-Ausrüstung, gleiche Wellen für alle.': 'No twist, pure skill. Standard loadout, same waves for everyone.',
 
