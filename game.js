@@ -217,7 +217,7 @@
     const bw = stuck ? meta.bossFail.w : w, B = C.BOSS_KINDS[C.bossKind(bw)];
     $('oFusT').textContent = stuck ? `${meta.bossFail.n}× an ${B ? B.name : 'Boss'} (Welle ${bw}) gescheitert` : 'Kernfusion möglich!';
     $('oFusP').textContent = (stuck ? 'Ein guter Moment für die Kernfusion. ' : `Du hast Welle ${C.FUSION_MIN} erreicht. `)
-      + `Sie setzt Labor, Kristalle und Bestwelle zurück und gibt dir +${fmt(gain)} Kernfragmente für dauerhafte Technik. Danach wirst du deutlich schneller stärker${meta.fusions ? '' : ', und es kommen Module, Kommandant und mehr dazu'}.`;
+      + `Sie setzt Labor, Kristalle und Bestwelle zurück und gibt dir +${fmt(gain)} Kernfragmente für dauerhafte Technik. Danach wirst du deutlich schneller stärker${meta.fusions ? '' : ', und es kommen Boss-Module, Erfolge und mehr dazu'}.`;
     save();
   }
   $('oFusBtn').addEventListener('click', () => { A.play('click'); show('fusion'); });
