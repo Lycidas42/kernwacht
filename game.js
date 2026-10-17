@@ -1200,13 +1200,13 @@
       if (C.mlv(meta, 'u_jump') && u && l < u.max && meta.crystals >= C.metaCost(u, l)) add(true, `Sprungweite: Start ab Welle ${C.maxStartWave(meta, l + 1)} statt ${C.maxStartWave(meta, l)}`, 'Labor', 'labBtn'); }
     add(fbUnread > 0, fbUnread === 1 ? 'Neue Antwort auf dein Feedback' : `${fbUnread} neue Antworten auf dein Feedback`, 'Feedback', 'fbBtn');
     add(!meta.name && (meta.runs || 0) >= 1, 'Gib dir einen Namen, damit du in den Highscores erscheinst', 'Profil', 'mMeProf');
-    add(sk > 0 && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kommandant', 'cmdBtn');
+    add(sk > 0 && !$('cmdBtn').hidden && $('cmdBtn').classList.contains('dot'), `${sk} Skillpunkt${sk > 1 ? 'e' : ''} frei`, 'Kommandant', 'cmdBtn');
     { const ea = C.elActive(meta); add(C.elUnlocked(meta) && !ea, 'Wähle ein Element: Feuer, Eis oder Licht', 'Elemente', 'elemBtn'); add(!!ea && $('elemBtn').classList.contains('dot'), 'Elementpunkt frei', 'Elemente', 'elemBtn'); }
     add(gain > 0 && !$('fusBtn').hidden, `Kernfusion bringt +${fmt(gain)} Fragmente`, 'Kernfusion', 'fusBtn');
     add(!$('dailyBtn').hidden && !(d && d.bonus), 'Tageslauf-Bonus wartet', 'Tageslauf', 'dailyBtn');
     add($('labBtn').classList.contains('dot'), 'Im Labor gibt es etwas zu kaufen', 'Labor', 'labBtn');
     add($('modBtn').classList.contains('dot') && !$('modBtn').hidden, 'Neue Modulfunde', 'Module', 'modBtn');
-    add($('achBtn').classList.contains('dot'), 'Neue Erfolgsstufe', 'Erfolge', 'achBtn');
+    add($('achBtn').classList.contains('dot') && !$('achBtn').hidden, 'Neue Erfolgsstufe', 'Erfolge', 'achBtn');
     add($('mineBtn').classList.contains('new') && !$('mineBtn').hidden, 'Ein Lager im Bergbau ist voll', 'Bergbau', 'mineBtn');
     add($('hangBtn').classList.contains('new') && !$('hangBtn').hidden, 'Neue Teile im Hangar', 'Hangar', 'hangBtn');
     $('mTodo').innerHTML = todo.slice(0, 3).map(x => `<button data-todo="${x.btn}"><i></i>${x.txt}<span>${x.area} ›</span></button>`).join('');
