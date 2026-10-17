@@ -329,15 +329,15 @@
     { id: 'bulwark', when: r => r.enemies.some(e => e.type === 'bulwark'), txt: '<b>Schildträger</b><br>Der Frontschild muss erst brechen und lädt sich ohne Treffer wieder auf. Dauerfeuer hilft.' },
     { id: 'phantom', when: r => r.enemies.some(e => e.type === 'phantom'), txt: '<b>Phantom</b><br>Tarnt sich zeitweise. Das Modul Zielerfassung macht Tarnung wirkungslos.' },
     { id: 'bomb', when: r => r.enemies.some(e => e.type === 'bomb'), txt: '<b>Bombe</b><br>Fliegt direkt auf die Kanone zu. Die Kanone schießt Bomben immer zuerst.' },
-    { id: 'el_fire', when: r => r.s.el && r.s.el.form === 'ball', txt: '<b>Element Feuer</b><br>Der Knopf mit der 4 macht den Feuerball scharf, dann tippst du ins Feld. Ein zweiter Tipp auf den Knopf wirft ihn automatisch.' },
+    { id: 'el_fire', when: r => r.s.el && r.s.el.form === 'ball', txt: '<b>Element Feuer</b><br>Der Knopf mit der 4 wirft den Feuerball automatisch. Lange drücken schaltet auf „Feld“: Dann macht der Knopf scharf und du tippst ins Feld.' },
     { id: 'el_ice', when: r => r.s.el && r.s.el.form === 'lance', txt: '<b>Element Eis</b><br>Der Knopf mit der 4 schießt die Frostlanze auf das markierte Ziel und friert es ein. Markiere vorher, was gestoppt werden soll: Heiler, Bomben oder den Boss.' },
-    { id: 'el_wall', when: r => r.s.el && r.s.el.form === 'wall', txt: '<b>Flammenwand</b><br>Knopf mit der 4 antippen, dann eine Linie ins Feld ziehen, am besten quer zur Flugbahn. Ein zweiter Tipp auf den Knopf setzt sie automatisch.' },
-    { id: 'el_meteor', when: r => r.s.el && r.s.el.form === 'meteor', txt: '<b>Meteor</b><br>Knopf mit der 4 antippen, dann ins Feld tippen. Der Einschlag kommt nach 1,5 s: Ziele dorthin, wo die Schiffe dann sind.' },
+    { id: 'el_wall', when: r => r.s.el && r.s.el.form === 'wall', txt: '<b>Flammenwand</b><br>Der Knopf mit der 4 setzt die Wand automatisch. Lange drücken schaltet auf „Feld“: Dann ziehst du selbst eine Linie ins Feld, am besten quer zur Flugbahn.' },
+    { id: 'el_meteor', when: r => r.s.el && r.s.el.form === 'meteor', txt: '<b>Meteor</b><br>Der Knopf mit der 4 ruft den Meteor automatisch, der Einschlag kommt nach 1,5 s. Lange drücken schaltet auf „Feld“: Dann tippst du selbst dorthin, wo die Schiffe dann sind.' },
     { id: 'el_nova', when: r => r.s.el && r.s.el.form === 'nova', txt: '<b>Frostnova</b><br>Der Knopf mit der 4 friert alle Schiffe rund um die Kanone ein. Heb sie dir für Momente auf, in denen es eng wird.' },
-    { id: 'el_storm', when: r => r.s.el && r.s.el.form === 'storm', txt: '<b>Eissturm</b><br>Knopf mit der 4 antippen, dann ins Feld tippen. Schiffe, die 3 s im Sturm bleiben, frieren ein.' },
+    { id: 'el_storm', when: r => r.s.el && r.s.el.form === 'storm', txt: '<b>Eissturm</b><br>Der Knopf mit der 4 setzt den Eissturm automatisch. Schiffe, die 3 s im Sturm bleiben, frieren ein. Lange drücken schaltet auf „Feld“: Dann tippst du selbst ins Feld.' },
     { id: 'el_lens', when: r => r.s.el && r.s.el.form === 'lens', txt: '<b>Brennglas</b><br>Markiere ein Ziel und tippe den Knopf mit der 4 an: Der Strahl bleibt darauf und wird immer heißer. Ideal gegen Bosse.' },
     { id: 'el_mirror', when: r => r.s.el && r.s.el.form === 'mirror', txt: '<b>Spiegelfeld</b><br>Knopf mit der 4 schaltet das Spiegelfeld ein. Jeder Tipp ins Feld setzt einen Spiegel, der Strahl läuft über alle Spiegel.' },
-    { id: 'el_light', when: r => r.s.el && r.s.el.form === 'prism', txt: '<b>Element Licht</b><br>Tippe den Knopf mit der 4 an, dann lege den Finger aufs Feld und ziehe: Der Strahl folgt dir. Lange drücken lässt ihn selbst zielen.' },
+    { id: 'el_light', when: r => r.s.el && r.s.el.form === 'prism', txt: '<b>Element Licht</b><br>Der Knopf mit der 4 lässt den Strahl selbst zielen (halber Schaden). Lange drücken schaltet auf „Feld“: Dann legst du den Finger aufs Feld und führst ihn mit vollem Schaden.' },
   ];
   let tipT = 0;
   if (!meta.tips && (meta.runs || 0) > 20) meta.tips = { mark: 1, buy: 1, strike: 1, boss: 1, freeze: 1, over: 1 }; // erfahrene Spieler: Grundlagen-Tipps überspringen
@@ -914,11 +914,14 @@
     updateElemBtn();
   }
   // ---------- Element (vierter Knopf) ----------
-  // Je nach Form: Feuerball, Meteor, Eissturm: Knopf macht scharf, Tipp ins Feld setzt; zweiter Tipp auf den Knopf zielt automatisch.
-  // Flammenwand: scharf machen, dann Linie ziehen. Frostlanze, Frostnova: ein Tipp. Prismastrahl: Knopf schaltet bereit, Finger führt;
-  // lange drücken zielt selbst (halber Schaden). Brennglas: Tipp an/aus. Spiegelfeld: Tipp an/aus, Tipps ins Feld setzen Spiegel.
+  // Zielmodus wie beim Orbitalschlag (lange drücken wechselt): „Knopf“ (Standard) zielt automatisch, „Feld“ zielt von Hand.
+  // Feld: Feuerball, Meteor, Eissturm: Knopf macht scharf, Tipp ins Feld setzt; zweiter Tipp auf den Knopf zielt automatisch.
+  // Flammenwand: scharf machen, dann Linie ziehen. Prismastrahl: Knopf schaltet bereit, Finger führt (Knopf-Modus: zielt selbst, halber Schaden).
+  // Ohne Zielmodus: Frostlanze, Frostnova (ein Tipp), Brennglas (Tipp an/aus), Spiegelfeld (Tipp an/aus, Tipps ins Feld setzen Spiegel).
   let elemLp = 0, elemLpDone = false, beamPtr = null, wallPtr = null;
   const TAP_FORMS = { ball: 1, meteor: 1, storm: 1 };
+  const AIM_FORMS = { ball: 1, meteor: 1, storm: 1, wall: 1, prism: 1 }; // Formen mit umschaltbarem Zielmodus
+  const elemField = () => meta.elemMode === 'tap';
   const ELEM_HINT = { ball: 'Tipp ins Feld: Feuerball werfen. Knopf: automatisch', meteor: 'Tipp ins Feld: Meteor rufen, er schlägt nach 1,5 s ein. Knopf: automatisch', storm: 'Tipp ins Feld: Eissturm setzen. Knopf: automatisch', wall: 'Linie ins Feld ziehen: Flammenwand. Knopf: automatisch' };
   // Knopf zeigt die gewählte Form; lange Namen auf zwei Zeilen getrennt (wie „Über-ladung“)
   const FORM_SPLIT = { ball: 'Feuer-|ball', wall: 'Flammen-|wand', lance: 'Frost-|lanze', nova: 'Frost-|nova', storm: 'Eis-|sturm', prism: 'Prisma-|strahl', lens: 'Brenn-|glas', mirror: 'Spiegel-|feld' };
@@ -943,10 +946,21 @@
     setRing(b, frac);
     b.classList.toggle('ready', run.elemReady()); b.classList.toggle('armed', ['elem', 'beam', 'wall', 'mirror'].includes(armed)); b.classList.toggle('active', !!run.beam);
     b.querySelector('.st').textContent = txt;
+    const sm = b.querySelector('.smode'), aim = !!AIM_FORMS[o.form], fld = aim && elemField();
+    sm.hidden = !aim; if (aim && sm.textContent !== (fld ? 'Feld' : 'Knopf')) sm.textContent = fld ? 'Feld' : 'Knopf';
+    b.classList.toggle('aim', fld);
   }
   function elemPress() {
     if (!runAlive() || !run.s.el) return;
     const o = run.s.el, f = o.form;
+    if (AIM_FORMS[f] && !elemField()) {
+      // Modus „Knopf“: sofort automatisch zielen
+      armed = null;
+      if (f === 'prism') { if (run.beam && run.beam.auto) { run.beam = null; return; } if (run.beamAuto(true)) A.play('beam'); else A.play('hurt'); return; }
+      if (!run.elemReady()) { A.play('hurt'); return; }
+      if (!fire('elem')) toast('Kein Ziel in Sicht.', 1500);
+      return;
+    }
     if (TAP_FORMS[f] || f === 'wall') {
       const mode = f === 'wall' ? 'wall' : 'elem';
       if (armed === mode) { armed = null; if (!fire('elem')) toast('Kein Ziel in Sicht.', 1500); return; }
@@ -963,11 +977,18 @@
     const b = $('ab-elem');
     b.addEventListener('pointerdown', () => {
       elemLpDone = false; clearTimeout(elemLp);
-      if (run && run.s.el && run.s.el.form === 'prism') elemLp = setTimeout(() => { elemLpDone = true; if (runAlive() && run.beamAuto(true)) { armed = null; A.play('beam'); } else A.play('hurt'); }, 500);
+      if (run && run.s.el && AIM_FORMS[run.s.el.form]) elemLp = setTimeout(() => { elemLpDone = true; toggleElemMode(); }, 550);
     });
     for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => clearTimeout(elemLp));
-    b.addEventListener('contextmenu', ev => ev.preventDefault());
+    b.addEventListener('contextmenu', ev => { ev.preventDefault(); if (!elemLpDone && run && run.s.el && AIM_FORMS[run.s.el.form]) toggleElemMode(); elemLpDone = true; });
     b.addEventListener('click', () => { if (elemLpDone) { elemLpDone = false; return; } elemPress(); });
+  }
+  function toggleElemMode() {
+    meta.elemMode = elemField() ? 'btn' : 'tap'; save(); A.play('click');
+    if (['elem', 'wall', 'beam'].includes(armed)) armed = null;
+    if (run && run.beam && !run.beam.auto) run.beamStop();
+    toast(elemField() ? '<b>Element: Feld</b><br>Der Knopf macht scharf, dann zielst du im Feld. Lange drücken wechselt.' : '<b>Element: nur Knopf</b><br>Der Knopf zielt automatisch. Lange drücken wechselt.', 3500);
+    updateElemBtn();
   }
   const HINT = { strike: 'Tipp ins Feld: Orbitalschlag setzen', freeze: 'Klick ins Feld: Stasis auslösen', over: 'Klick ins Feld: Überladung auslösen', beam: 'Finger aufs Feld legen und ziehen: Strahl führen', mirror: 'Tipp ins Feld: Spiegel setzen. Knopf: Spiegelfeld aus' };
   function canArm(id) { return runAlive() && (id === 'strike' ? run.charge >= 1 : id === 'elem' || id === 'wall' ? run.elemReady() : id === 'beam' ? !!(run.s.el && run.s.el.form === 'prism') : id === 'mirror' ? !!(run.s.el && run.s.el.form === 'mirror') : run.abilityReady(id)); }
