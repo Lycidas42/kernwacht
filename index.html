@@ -266,6 +266,16 @@ input { font: inherit; color: var(--ink); background: var(--deck-2); border: 1px
 .elsvg text { font-family: inherit; pointer-events: none; }
 #elDet { min-height: 86px; }
 .elprobes { display: grid; gap: 8px; }
+.elms { display: grid; gap: 6px; }
+.elms.off { opacity: .45; }
+.elm { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+.elm b { font-size: .85rem; }
+.elm .lv { font-family: var(--font-num); color: var(--c); font-size: .8rem; }
+.elm small { display: block; font-size: .74rem; color: var(--ink-dim); line-height: 1.35; }
+.elm .msb { display: flex; gap: 6px; flex-shrink: 0; }
+.elm .msb button { width: 34px; height: 34px; border: 1px solid var(--c); border-radius: 4px; background: transparent; color: var(--c); font-size: 1.1rem; cursor: pointer; }
+.elm .msb button:disabled { opacity: .3; cursor: default; }
+.elmi { display: grid; gap: 4px; }
 .elpf { display: grid; gap: 3px; }
 .elpf > b { font-size: .8rem; color: var(--c); }
 .elpr { display: grid; grid-template-columns: 16px 1fr auto; gap: 6px; align-items: center; font-size: .78rem; color: var(--ink-dim); }

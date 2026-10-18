@@ -35,6 +35,15 @@
     // Elemente jetzt erst mit einer Fusion bei Welle 150: nach älteren, früheren Regeln geöffnet, aber nie benutzt → wieder schließen
     if (meta.elOpen && !(meta.elem && meta.elem.act) && (meta.elMig || 0) < 1) delete meta.elOpen;
     meta.elMig = 1;
+    // Meisterring: der frühere automatische Bonus (×1,03 je Rang über 15, alte Kurve) wird einmalig zu Punkten in „Wucht“
+    if (meta.elem && meta.elem.xp && !meta.msMig) {
+      for (const el in C.ELEMENTS) {
+        let xp = meta.elem.xp[el] || 0, r = 0; while (xp >= Math.round(300 * Math.pow(1.2, r))) { xp -= Math.round(300 * Math.pow(1.2, r)); r++; }
+        const n = Math.max(0, r - C.elTreeMax(el));
+        if (n) { const E = C.elemState(meta); E.ms = E.ms || {}; E.ms[el] = E.ms[el] || {}; E.ms[el].w = (E.ms[el].w || 0) + n; }
+      }
+    }
+    meta.msMig = 1;
   }
   // Fusionskern neu bewertet (ab Stufe 200 steigen die Kosten wieder exponentiell): alte Ausgaben anrechnen und neu kaufen
   function migrateFusionCore() {
@@ -1370,12 +1379,12 @@
   }
 
   // ---------- Elemente ----------
-  function elCanAny(el) { return C.ELEM_SKILLS.some(k => k.el === el && C.elCan(meta, k.id)); }
+  function elCanAny(el) { return C.ELEM_SKILLS.some(k => k.el === el && C.elCan(meta, k.id)) || C.ELEM_MASTER.some(x => C.msCan(meta, el, x.id)); }
   let elView = null, elRankSeen = null;
   function elemRankCheck() {
     const el = run && run.s.el && run.s.el.k; if (!el || run.home !== meta) return;
     const r = C.elRank(meta, el).rank;
-    if (elRankSeen && elRankSeen.el === el && r > elRankSeen.r) { toast(`<b>${C.ELEMENTS[el].name}: Rang ${r}</b><br>Neuer Elementpunkt. Verteilen im Menü unter Kanone → Elemente.`, 4000); A.play('loot'); save(); }
+    if (elRankSeen && elRankSeen.el === el && r > elRankSeen.r) { { const mi = r === C.EL_MEM2 ? 'Formgedächtnis: Zwei Formen behalten ihre Punkte.' : r === C.EL_MEM3 ? 'Dritte Form: Alle Formen behalten ihre Punkte.' : r === C.EL_SWAP ? 'Formwechsel im Lauf freigeschaltet.' : r === C.elTreeMax(el) + 1 ? 'Meisterring offen: Punkte über dem vollen Baum.' : ''; toast(`<b>${C.ELEMENTS[el].name}: Rang ${r}</b><br>${mi ? mi + ' ' : ''}Neuer Elementpunkt. Verteilen im Menü unter Kanone → Elemente.`, mi ? 6000 : 4000); } A.play('loot'); save(); }
     elRankSeen = { el, r };
   }
   // Baumkarte je Element: Kern oben, Stamm (Wurzel und zwei Äste), darunter drei Formsterne, unter jeder Form ihr Wurzelknoten mit zwei Ästen
@@ -1449,7 +1458,9 @@
     if (elSel.startsWith('form:')) {
       const f = C.ELEM_FORMS[id].find(x => x.id === elSel.slice(5)); if (!f) return '';
       const on = f.id === form;
-      const btn = on ? '' : inRun ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<div class="skbtns"><button id="elForm">Form wählen</button><small>Kostenlos, die Punkte der alten Form werden frei</small></div>`;
+      const mem = C.elMemForms(meta, id), swap = inRun && C.elSwapRun(meta, id) && C.elActive(meta) === id;
+      const keepTxt = mem >= 3 ? 'Kostenlos, alle Formen behalten ihre Punkte' : mem === 2 ? 'Kostenlos, die alte Form behält ihre Punkte (zwei Formen bleiben ausgebaut)' : 'Kostenlos, die Punkte der alten Form werden frei';
+      const btn = on ? '' : inRun && !swap ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<div class="skbtns"><button id="elForm">Form wählen</button><small>${keepTxt}</small></div>`;
       return `<div class="hd"><b>${f.name}</b><span class="tag"><span>Form</span>${on ? ' · <span>gewählt</span>' : ''}</span></div><small>${f.desc}</small>${f.how ? `<small class="nx"><b>Bedienung:</b> ${f.how}</small>` : ''}${btn}`;
     }
     const k = C.ELEM_SKILLS.find(x => x.id === elSel); if (!k) return '';
@@ -1475,12 +1486,13 @@
       const X = C.ELEMENTS[id], dot = id === act && C.elPoints(meta, id) > 0 && elCanAny(id);
       return `<button class="elcard${id === elView ? ' view' : ''}${id === act ? ' act' : ''}${dot ? ' dot' : ''}" data-el="${id}" style="--c:${X.col}"><span class="ei">${X.icon}</span><b>${X.name}</b><small>${X.ask} · Rang ${C.elRank(meta, id).rank}</small></button>`;
     }).join('');
-    const id = elView, X = C.ELEMENTS[id], R = C.elRank(meta, id), pts = C.elPoints(meta, id), ms = C.elMastery(meta, id);
+    const id = elView, X = C.ELEMENTS[id], R = C.elRank(meta, id), pts = C.elPoints(meta, id);
     let h = `<div class="elbody" style="--c:${X.col}"><small>${X.role}</small>`;
     if (id !== act) h += inRun ? '<small class="req">Wechseln geht nach dem Lauf.</small>' : `<button class="cta" id="elChoose">${X.name} wählen</button>`;
     h += `<div class="elrow"><span>Rang <b>${R.rank}</b></span><span>Freie Punkte: <b>${pts}</b></span></div><div class="bar"><i style="width:${Math.min(100, R.cur / R.need * 100).toFixed(1)}%"></i></div><small>${fmt(R.cur)} / ${fmt(R.need)} Erfahrung bis Rang ${R.rank + 1}</small>`;
-    h += ms ? `<small>Meisterschaft: ${ms} Rang über dem vollen Baum · ×${mult(Math.pow(C.ELEM_MASTER_K, ms))} Elementschaden</small>` : `<small>Mit ${C.elTreeMax(id)} Punkten ist der Baum voll. Danach bringt jeder Rang ×1,03 Elementschaden.</small>`;
+    h += `<small>Mit ${C.elTreeMax(id)} Punkten ist der Baum voll. Ab Rang ${C.elTreeMax(id) + 1} gehen weitere Punkte in den Meisterring oder in weitere Formen.</small>`;
     h += `<div class="elmap">${elMapSvg(id)}</div><div class="skdet" id="elDet">${elDetail(id)}</div>`;
+    h += elMasterHtml(id);
     const PR = C.ELEM_PROBES.filter(p => p.el === id), done = PR.filter(p => C.elProbeDone(meta, p.id)).length;
     h += `<h3>Elementproben · ${done}/${PR.length}</h3><small>Jede Probe gibt einmalig Erfahrung. Sie zählt nur mit der passenden Form.</small><div class="elprobes">${C.ELEM_FORMS[id].map(f => `<div class="elpf"><b>${f.name}</b>${PR.filter(p => p.form === f.id).map(p => { const ok = C.elProbeDone(meta, p.id); return `<div class="elpr${ok ? ' ok' : ''}"><i>${ok ? '✓' : ''}</i><span>${p.name}</span><em>+${fmt(C.PROBE_XP[p.t])}</em></div>`; }).join('')}</div>`).join('')}</div>`;
     h += `<button class="sec" id="elReset" ${inRun || !C.elSpent(meta, id) ? 'disabled' : ''}>Punkte von ${X.name} zurücksetzen</button>${inRun ? '<small>Zurücknehmen und Zurücksetzen gehen nach dem Lauf.</small>' : ''}</div>`;
@@ -1492,8 +1504,29 @@
     const ch = $('elChoose'); if (ch) ch.addEventListener('click', () => { if (!runAlive() && C.elChoose(meta, id)) { A.play('buy'); redraw(); } });
     const bu = $('elBuy'); if (bu) bu.addEventListener('click', () => { if (!runAlive() && C.elBuy(meta, elSel)) { A.play('buy'); redraw(); } });
     const rf = $('elRef'); if (rf) rf.addEventListener('click', () => { if (!runAlive() && C.elRefund(meta, elSel)) { A.play('click'); redraw(); } });
-    const fo = $('elForm'); if (fo) fo.addEventListener('click', () => { if (!runAlive() && C.elSetForm(meta, id, elSel.slice(5))) { A.play('buy'); redraw(); } });
+    const fo = $('elForm'); if (fo) fo.addEventListener('click', () => {
+      const live = runAlive(); if (live && !(C.elSwapRun(meta, id) && C.elActive(meta) === id)) return;
+      if (!C.elSetForm(meta, id, elSel.slice(5))) return;
+      if (live) { run.beam = null; run.mirrorMode = false; run.recalc(); } // Formwechsel im Lauf (ab Rang 40)
+      A.play('buy'); redraw();
+    });
+    $$('#elBody [data-msb]').forEach(b => b.addEventListener('click', () => { if (!runAlive() && C.msBuy(meta, id, b.dataset.msb)) { A.play('buy'); redraw(); } }));
+    $$('#elBody [data-msr]').forEach(b => b.addEventListener('click', () => { if (!runAlive() && C.msRefund(meta, id, b.dataset.msr)) { A.play('click'); redraw(); } }));
     const rs = $('elReset'); if (rs) rs.addEventListener('click', () => { if (runAlive()) return; C.elReset(meta, id); A.play('click'); redraw(); });
+  }
+  // Meisterring und Meilensteine eines Elements
+  function elMasterHtml(id) {
+    const R = C.elRank(meta, id).rank, open = C.msOpen(meta, id), inRun = runAlive(), tm = C.elTreeMax(id);
+    let h = `<h3>Meisterring</h3>`;
+    if (!open) h += `<small>Ab Rang ${tm + 1}: Jeder weitere Punkt kann in den Meisterring gehen, ohne Obergrenze bei Wucht und Bossbrecher.</small>`;
+    h += `<div class="elms${open ? '' : ' off'}">` + C.ELEM_MASTER.map(x => {
+      const l = C.msLv(meta, id, x.id), can = !inRun && C.msCan(meta, id, x.id);
+      return `<div class="elm"><div><b>${x.name}</b> <span class="lv">${l}${x.max < 999 ? '/' + x.max : ''}</span><small>${x.desc(Math.max(1, l))}</small></div>`
+        + `<span class="msb"><button data-msr="${x.id}" ${l && !inRun ? '' : 'disabled'} aria-label="−1">−</button><button data-msb="${x.id}" ${can ? '' : 'disabled'} aria-label="+1">+</button></span></div>`;
+    }).join('') + '</div>';
+    const MI = [[C.EL_MEM2, 'Formgedächtnis', 'Beim Formwechsel behält die alte Form ihre Punkte, zwei Formen bleiben ausgebaut.'], [C.EL_MEM3, 'Dritte Form', 'Alle drei Formen behalten ihre Punkte.'], [C.EL_SWAP, 'Formwechsel im Lauf', 'Die Form lässt sich auch mitten im Lauf wechseln.']];
+    h += `<h3>Meilensteine</h3><div class="elmi">${MI.map(([r, n, d]) => `<div class="fusmile${R >= r ? ' ok' : ''}"><i>${R >= r ? '✓' : ''}</i><span><b>Rang ${r}: ${n}.</b> ${d}</span></div>`).join('')}</div>`;
+    return h;
   }
   function probeToast(id) {
     const p = C.ELEM_PROBES.find(x => x.id === id); if (!p) return;
@@ -1699,7 +1732,8 @@
     const a = C.elActive(meta), E = meta.elem, sk = {}, fm = {};
     for (const k in E.sk || {}) if (E.sk[k] > 0) sk[k] = E.sk[k];
     for (const id in C.ELEMENTS) fm[id] = C.elForm(meta, id);
-    return { a, f: a ? C.elForm(meta, a) : null, r, sk, fm };
+    const ms = {}; for (const id in C.ELEMENTS) if (C.msSpent(meta, id)) ms[id] = Object.assign({}, meta.elem.ms[id]);
+    return { a, f: a ? C.elForm(meta, a) : null, r, sk, fm, ms };
   }
   // Mini-Sternkarte (nur Anzeige) für eine fremde Skillverteilung
   function skMiniSvg(sk) {
@@ -1755,9 +1789,13 @@
       const xp = {}; for (const id in C.ELEMENTS) { let x = 0; for (let i = 0; i < Math.min(200, Math.max(0, +r[id] || 0)); i++) x += C.elXpNeed(i); xp[id] = x; }
       const em = { elOpen: 1, elem: { act: c.el.a, xp, sk, form: {}, probes: {} } };
       for (const id in C.ELEMENTS) if (C.ELEM_FORMS[id].some(f => f.id === fm[id])) em.elem.form[id] = fm[id];
+      const ms = c.el.ms && typeof c.el.ms === 'object' ? c.el.ms : {}; em.elem.ms = {};
+      for (const id in C.ELEMENTS) if (ms[id] && typeof ms[id] === 'object') { em.elem.ms[id] = {}; for (const x of C.ELEM_MASTER) { const v = Math.min(x.max, Math.floor(+ms[id][x.id] || 0)); if (v > 0) em.elem.ms[id][x.id] = v; } }
       for (const id of Object.keys(C.ELEMENTS).filter(id => C.elSpent(em, id) > 0).sort((x, y) => (y === c.el.a) - (x === c.el.a))) {
         const X = C.ELEMENTS[id], F = C.ELEM_FORMS[id].find(f => f.id === C.elForm(em, id));
         h += `<h4 style="color:${X.col}">${X.icon} <b>${X.name}</b> · ${F.name} · ${C.elSpent(em, id)} Punkte verteilt</h4>` + elMapSvg(id, em, true);
+        const mr = C.ELEM_MASTER.filter(x => C.msLv(em, id, x.id));
+        if (mr.length) h += `<div class="pcfl">${mr.map(x => `<span style="border-color:${X.col}">${x.name} <b>${C.msLv(em, id, x.id)}</b></span>`).join('')}</div>`;
       }
     }
     // Skills

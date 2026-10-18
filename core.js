@@ -784,13 +784,25 @@
   const elProbeDone = (m, id) => !!(m.elem && m.elem.probes && m.elem.probes[id]);
   // Einzelziel-Elemente kommen auf weniger Abschüsse: ausgleichen, damit alle etwa gleich schnell aufsteigen
   const ELEM_XP_K = { fire: 1, ice: 2, light: 1.6 };
-  const ELEM_MASTER_K = 1.03; // je Rang über dem vollen Baum ×1,03 Elementschaden
+  // Meisterring (ab Rang 16): Punkte über dem vollen Baum frei verteilen; ersetzt den früheren automatischen Bonus je Rang
+  const ELEM_MASTER = [
+    { id: 'w', name: 'Wucht',       max: 999, desc: l => `×${fmtK(Math.pow(1.03, l))} Elementschaden (je Stufe ×1,03)` },
+    { id: 'r', name: 'Reichweite',  max: 15,  desc: l => `+${3 * l} % Radius, Länge, Breite und Dauer (höchstens +45 %)` },
+    { id: 't', name: 'Takt',        max: 15,  desc: l => `−${2 * l} % Abklingzeit, der Strahl lädt schneller (höchstens −30 %)` },
+    { id: 'b', name: 'Bossbrecher', max: 999, desc: l => `+${3 * l} % Elementschaden gegen Bosse und Anbauteile` },
+  ];
+  const fmtK = v => v.toFixed(2).replace('.', ',');
+  const ELEM_MASTER_K = 1.03;
+  // Meilensteine je Element: Formgedächtnis (zwei Formen behalten ihre Punkte), dritte Form, Formwechsel im Lauf
+  const EL_MEM2 = 20, EL_MEM3 = 30, EL_SWAP = 40;
   function elemState(m) {
     if (!m.elem || typeof m.elem !== 'object') m.elem = { act: null };
     const E = m.elem; E.xp = E.xp || {}; E.sk = E.sk || {}; E.form = E.form || {}; E.probes = E.probes || {};
     return E;
   }
-  const elXpNeed = r => Math.round(300 * Math.pow(1.2, r)); // Erfahrung für Rang r → r+1
+  // Erfahrung für Rang r → r+1: bis zum vollen Baum (15) +20 % je Rang, danach nur +8 %, damit Meisterränge regelmäßig kommen
+  const EL_FLAT_AT = 15;
+  const elXpNeed = r => Math.round(300 * Math.pow(1.2, Math.min(r, EL_FLAT_AT)) * Math.pow(1.08, Math.max(0, r - EL_FLAT_AT)));
   function elRank(m, el) {
     let xp = (m.elem && m.elem.xp && m.elem.xp[el]) || 0, r = 0;
     while (xp >= elXpNeed(r)) { xp -= elXpNeed(r); r++; }
@@ -798,24 +810,34 @@
   }
   const elLv = (m, id) => (m.elem && m.elem.sk && m.elem.sk[id]) || 0;
   const elForm = (m, el) => { const f = m.elem && m.elem.form && m.elem.form[el]; return ELEM_FORMS[el].some(x => x.id === f) ? f : ELEM_FORMS[el][0].id; };
-  const elSpent = (m, el) => ELEM_SKILLS.filter(k => k.el === el).reduce((a, k) => a + elLv(m, k.id), 0);
+  const msLv = (m, el, id) => (m.elem && m.elem.ms && m.elem.ms[el] && m.elem.ms[el][id]) || 0;
+  const msSpent = (m, el) => ELEM_MASTER.reduce((a, x) => a + msLv(m, el, x.id), 0);
+  const elSpent = (m, el) => ELEM_SKILLS.filter(k => k.el === el).reduce((a, k) => a + elLv(m, k.id), 0) + msSpent(m, el);
   const elStemPts = (m, el) => ELEM_SKILLS.filter(k => k.el === el && !k.form).reduce((a, k) => a + elLv(m, k.id), 0);
   const elFormPts = (m, el, f) => ELEM_SKILLS.filter(k => k.el === el && k.form === f && !k.cap).reduce((a, k) => a + elLv(m, k.id), 0);
   // voller Baum: Stamm, eine Form und ihr Schlussstein
   const elTreeMax = el => ELEM_SKILLS.filter(k => k.el === el && (!k.form || k.form === ELEM_FORMS[el][0].id)).reduce((a, k) => a + (k.cap ? 1 : k.max), 0);
   const elKMax = k => (k.cap ? 1 : k.max);
   const elPoints = (m, el) => elRank(m, el).rank - elSpent(m, el);
-  const elMastery = (m, el) => Math.max(0, elRank(m, el).rank - elTreeMax(el));
+  const msOpen = (m, el) => elRank(m, el).rank > elTreeMax(el);
+  const msCan = (m, el, id) => { const x = ELEM_MASTER.find(q => q.id === id); return !!x && msOpen(m, el) && elPoints(m, el) >= 1 && msLv(m, el, id) < x.max; };
+  function msBuy(m, el, id) { if (!msCan(m, el, id)) return false; const E = elemState(m); E.ms = E.ms || {}; E.ms[el] = E.ms[el] || {}; E.ms[el][id] = msLv(m, el, id) + 1; return true; }
+  function msRefund(m, el, id) { const l = msLv(m, el, id); if (!l) return false; m.elem.ms[el][id] = l - 1; if (!m.elem.ms[el][id]) delete m.elem.ms[el][id]; return true; }
+  // Wie viele Formen ihre Punkte behalten und ob die Form im Lauf wechseln darf
+  const elMemForms = (m, el) => { const r = elRank(m, el).rank; return r >= EL_MEM3 ? 3 : r >= EL_MEM2 ? 2 : 1; };
+  const elSwapRun = (m, el) => elRank(m, el).rank >= EL_SWAP;
   // Freischaltung merkt sich der Spielstand, denn die Bestwelle fällt mit jeder Fusion wieder auf 0
   function elUnlocked(m) { if (m.elOpen) return true; if (fusMile(m, 'slot4')) { m.elOpen = 1; return true; } return false; }
   const elActive = m => elUnlocked(m) && m.elem && ELEMENTS[m.elem.act] ? m.elem.act : null;
-  function elOpen(m, id) {
+  function elOpen(m, id, any) {
     const k = EL_BY_ID[id]; if (!k) return false;
     if (k.par && !elLv(m, k.par)) return false;
     if (!k.form) return true;
-    if (k.form !== elForm(m, k.el) || elStemPts(m, k.el) < ELEM_FORM_AT) return false;
+    if ((!any && k.form !== elForm(m, k.el)) || elStemPts(m, k.el) < ELEM_FORM_AT) return false;
     return !k.cap || elFormPts(m, k.el, k.form) >= ELEM_CAP_AT;
   }
+  // gültig (darf Punkte halten): wie offen, behaltene Formen zählen mit
+  const elValid = (m, id) => elOpen(m, id, elMemForms(m, EL_BY_ID[id].el) > 1);
   function elCan(m, id) { const k = EL_BY_ID[id]; return !!k && elPoints(m, k.el) >= 1 && elLv(m, id) < elKMax(k) && elOpen(m, id); }
   function elBuy(m, id) { if (!elCan(m, id)) return false; elemState(m).sk[id] = elLv(m, id) + 1; return true; }
   // Zurücknehmen nur, wenn danach alle gekauften Knoten offen bleiben (Kinder, Formknoten, Schlussstein)
@@ -823,15 +845,17 @@
     const k = EL_BY_ID[id], l = elLv(m, id); if (!k || !l) return false;
     const sk = Object.assign({}, m.elem.sk); sk[id] = l - 1; if (!sk[id]) delete sk[id];
     const t = Object.assign({}, m, { elem: Object.assign({}, m.elem, { sk }) });
-    return Object.keys(sk).every(x => elOpen(t, x));
+    return Object.keys(sk).every(x => elValid(t, x));
   }
   function elRefund(m, id) { if (!elCanRefund(m, id)) return false; const E = elemState(m); E.sk[id]--; if (!E.sk[id]) delete E.sk[id]; return true; }
-  function elReset(m, el) { const E = elemState(m); for (const k of ELEM_SKILLS) if (k.el === el) delete E.sk[k.id]; }
+  function elReset(m, el) { const E = elemState(m); for (const k of ELEM_SKILLS) if (k.el === el) delete E.sk[k.id]; if (E.ms) delete E.ms[el]; }
   function elChoose(m, el) { if (!ELEMENTS[el] || !elUnlocked(m)) return false; elemState(m).act = el; return true; }
-  // Formwechsel: Punkte der alten Form werden frei
+  // Formwechsel: Punkte der alten Form werden frei; mit Formgedächtnis (Rang 20) behalten zwei Formen ihre Punkte, ab Rang 30 alle drei
   function elSetForm(m, el, f) {
     const F = ELEM_FORMS[el] && ELEM_FORMS[el].find(x => x.id === f); if (!F) return false;
-    const E = elemState(m); for (const k of ELEM_SKILLS) if (k.el === el && k.form && k.form !== f) delete E.sk[k.id];
+    const E = elemState(m), old = elForm(m, el), n = elMemForms(m, el);
+    const keep = f2 => f2 === f || (n >= 3) || (n === 2 && f2 === old);
+    for (const k of ELEM_SKILLS) if (k.el === el && k.form && !keep(k.form)) delete E.sk[k.id];
     E.form[el] = f; return true;
   }
   // Ungültige Knoten (z. B. nach Umbau des Baums) entfernen
@@ -839,7 +863,9 @@
     if (!m.elem || !m.elem.sk) return;
     const E = m.elem;
     for (const id in E.sk) if (!EL_BY_ID[id] || !(E.sk[id] > 0)) delete E.sk[id]; else E.sk[id] = Math.min(E.sk[id], elKMax(EL_BY_ID[id]));
-    let ch = true; while (ch) { ch = false; for (const id in E.sk) if (!elOpen(m, id)) { delete E.sk[id]; ch = true; } }
+    let ch = true; while (ch) { ch = false; for (const id in E.sk) if (!elValid(m, id)) { delete E.sk[id]; ch = true; } }
+    if (E.ms) for (const el in E.ms) { if (!ELEMENTS[el] || typeof E.ms[el] !== 'object') { delete E.ms[el]; continue; } for (const id in E.ms[el]) { const x = ELEM_MASTER.find(q => q.id === id); if (!x || !(E.ms[el][id] > 0)) delete E.ms[el][id]; else E.ms[el][id] = Math.min(Math.floor(E.ms[el][id]), x.max); } }
+    for (const el in ELEMENTS) while (elPoints(m, el) < 0 && msSpent(m, el) > 0) { const x = ELEM_MASTER.find(q => msLv(m, el, q.id) > 0); msRefund(m, el, x.id); }
     for (const el in ELEMENTS) while (elPoints(m, el) < 0) { const k = ELEM_SKILLS.filter(x => x.el === el && elLv(m, x.id)).pop(); if (!k) break; E.sk[k.id]--; if (!E.sk[k.id]) delete E.sk[k.id]; }
   }
 
@@ -1097,7 +1123,7 @@
         // Basis ist die Kanonenleistung pro Sekunde (Schuss × Feuerrate × Mehrfachschuss × Krit), normiert auf P.elF,
         // sonst bleiben Elemente bei Spielständen mit viel Feuerrate und Krit weit hinter der Kanone zurück
         const gunF = s.rate * (1 + s.multi * s.multiDmg) * (1 + s.crit * (s.critx - 1));
-        const E = id => elLv(this.meta, id), gb = s.gunDmg * gunF / P.elF * Math.pow(ELEM_MASTER_K, elMastery(this.meta, el)) * cb.elem, g = gb, form = elForm(this.meta, el);
+        const E = id => elLv(this.meta, id), gb = s.gunDmg * gunF / P.elF * Math.pow(ELEM_MASTER_K, msLv(this.meta, el, 'w')) * cb.elem, g = gb, form = elForm(this.meta, el);
         const o = { k: el, form, cap: ELEM_SKILLS.some(k => k.el === el && k.form === form && k.cap && E(k.id)) };
         if (el === 'fire') {
           const f = 1 + P.fDmgLv * E('f_dmg'), cdk = 1 - 0.08 * E('f_cd');
@@ -1108,7 +1134,7 @@
         }
         if (el === 'ice') {
           const g = gb * P.iceK;
-          o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.shard = g * 2 * (1 + 0.4 * E('il_shard'));
+          o.dur = 3 + 0.5 * E('i_dur'); o.brit = 0.4 + 0.1 * E('i_brit'); o.shard = g * 2 * (1 + 0.4 * (form === 'lance' ? E('il_shard') : 0));
           if (form === 'lance') { o.dmg = g * 6 * P.lanceK; o.cd = 8 - E('i_cd'); o.chain = E('il_chain'); o.sog = 0.5 * E('il_sog'); o.zero = !!E('il_zero'); }
           if (form === 'nova') { o.dmg = g * 0.8 * P.novaK; o.cd = 18 - E('i_cd'); o.r = P.novaR * (1 + 0.125 * E('in_rad')); o.dur = 2 + 0.5 * E('i_dur'); o.rime = 0.5 * E('in_rime'); o.heal = 0.004 * E('in_hull'); o.age = !!E('in_age'); }
           if (form === 'storm') { o.dps = g * 0.6; o.dmg = o.dps; o.cd = 18 - E('i_cd'); o.r = 70; o.sdur = 6 + E('is_dur'); o.dur = 2 + 0.5 * E('i_dur'); o.drift = 15 * E('is_drift'); o.slick = 0.15 * E('is_slick'); o.vortex = !!E('is_vortex'); }
@@ -1120,6 +1146,11 @@
           if (form === 'lens') { o.dps = g * 3 * lk * P.lensK; o.hot = P.llHot * E('ll_hot'); o.after = P.llAfter * E('ll_after'); o.weak = P.llWeak * E('ll_weak'); o.sun = !!E('ll_sun'); o.ramp = P.llRamp; o.w = 3; }
           if (form === 'mirror') { o.dps = g * 1.2 * lk; o.mirrors = 3 + E('lm_more'); o.refr = 0.1 * E('lm_refr'); o.lens = g * 0.3 * E('lm_lens'); o.cage = !!E('lm_cage'); o.w = 7; }
         }
+        // Meisterring: Reichweite (Radius, Länge, Breite, Dauer), Takt (Abklingzeit), Bossbrecher
+        const mr = 1 + 0.03 * msLv(this.meta, el, 'r'), mt = 1 - 0.02 * msLv(this.meta, el, 't');
+        for (const q of ['r', 'len', 'w', 'dur', 'sdur']) if (o[q]) o[q] *= mr;
+        if (o.cd) o.cd *= mt;
+        o.bossK = 1 + 0.03 * msLv(this.meta, el, 'b');
         s.el = o;
         if (el === 'fire' && form === 'ball' && this.elemAmmo == null) this.elemAmmo = o.ammo;
         if (el === 'light' && this.beamE == null) this.beamE = o.dur;
@@ -1762,6 +1793,7 @@
       e.elemT = this.time; e.elemHand = !!hand;
       // Kältebruch wirkt auch für das Element: verlangsamte Ziele nehmen mehr Schaden
       const m = this.s.mod && this.s.mod.cryoammo; if (m && e.slowUntil > this.time) d *= 1 + m;
+      const bk = this.s.el && this.s.el.bossK; if (bk > 1 && (e.type === 'boss' || e.host)) d *= bk; // Bossbrecher
       return this.hurt(e, d, false, 'elem');
     }
     // Element-Erfahrung: k Abschüsse, skaliert mit Welle; Brennglas trifft nur ein Ziel; Fusionsglut vervielfacht
@@ -3004,6 +3036,6 @@
   }
   function skinUnlocked(m) { const out = []; for (const cat in SKIN) for (const p of SKIN[cat]) if (p.need && skinState(m, p).ok) out.push(cat + ':' + p.id); return out; }
 
-  const VERSION = '0.48.0'; // gleich halten mit VERSION in sw.js
-  root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elMastery, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
+  const VERSION = '0.49.0'; // gleich halten mit VERSION in sw.js
+  root.Core = { VERSION, ELEM_FORM_AT, ELEM_CAP_AT, ELEM_PROBES, PROBE_XP, elProbeDone, elFormPts, elKMax, ELEMENTS, ELEM_FORMS, ELEM_SKILLS, ELEM_MASTER_K, ELEM_MASTER, EL_MEM2, EL_MEM3, EL_SWAP, msLv, msSpent, msOpen, msCan, msBuy, msRefund, elMemForms, elSwapRun, elValid, elemState, elXpNeed, elRank, elLv, elForm, elSpent, elStemPts, elTreeMax, elPoints, elUnlocked, elActive, elOpen, elCan, elBuy, elCanRefund, elRefund, elReset, elChoose, elSetForm, elFix, fusionCostOld, fusionCostG, AUTO_W, PLANETS, MINE_AT, FACIL, mineState, mineRate, mineCapH, mineCap, droneRate, facCost, planetOpen, plOf, mineTick, mineCollect, mineUpgrade, tapMax, tapRegen, tapYield, tapEnergy, mineTap, orePrice, mineSell, MOD_CRAFT, modBoostCost, modRarCost, modMastCost, RESEARCH, researchCost, researchLv, researchBonus, research, planetForModule, modCraft, modImprove, SKIN, skinState, skinUnlocked, CHALLENGES, CHAL_AT, xpFor, xpNeed, cmdState, rankOf, SK_BRANCH, SKILLS, SK_CAP_AT, SK_CAP2_AT, SK_MASTER_K, skMastery, skFree, skTreeMax, skLv, skSpent, skPoints, skBranchPts, skCan, skOpen, skFix, SK_LINK_AT, skBuy, skReset, skCanRefund, skRefund, chalStart, chalMult, ACH, achVal, achTier, achBonus, achPoints, permBonus, statOf, DAILY_AT, chalTier, chalBonus, TWISTS, STD_LV, dayKey, dailyOf, dailyBonus, stdMeta, dropChance, WALL_R, WAVE_TYPES, GATES, MODULES_AT, FUSION_AT, cmdOpen, mileOk, mileTxt, fusWave, fusMile, rushOpen, BUY_RUN_AT, buyInRun, TEMPO_AT, TEMPO4_AT, tempoOpen, tempo4Open, ROADMAP, record, gateOk, nextUnlock, unlocked, beginner, modOpen, chalOpen, dailyOpen, mineOpen, recommend, cheapest, MODULES, RARITY, MODULE_SLOTS, modSlots, FUS_MILES, fusGlow, moduleValue, addModule, rollModule, FUSION_UPG, FUSION_MIN, LORD_W, lordCore, SECTORS, sectorOf, cycleOf, ANOMALIES, anomalyOf, cycleName, ECHO_AT, flv, fragmentsFor, fuse, fusionCost, fusionBuy, milestoneReward, RUN_UPG, META_UPG, ENEMY, ABIL, SOURCES, Run, newMeta, mlv, metaCost, metaBuy, startEnergy, offlinePerHour, enemyHp, maxStartWave, startWaveFor, jumpShare, jumpBonus, FIELD_W, FIELD_H, BASE_R, WAVE_LEN, STRIKE_R, STRIKE_KILLS, BOSS_KINDS, BOSS_ROSTER, BOSS_ACT_NAME, BOSS_CHECK, bossKind, bossWaves, P };
 })(typeof window !== 'undefined' ? window : globalThis);
