@@ -185,7 +185,7 @@ window.KW_EN = {
   'Klang': 'Sound', 'Lauf': 'Run', 'Weiterlaufen im Hintergrund': 'Keep running in background', 'Wellen automatisch rufen': 'Call waves automatically', 'Welle {0} · Rekord {1}': 'Wave {0} · Record {1}',
   'Spielerprofil': 'Player profile', 'Rang unbekannt': 'Rank unknown', 'aktiv vor {0} min': 'active {0} min ago', 'aktiv vor {0} h': 'active {0} h ago', 'aktiv vor {0} Tagen': 'active {0} days ago',
   'Läufe': 'Runs', 'Laborstufen': 'Lab levels', 'Bosse besiegt': 'Bosses beaten', 'Kernfusion': 'Core fusion', 'Noch keine Fusions-Upgrades.': 'No fusion upgrades yet.',
-  'Keine Module ausgerüstet.': 'No modules equipped.', 'Kommandant · {0} Punkte verteilt': 'Commander · {0} points spent', 'Noch keine Skillpunkte verteilt.': 'No skill points spent yet.',
+  'Keine Module ausgerüstet.': 'No modules equipped.', 'Kommandant · {0} Punkte verteilt': 'Commander · {0} points spent', '· {0} · {1} Punkte verteilt': '· {0} · {1} points spent', 'Noch keine Skillpunkte verteilt.': 'No skill points spent yet.',
   'Das Profil ist gerade nicht erreichbar.': 'The profile is currently unavailable.', 'Mehr Details erscheinen, sobald dieser Spieler mit einer aktuellen Version gespielt hat.': 'More details appear once this player has played a current version.',
   'Kompendium': 'Compendium', 'Gegner, Bosse und Waffen': 'Enemies, bosses and weapons', 'Gegner': 'Enemies', 'Waffen': 'Weapons',
   '{0} von {1} entdeckt': '{0} of {1} discovered', '{0} von {1} freigeschaltet': '{0} of {1} unlocked', 'ab Welle {0}': 'from wave {0}', 'Noch nicht begegnet.': 'Not encountered yet.',

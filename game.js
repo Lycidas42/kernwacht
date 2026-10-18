@@ -1393,16 +1393,18 @@
     });
     return pos;
   }
-  function elMapSvg(id) {
-    const X = C.ELEMENTS[id], col = X.col, pos = elLayout(id), form = C.elForm(meta, id), gate = C.elStemPts(meta, id) >= C.ELEM_FORM_AT, out = [];
+  // view: fremder Spielstand im Profil (nur Anzeige, ohne Auswahl und Kaufhinweise)
+  function elMapSvg(id, M, view) {
+    const m = M || meta, sel = view ? undefined : elSel;
+    const X = C.ELEMENTS[id], col = X.col, pos = elLayout(id), form = C.elForm(m, id), gate = C.elStemPts(m, id) >= C.ELEM_FORM_AT, out = [];
     const line = (a, b, lit, dash) => out.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${col}" stroke-width="${lit ? 3 : 1.5}" stroke-opacity="${lit ? 0.9 : 0.25}" ${dash ? 'stroke-dasharray="4 5"' : ''} ${lit ? `style="filter:drop-shadow(0 0 4px ${col})"` : ''}/>`);
     const K = C.ELEM_SKILLS.filter(k => k.el === id);
     for (const k of K) {
       const p = pos[k.id]; if (!p) continue;
       // Schlussstein: gestrichelt von beiden Ästen der Form
-      if (k.cap) { for (const q of K.filter(x => x.par === k.par && !x.cap)) line(pos[q.id], p, C.elLv(meta, k.id) > 0, true); continue; }
+      if (k.cap) { for (const q of K.filter(x => x.par === k.par && !x.cap)) line(pos[q.id], p, C.elLv(m, k.id) > 0, true); continue; }
       const from = k.par ? pos[k.par] : k.form ? pos['form:' + k.form] : pos.hub;
-      line(from, p, C.elLv(meta, k.id) > 0, false);
+      line(from, p, C.elLv(m, k.id) > 0, false);
     }
     // Schwelle zum Formbereich: von den Ästen des Stamms zu einer Leiste, von dort zu den Formsternen
     const sx = K.filter(k => !k.form && k.par).map(k => pos[k.id]);
@@ -1411,12 +1413,12 @@
     C.ELEM_FORMS[id].forEach(f => line({ x: pos['form:' + f.id].x, y: 196 }, pos['form:' + f.id], gate && f.id === form, true));
     out.push(`<text x="0" y="188" text-anchor="middle" font-size="8.5" fill="${gate ? col : '#9fb3c8'}" letter-spacing=".5">FORM AB ${C.ELEM_FORM_AT} PUNKTEN IM STAMM</text>`);
     // Kern
-    const R = C.elRank(meta, id);
-    out.push(`<g class="skn${elSel === null ? ' sel' : ''}" data-es="hub"><circle class="halo" r="35" fill="none"/><circle r="27" fill="var(--deck)" stroke="${col}" stroke-width="2" style="filter:drop-shadow(0 0 8px ${col})"/><text y="-3" text-anchor="middle" font-size="15" fill="${col}">${X.icon}</text><text y="14" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">RANG ${R.rank}</text></g>`);
+    const R = C.elRank(m, id);
+    out.push(`<g class="skn${sel === null ? ' sel' : ''}" data-es="hub"><circle class="halo" r="35" fill="none"/><circle r="27" fill="var(--deck)" stroke="${col}" stroke-width="2" style="filter:drop-shadow(0 0 8px ${col})"/><text y="-3" text-anchor="middle" font-size="15" fill="${col}">${X.icon}</text><text y="14" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">RANG ${R.rank}</text></g>`);
     // Formsterne
     C.ELEM_FORMS[id].forEach(f => {
       const p = pos['form:' + f.id], on = f.id === form, rad = 20;
-      const cls = ['skn', on ? 'own' : '', !on ? 'lock' : '', elSel === 'form:' + f.id ? 'sel' : ''].join(' ');
+      const cls = ['skn', on ? 'own' : '', !on ? 'lock' : '', sel === 'form:' + f.id ? 'sel' : ''].join(' ');
       const hex = [0, 1, 2, 3, 4, 5].map(i => { const an = Math.PI / 3 * i + Math.PI / 6; return (Math.cos(an) * rad).toFixed(1) + ',' + (Math.sin(an) * rad).toFixed(1); }).join(' ');
       out.push(`<g class="${cls}" data-es="form:${f.id}" transform="translate(${p.x} ${p.y})" ${on ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}><circle class="halo" r="${rad + 9}" fill="none"/><polygon class="bg" points="${hex}" stroke="${col}" ${on ? `fill="${col}" fill-opacity=".3"` : ''}/><text y="4" text-anchor="middle" font-size="12" font-weight="700" fill="${on ? '#fff' : col}">${on ? '✓' : ''}</text>`
         + `<text y="${rad + 14}" text-anchor="middle" font-size="9.5" fill="${on ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${f.name}</text></g>`);
@@ -1424,9 +1426,9 @@
     // Knoten
     for (const k of K) {
       const p = pos[k.id]; if (!p) continue;
-      const mx = C.elKMax(k), l = C.elLv(meta, k.id), open = C.elOpen(meta, k.id), can = C.elCan(meta, k.id), full = l >= mx, rad = k.cap ? 20 : 15;
-      const todo = !full && (open || l > 0) && can;
-      const cls = ['skn', l ? 'own' : '', can ? 'can' : '', todo ? 'todo' : '', full ? 'full' : '', !l && !open ? 'lock' : '', elSel === k.id ? 'sel' : ''].join(' ');
+      const mx = C.elKMax(k), l = C.elLv(m, k.id), open = C.elOpen(m, k.id), can = C.elCan(m, k.id), full = l >= mx, rad = k.cap ? 20 : 15;
+      const todo = !view && !full && (open || l > 0) && can;
+      const cls = ['skn', l ? 'own' : '', !view && can ? 'can' : '', todo ? 'todo' : '', full ? 'full' : '', !l && !open ? 'lock' : '', sel === k.id ? 'sel' : ''].join(' ');
       const C2 = 2 * Math.PI * (rad + 4);
       out.push(`<g class="${cls}" data-es="${k.id}" transform="translate(${p.x} ${p.y})" ${l ? `style="filter:drop-shadow(0 0 5px ${col})"` : ''}><circle class="halo" r="${rad + 9}" fill="none"/>${todo ? `<circle class="todoring" r="${rad + 10}"/>` : ''}`
         + (k.cap ? `<polygon class="bg" points="${[0, 1, 2, 3, 4, 5].map(i => { const an = Math.PI / 3 * i; return (Math.cos(an) * rad).toFixed(1) + ',' + (Math.sin(an) * rad).toFixed(1); }).join(' ')}" stroke="${col}" ${l ? `fill="${col}" fill-opacity=".35"` : ''}/><text y="5" text-anchor="middle" font-size="13" font-weight="700" fill="${l ? '#fff' : col}">${l ? '✓' : '★'}</text>`
@@ -1434,7 +1436,7 @@
           + `<circle class="bg" r="${rad}" stroke="${col}" ${l ? `fill="${col}" fill-opacity=".18"` : ''}/><text y="4" text-anchor="middle" font-size="10" font-weight="700" fill="${l ? '#fff' : col}">${l}/${mx}</text>`)
         + `<text y="${rad + 15}" text-anchor="middle" font-size="9.5" fill="${l ? '#fff' : '#9fb3c8'}" stroke="#0b0d1f" stroke-width="3" stroke-opacity=".85" paint-order="stroke">${k.name}</text></g>`);
     }
-    return `<svg class="elsvg" viewBox="-212 -40 424 532" xmlns="http://www.w3.org/2000/svg">${out.join('')}</svg>`;
+    return `<svg class="elsvg${view ? ' pcel' : ''}" viewBox="-212 -40 424 532" xmlns="http://www.w3.org/2000/svg">${out.join('')}</svg>`;
   }
   // Detail zum gewählten Stern: Kern (Element und Fähigkeit), Form oder Knoten
   function elDetail(id) {
@@ -1694,8 +1696,10 @@
   function publicElem() {
     if (!C.elUnlocked(meta) || !meta.elem) return null;
     const r = {}; for (const id in C.ELEMENTS) r[id] = C.elRank(meta, id).rank;
-    const a = C.elActive(meta);
-    return { a, f: a ? C.elForm(meta, a) : null, r };
+    const a = C.elActive(meta), E = meta.elem, sk = {}, fm = {};
+    for (const k in E.sk || {}) if (E.sk[k] > 0) sk[k] = E.sk[k];
+    for (const id in C.ELEMENTS) fm[id] = C.elForm(meta, id);
+    return { a, f: a ? C.elForm(meta, a) : null, r, sk, fm };
   }
   // Mini-Sternkarte (nur Anzeige) für eine fremde Skillverteilung
   function skMiniSvg(sk) {
@@ -1743,6 +1747,18 @@
       const r = c.el.r && typeof c.el.r === 'object' ? c.el.r : {};
       const fo = (id, f) => (C.ELEM_FORMS[id] || []).find(x => x.id === f);
       h += `<h4>Elemente</h4><div class="pcfl">${Object.keys(C.ELEMENTS).map(id => { const X = C.ELEMENTS[id], on = c.el.a === id, F = on && fo(id, c.el.f); return `<span style="border-color:${on ? X.col : 'var(--line)'};color:${X.col}">${X.icon} ${X.name}${F ? ' · ' + F.name : ''} <b>Rang ${Math.max(0, Math.floor(+r[id] || 0))}</b></span>`; }).join('')}</div>`;
+    }
+    // Elementbäume (fremde Daten: nur bekannte Knoten, Stufen begrenzt)
+    if (c.el && c.el.sk && typeof c.el.sk === 'object') {
+      const r = c.el.r && typeof c.el.r === 'object' ? c.el.r : {}, fm = c.el.fm && typeof c.el.fm === 'object' ? c.el.fm : {}, sk = {};
+      for (const k of C.ELEM_SKILLS) { const v = Math.floor(+c.el.sk[k.id] || 0); if (v > 0) sk[k.id] = Math.min(v, C.elKMax(k)); }
+      const xp = {}; for (const id in C.ELEMENTS) { let x = 0; for (let i = 0; i < Math.min(200, Math.max(0, +r[id] || 0)); i++) x += C.elXpNeed(i); xp[id] = x; }
+      const em = { elOpen: 1, elem: { act: c.el.a, xp, sk, form: {}, probes: {} } };
+      for (const id in C.ELEMENTS) if (C.ELEM_FORMS[id].some(f => f.id === fm[id])) em.elem.form[id] = fm[id];
+      for (const id of Object.keys(C.ELEMENTS).filter(id => C.elSpent(em, id) > 0).sort((x, y) => (y === c.el.a) - (x === c.el.a))) {
+        const X = C.ELEMENTS[id], F = C.ELEM_FORMS[id].find(f => f.id === C.elForm(em, id));
+        h += `<h4 style="color:${X.col}">${X.icon} <b>${X.name}</b> · ${F.name} · ${C.elSpent(em, id)} Punkte verteilt</h4>` + elMapSvg(id, em, true);
+      }
     }
     // Skills
     const m = { sk: c.sk || {} }, spent = C.skSpent(m);
